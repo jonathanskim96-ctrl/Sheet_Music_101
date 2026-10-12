@@ -33,3 +33,16 @@
 - eslint-plugin-react does not support ESLint 10: bans are done with core rules instead.
 - Vitest config must use `defineConfig` from `vitest/config`, and the Node tsconfig needs the
   `DOM` lib for Playwright `page.evaluate` callbacks.
+
+## 2026-10-12: M1 executed (scaffold, guardrails, CI, deploy)
+- Copied `docs/build/m1-files/` into the repo root; `npm ci` (npm 10.9.4, works from the
+  npm 11 lockfile; 0 vulnerabilities); `npm run verify` passed first time: check-safety OK,
+  typecheck/lint/format clean, 2 unit tests, build + check-dist OK, 4 e2e tests (phone + desktop).
+- Mutation checks of the guardrails (all "failed as expected", then the test files were deleted):
+  1. `src/domain/x.ts` using `Date.now()` and `Math.random()` → lint fails (2 errors).
+  2. `src/domain/y.ts` importing `idb` → lint fails (`no-restricted-imports`).
+  3. `src/ui/x.ts` setting `innerHTML` and calling `window.alert` → lint fails (2 errors) and
+     check-safety fails (2 problems).
+  4. Build, then remove the CSP meta from `dist/index.html` → check-dist fails ("CSP meta missing").
+- Not yet verified (needs the owner / GitHub): CI run on the PR, branch protection, the Pages
+  deploy and the live page.

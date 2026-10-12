@@ -3,9 +3,9 @@
 _Read this first in every new session. Keep it short and current._
 
 ## Where we are
-- **Phase:** planning complete (M0). Next: **M1** (`docs/build/M1.md`), run by a Sonnet 5.5 session.
+- **Phase:** M1 (scaffold, guardrails, CI, deploy) built, **pending review and merge**. Next after merge: **M2** (`docs/build/M2.md`).
 - Repo: `jonathanskim96-ctrl/Sheet_Music_101`. App name: **Sheet Music 101**.
-- Live URL (after M1 is merged): https://jonathanskim96-ctrl.github.io/Sheet_Music_101/
+- Live URL (live once M1 is merged and Pages is on, see `docs/SETUP.md`): https://jonathanskim96-ctrl.github.io/Sheet_Music_101/
 - How the build works: `docs/build/README.md` (milestones, session prompts, owner steps).
 
 ## Decisions made
@@ -29,18 +29,21 @@ _Read this first in every new session. Keep it short and current._
 | 2026-10-12 | Tech: versions in `docs/build/SPEC.md` §2 were verified to install, build and test together (with npm 11 for installs; npm 10 has a resolver bug). |
 
 ## Waiting on the owner
-- [ ] Make the repository public (decided 2026-10-12: free GitHub Pages hosting). Steps: GitHub →
-      repo Settings → General → Danger Zone → Change visibility → Make public.
-- [ ] Set `main` as the default branch (`main` was created 2026-10-12): Settings → General →
-      Default branch → switch icon → choose `main` → Update.
+- [x] Make the repository public (done).
+- [x] Set `main` as the default branch (done).
+- [ ] Follow `docs/SETUP.md` section 2 (Pages source = GitHub Actions) before merging the M1 PR.
+- [ ] After the M1 PR is merged: SETUP section 3 (protect `main`), then open the live URL and
+      confirm "Sheet Music 101 · Coming soon" and the version line.
 
 ## Next step
-1. Owner does the two items above (M1 can start before, but deploy needs the repo public).
-2. Sonnet 5.5 session runs M1 using the execution prompt in `docs/build/README.md`.
+1. Review (Opus 5.5) of the M1 PR, then the owner merges it.
+2. M1 step 8: confirm in the Actions tab that `verify` and `deploy` both succeeded.
+3. Then M2 with the execution prompt in `docs/build/README.md`.
 
 ## How to run checks
-Not set up yet. From M1 on: `npm ci`, then `npm run verify`.
-Adding a package: `npx -y npm@11.6.2 install -E <pkg>@<version>` (see SPEC §2).
+`npm ci`, then `npm run verify` (check-safety, typecheck, lint, format, unit tests, build,
+check-dist, e2e). Adding a package: `npx -y npm@11.6.2 install -E <pkg>@<version>` (SPEC §2).
+Never run `npx playwright install` in a cloud session.
 
 ## Blocked
 (nothing)
