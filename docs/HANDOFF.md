@@ -25,14 +25,17 @@ _Read this first in every new session. Keep it short and current._
 | 2026-10-12 | Sound on by default, with mute. |
 | 2026-10-12 | Bright, colourful, entertaining style; mascot "Quaver". |
 | 2026-10-12 | Planner decisions (owner may veto): whole notes only, naturals only, range C2–C6; landmark teaching method; Leitner spaced repetition; leaving a lesson saves nothing; checkpoints let you jump ahead; no octave numbers shown to learners. |
+| 2026-10-12 | Hosting: GitHub Pages; the repository will be made public (code only, no data). |
 | 2026-10-12 | Tech: versions in `docs/build/SPEC.md` §2 were verified to install, build and test together (with npm 11 for installs; npm 10 has a resolver bug). |
 
 ## Waiting on the owner
-- [ ] Hosting: make the repository public (free GitHub Pages) or choose another option.
-- [ ] Create `main` as the default branch (currently the planning branch is the default).
+- [ ] Make the repository public (decided 2026-10-12: free GitHub Pages hosting). Steps: GitHub →
+      repo Settings → General → Danger Zone → Change visibility → Make public.
+- [ ] Set `main` as the default branch (`main` was created 2026-10-12): Settings → General →
+      Default branch → switch icon → choose `main` → Update.
 
 ## Next step
-1. Owner resolves the two items above.
+1. Owner does the two items above (M1 can start before, but deploy needs the repo public).
 2. Sonnet 5.5 session runs M1 using the execution prompt in `docs/build/README.md`.
 
 ## How to run checks
