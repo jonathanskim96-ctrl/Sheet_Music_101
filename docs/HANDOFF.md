@@ -3,9 +3,10 @@
 _Read this first in every new session. Keep it short and current._
 
 ## Where we are
-- **Phase:** planning (milestone M0). No app code yet.
+- **Phase:** planning complete (M0). Next: **M1** (`docs/build/M1.md`), run by a Sonnet 5.5 session.
 - Repo: `jonathanskim96-ctrl/Sheet_Music_101`. App name: **Sheet Music 101**.
-- Plan: `docs/PLAN.md` (product, curriculum, tech, milestones).
+- Live URL (after M1 is merged): https://jonathanskim96-ctrl.github.io/Sheet_Music_101/
+- How the build works: `docs/build/README.md` (milestones, session prompts, owner steps).
 
 ## Decisions made
 | Date | Decision |
@@ -14,25 +15,29 @@ _Read this first in every new session. Keep it short and current._
 | 2026-10-12 | Teaches treble and bass clef for piano. |
 | 2026-10-12 | Duolingo-style: units, lessons, levels, progress markers. |
 | 2026-10-12 | Easy difficulty; sustainable learning over condensed learning. |
-| 2026-10-12 | Opus 5.5 for planning, Sonnet 5.5 for execution. |
+| 2026-10-12 | Opus 5.5 for planning and reviews, Sonnet 5.5 for execution. |
 | 2026-10-12 | Follow `docs/APP_BUILD_PLAYBOOK.md` for process and safety rules. |
 | 2026-10-12 | Progress stored on each device (IndexedDB), no backend/accounts; export/import backup file. |
 | 2026-10-12 | **No streak.** Show total days practised and XP instead. |
 | 2026-10-12 | **No hearts/lives.** Mistakes are explained and repeated, never block. |
-| 2026-10-12 | Answer with A–G letter buttons first; on-screen piano keyboard unlocks later. |
+| 2026-10-12 | Answer with A–G letter buttons first; on-screen piano keyboard unlocks after Unit 4. |
+| 2026-10-12 | Two learners use separate phones (no profiles). |
+| 2026-10-12 | Sound on by default, with mute. |
+| 2026-10-12 | Bright, colourful, entertaining style; mascot "Quaver". |
+| 2026-10-12 | Planner decisions (owner may veto): whole notes only, naturals only, range C2–C6; landmark teaching method; Leitner spaced repetition; leaving a lesson saves nothing; checkpoints let you jump ahead; no octave numbers shown to learners. |
+| 2026-10-12 | Tech: versions in `docs/build/SPEC.md` §2 were verified to install, build and test together (with npm 11 for installs; npm 10 has a resolver bug). |
 
-## Open decisions
-See `docs/PLAN.md` section 8 (two learners on one device or two, sound default,
-look and feel).
+## Waiting on the owner
+- [ ] Hosting: make the repository public (free GitHub Pages) or choose another option.
+- [ ] Create `main` as the default branch (currently the planning branch is the default).
 
 ## Next step
-1. Owner answers the open decisions → record them above.
-2. Opus session finalises the plan for M1.
-3. Sonnet session builds M1 (scaffold + deploy pipeline).
+1. Owner resolves the two items above.
+2. Sonnet 5.5 session runs M1 using the execution prompt in `docs/build/README.md`.
 
 ## How to run checks
-Not set up yet (comes with M1).
+Not set up yet. From M1 on: `npm ci`, then `npm run verify`.
+Adding a package: `npx -y npm@11.6.2 install -E <pkg>@<version>` (see SPEC §2).
 
-## Docs still to create (with M1)
-- `docs/SETUP.md`: click-by-click GitHub Pages setup and phone install.
-- `docs/RECOVERY.md`: how to back up and restore progress (export/import).
+## Blocked
+(nothing)

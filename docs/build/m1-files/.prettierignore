@@ -1,0 +1,13 @@
+dist/
+dist-e2e/
+node_modules/
+package-lock.json
+test-results/
+playwright-report/
+public/
+LICENSES/
+tools/
+docs/
+*.md
+src/notation/glyphs.ts
+tests/fixtures/

@@ -1,7 +1,7 @@
 # Sheet Music 101: product and build plan
 
-Status: **planning**. Items marked **[DECIDE]** are waiting on the owner.
-Everything else is a proposal the owner can change.
+Status: **planning complete** (2026-10-12). This is the overview; the exact build
+instructions are in `docs/build/` (start with `docs/build/README.md`).
 
 ---
 
@@ -9,7 +9,7 @@ Everything else is a proposal the owner can change.
 
 A small installable web app (PWA) that teaches one or two people to read piano
 sheet music: **treble clef and bass clef**. It's styled after Duolingo: short
-lessons, a path of units, progress markers, a daily goal and a streak.
+lessons, a path of units, progress markers, a daily goal and a count of days practised.
 
 Guiding principle: **sustainable over intense.** Lessons are short and easy,
 new material comes slowly, and review does most of the work. Missing a day
@@ -19,7 +19,7 @@ should never feel like a punishment.
 - Note names on the treble staff, bass staff and grand staff (C2 to C6 by the end).
 - Ledger lines (including Middle C between the staves).
 - Answering by tapping a note name, and later by tapping an on-screen piano key.
-- Units, lessons, review sessions, XP, per-skill levels, daily goal, streak.
+- Units, lessons, review sessions, XP, per-skill levels, daily goal, days practised.
 - Works offline, installs to the phone home screen.
 
 ### Out of scope for now
@@ -66,8 +66,9 @@ more durable than memorising every line and space at once. Mnemonics
 
 ## 3. Curriculum draft
 
-Each unit is a group of lessons on the path. Pace guide at 1 lesson a day:
-the whole of v1 takes roughly 3–4 months.
+Each unit is a group of lessons on the path. Exact lessons are in
+`docs/build/CURRICULUM.md` (43 main-path lessons; about 6–8 weeks at one lesson a day, with
+levels 2–3 and reviews adding as much again).
 
 | Unit | Topic | New notes |
 |---|---|---|
@@ -84,8 +85,10 @@ the whole of v1 takes roughly 3–4 months.
 | 11 | **Steps and skips:** reading by distance between notes | (intervals) |
 | ★ | **Checkpoint tests** at the end of units 4, 7, 10 (optional, can skip ahead) | |
 
+If this summary and `docs/build/CURRICULUM.md` ever differ, CURRICULUM.md is right.
+
 Each unit's skill has **levels 1–3** (like Duolingo's crowns): level 1 = name the
-note, level 2 = adds keyboard questions, level 3 = adds speed/finding on the staff.
+note, level 2 = adds keyboard questions, level 3 = exact keys and placing notes on the staff.
 Players can move forward after level 1; higher levels are optional extra depth.
 
 ---
@@ -121,13 +124,13 @@ and no server**.
 - **Sheet music drawing:** our own small SVG component (staff, clefs, notes, ledger
   lines). We only draw single notes, so a library like VexFlow is more than we need;
   own SVG keeps the app small, offline-friendly and fully under our control.
-  The clef symbols come from an open-licensed music font or SVG paths (Bravura,
-  SIL Open Font License).
+  The clef symbols are outlines extracted from the Bravura music font (SIL Open Font
+  License), already in `src/notation/glyphs.ts`.
 - **Sound:** piano-like tones generated with the Web Audio API (no audio files to
   download). Mute toggle; sound starts only after a tap (browser rule).
 - **Architecture** (playbook section 4):
   - `src/domain/`: pure logic, no I/O: notes and pitch maths, staff positions,
-    curriculum definition, lesson builder, spaced-repetition scheduler, XP/streak rules,
+    curriculum definition, lesson builder, spaced-repetition scheduler, XP and daily-goal rules,
     progress validator, import/export. Thoroughly unit tested and fuzzed.
   - `src/data/`: IndexedDB storage, schema upgrades, defensive normalising of anything
     read from storage or an import file.
@@ -140,7 +143,7 @@ and no server**.
 ### Testing
 - Unit + fuzz: pitch/staff maths (every note maps to the right line/space in each clef),
   lesson builder (never more than the allowed number of new notes, always valid
-  answers), scheduler, streak across time zones/daylight saving, import validator.
+  answers), scheduler, day counting across time zones/daylight saving, import validator.
 - Browser e2e: complete a lesson, progress survives reload, offline use, export →
   reset → import round trip, install/update flow.
 - Accessibility basics: buttons large enough on phone, colour is never the only signal,
@@ -150,18 +153,9 @@ and no server**.
 
 ## 6. Milestones
 
-| # | Milestone | Owner can try it? |
-|---|---|---|
-| M0 | Planning docs, decisions recorded (this) | No |
-| M1 | Scaffold: Vite/React/TS/PWA, lint, tests, deploy workflow, empty app live on GitHub Pages | Yes: open the URL |
-| M2 | Domain core: notes, staff maths, SVG staff renderer, sound | Yes: a demo page of notes |
-| M3 | First playable lesson: Unit 2 with "name the note" | **Yes: first real use** |
-| M4 | Saving progress, path screen, XP, daily goal, streak, export/import | Yes |
-| M5 | Spaced-repetition review, mastery chart | Yes |
-| M6 | Full curriculum units 1–11, keyboard questions, levels 1–3, checkpoints | Yes |
-| M7 | Polish, two review passes (code + security), install on phones | Go live |
-
----
+See `docs/build/README.md` for the table, the session prompts and the owner's steps.
+M1 scaffold + deploy · M2 domain logic · M3 look/sound/notation · M4 saving + first lessons ·
+M5 progress/settings/backups · M6 full curriculum · M7 hardening and go-live.
 
 ## 7. Ideas for later
 - MIDI keyboard input (USB/Bluetooth piano) via Web MIDI.
@@ -171,12 +165,13 @@ and no server**.
 
 ---
 
-## 8. Open decisions **[DECIDE]**
+## 8. Decisions (all made 2026-10-12)
 
-Decided 2026-10-12: storage on each device; no streak; no hearts; letter buttons
-first, on-screen keyboard unlocked later. Still open:
-
-1. **Two learners:** if two people use it, on separate phones (works automatically
-   with on-device storage) or sharing one device (needs profiles)?
-2. **Sound:** on by default (recommended) vs off by default.
-3. **Look and feel:** bright and playful (Duolingo-like) vs calm and minimal.
+- Progress stored on each device; backup by export/import file.
+- Two learners use separate phones (no profiles needed).
+- No streak; total days practised and XP instead.
+- No hearts.
+- Letter buttons first; on-screen keyboard unlocks after Unit 4.
+- Sound on by default, with a mute button.
+- Bright, colourful, entertaining look with a mascot ("Quaver").
+- Hosting: GitHub Pages (needs the repository to be public, or another choice recorded in HANDOFF).

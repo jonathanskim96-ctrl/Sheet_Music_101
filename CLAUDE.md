@@ -1,8 +1,12 @@
 # CLAUDE.md: standing rules for every AI session
 
-**Read `docs/HANDOFF.md` first**, then `docs/PLAN.md`. `docs/APP_BUILD_PLAYBOOK.md`
-is the owner's general playbook; follow its process and safety rules, adapted as
-described in `docs/PLAN.md` section 5 (this app has no server or database).
+**Read `docs/HANDOFF.md` first**, then `docs/build/README.md`. The build is specified in
+`docs/build/` (SPEC, CURRICULUM, STANDARDS, M1–M7); `docs/PLAN.md` is the overview.
+`docs/APP_BUILD_PLAYBOOK.md` is the owner's general playbook; its process and safety rules
+apply, adapted in `docs/build/STANDARDS.md` (this app has no server or database).
+
+If the spec documents and the code disagree, the spec wins; if the spec is unclear or
+silent on product behaviour, ask the owner. Do not improvise.
 
 ## Model split
 - **Planning, product decisions, architecture, reviews:** Opus 5.5.
@@ -46,7 +50,11 @@ described in `docs/PLAN.md` section 5 (this app has no server or database).
 - CI: least-privilege `permissions:`; untrusted values via `env:`, never `${{ }}`
   inside `run:`.
 
+- Add or upgrade packages only with `npx -y npm@11.6.2 install -E <pkg>@<version>`
+  (exact versions, at least two weeks old); clean installs use `npm ci`.
+- Never run `npx playwright install` in a cloud session (Chromium is pre-installed).
+
 ## Before every push
-Run the full check chain (exact command will be listed in `docs/HANDOFF.md` once
-the project is scaffolded) and report honestly what passed. Update
-`docs/HANDOFF.md` and `NOTES.md` with what changed.
+Run `npm run verify` (from M1 on) and report honestly what passed, with the output tail.
+Do the "debug again" pass in `docs/build/STANDARDS.md` §5 before calling a milestone done.
+Update `docs/HANDOFF.md` and `NOTES.md` with what changed.
