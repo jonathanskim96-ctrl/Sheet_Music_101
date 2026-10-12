@@ -1,6 +1,6 @@
 # Sheet Music 101: product and build plan
 
-Status: **planning (draft)**. Items marked **[DECIDE]** are waiting on the owner.
+Status: **planning**. Items marked **[DECIDE]** are waiting on the owner.
 Everything else is a proposal the owner can change.
 
 ---
@@ -95,11 +95,11 @@ Players can move forward after level 1; higher levels are optional extra depth.
 - **Path view:** units shown as a winding path of lesson bubbles; done / current / locked.
 - **XP:** ~10 XP per lesson, small bonus for a perfect lesson.
 - **Daily goal:** default 1 lesson (options: 1, 2 or 3).
-- **Streak:** counts days with the daily goal met. **[DECIDE]** how forgiving
-  (see section 8).
+- **No streak** (owner decision). Instead show **total days practised** and total XP,
+  which only ever go up. The daily goal is just today's ring; missing it has no effect.
 - **Note mastery chart:** a grand staff where each note is coloured by how well
   it's known; this is the clearest "progress marker" for this subject.
-- **No hearts / lives.** Mistakes never block learning. **[DECIDE]**
+- **No hearts / lives.** Mistakes never block learning. (Owner decision.)
 - Small celebration screen at lesson end (XP, accuracy, notes improved).
 
 ---
@@ -112,7 +112,7 @@ and no server**.
 - **Stack:** React + Vite + TypeScript + `vite-plugin-pwa`; vitest; Playwright e2e.
 - **Hosting:** GitHub Pages via GitHub Actions, free. Deploy gated on checks.
 - **Data:** stored **on the device** in IndexedDB. No account, no backend, no
-  Supabase. **[DECIDE]** (see section 8).
+  Supabase. (Owner decision.)
   - Versioned local schema with additive upgrade steps (the local equivalent of the
     playbook's "migrations are additive").
   - **Export / import progress** to a JSON file as a backup, and to move to a new phone.
@@ -173,14 +173,10 @@ and no server**.
 
 ## 8. Open decisions **[DECIDE]**
 
-1. **Where progress is stored.** On each device only (recommended, no setup, no
-   account) vs synced through a cloud database (Supabase, needs sign-in setup).
-2. **Two learners:** if two people use it, on separate phones (works automatically
+Decided 2026-10-12: storage on each device; no streak; no hearts; letter buttons
+first, on-screen keyboard unlocked later. Still open:
+
+1. **Two learners:** if two people use it, on separate phones (works automatically
    with on-device storage) or sharing one device (needs profiles)?
-3. **Streak style:** gentle (rest days / streak freezes earned automatically,
-   recommended) vs classic (miss a day, streak resets) vs no streak.
-4. **Hearts / lives:** none (recommended) vs Duolingo-style hearts.
-5. **Answer method at the start:** letter buttons first, keyboard unlocked later
-   (recommended) vs keyboard from day one.
-6. **Sound:** on by default (recommended) vs off by default.
-7. **Look and feel:** bright and playful (Duolingo-like) vs calm and minimal.
+2. **Sound:** on by default (recommended) vs off by default.
+3. **Look and feel:** bright and playful (Duolingo-like) vs calm and minimal.

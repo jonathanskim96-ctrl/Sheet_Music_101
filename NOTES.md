@@ -7,3 +7,4 @@
   sound, Leitner-box spaced repetition, landmark-note teaching method,
   11-unit curriculum (about 3–4 months at one lesson a day).
 - Waiting on owner answers to the open decisions in `docs/PLAN.md` section 8.
+- Owner decided: on-device storage, no streak, no hearts, letters first then keyboard.
