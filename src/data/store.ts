@@ -25,6 +25,7 @@ export interface StoreDeps {
   readRecord: typeof db.readRecord;
   writeFresh: typeof db.writeFresh;
   transactCommit: typeof db.transactCommit;
+  readRaw: typeof db.readRaw;
 }
 
 const REAL_DEPS: StoreDeps = {
@@ -32,6 +33,7 @@ const REAL_DEPS: StoreDeps = {
   readRecord: db.readRecord,
   writeFresh: db.writeFresh,
   transactCommit: db.transactCommit,
+  readRaw: db.readRaw,
 };
 
 /** A planner produced something invalid (a bug in the app, never the learner's fault). */
@@ -262,24 +264,57 @@ export class ProgressStore {
     }
   }
 
+  /**
+   * The last progress known to be good (on screen or saved), for the error screen's backup
+   * button. Null if nothing was ever loaded.
+   */
+  lastGoodProgress(): Progress | null {
+    const s = this.state;
+    if (s.status === 'ready' || s.status === 'unavailable') return s.progress;
+    return this.saved;
+  }
+
+  /**
+   * The stored value exactly as it is, for the broken screen's "Download the saved data".
+   * Opens its own connection (after a failed read the store keeps none) and never writes.
+   */
+  async readRawRecord(): Promise<unknown> {
+    const handle = await this.deps.openDb(this.dbName);
+    try {
+      return await this.deps.readRaw(handle);
+    } finally {
+      handle.close();
+    }
+  }
+
   /** From the "broken" screen only, after the learner confirms: replaces the unreadable record. */
   startFresh(now: Date): Promise<void> {
     return this.enqueue(async () => {
-      const handle = this.handle;
-      if (this.state.status !== 'broken' || handle === null) {
+      if (this.state.status !== 'broken') {
         throw new Error('Start fresh is only possible when the saved data is unreadable.');
       }
+      // After a failed read no connection is kept: open one now. The transaction below still
+      // refuses to replace a record that has become readable.
+      const opened = this.handle === null;
+      const handle = this.handle ?? (await this.deps.openDb(this.dbName));
       const fresh = emptyProgress(dayKeyOf(now));
-      const record = await this.deps.transactCommit(
-        handle,
-        (current) => {
-          // Another tab (or a newer app version) may have saved readable progress since this
-          // tab gave up on it: that progress must never be replaced.
-          if (current !== null && interpret(current.doc).ok) throw new Error(MSG_READABLE_AGAIN);
-          return fresh;
-        },
-        now.toISOString(),
-      );
+      let record: db.StoredRecord;
+      try {
+        record = await this.deps.transactCommit(
+          handle,
+          (current) => {
+            // Another tab (or a newer app version) may have saved readable progress since this
+            // tab gave up on it: that progress must never be replaced.
+            if (current !== null && interpret(current.doc).ok) throw new Error(MSG_READABLE_AGAIN);
+            return fresh;
+          },
+          now.toISOString(),
+        );
+      } catch (e) {
+        if (opened) handle.close();
+        throw e;
+      }
+      this.handle = handle;
       this.saved = fresh;
       this.rev = record.rev;
       this.pending = [];
