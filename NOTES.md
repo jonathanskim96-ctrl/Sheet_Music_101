@@ -79,3 +79,25 @@
   `tests/fixtures/v1-a.json` without a lock → check-safety fails; `'unsafe-inline'` added to
   script-src in `dist/index.html` → check-dist fails; `http://evil.example/x` appended to a
   dist JS file → check-dist fails. Probe files deleted afterwards.
+
+## 2026-10-13: M2 executed (domain core)
+- Built SPEC §4 in `src/domain/` in the order of `M2.md` (18 steps, one commit per step or two): notes, cards, days,
+  rng, srs, progress, curriculum + content, ids lock, landmarks (+ `describePosition`), keyboard window, validate,
+  upgrades + first fixture, unlocks, questions, lesson builder, session, planners, backup. Plus `testkit.ts` (test-only
+  helpers: deep freeze, random valid progress) and `edge.test.ts` (empty and fully finished progress).
+- `npm run verify` green: 20 test files, 735 tests (property tests: notes, days, srs, lessonBuilder over every lesson ×
+  200 seeds × random progress, session, planners, validate fuzz, backup).
+- Mutation checks (break a guardrail or rule on purpose, confirm tests fail, restore with `git checkout`), all "failed
+  as expected": id removed from `ids.lock.json`; lesson id renamed; fixture edited (`check-safety`); promotion-once-per-day
+  removed; retry gap 3→2; checkpoint pass mark 13→12; checkpoint XP bonus changed; `correct ≤ seen` check removed;
+  floats accepted by validate; unknown card ids kept by validate; backup size cap raised; repeat-free ordering removed;
+  keyboard unlock moved to u4-l4; level 2 no longer needs the keyboard; find-key-letter accepting any key; `SLOW_MS` 6000→7000
+  (this one was NOT caught at first because the test used the constant itself, so a literal 6000/6001 test was added).
+- Gotchas:
+  - `check-safety` scans test files too: a hostile-payload test string containing `alert(` tripped it; payload text now avoids it.
+  - Assigning `obj['__proto__'] = x` in a test changes the prototype instead of creating a key; tests use `Object.defineProperty`
+    (or `JSON.parse`) to make a real own `__proto__` key.
+  - `fc.date()` can produce invalid dates by default in fast-check 4 (`noInvalidDate: true`); day arbitraries use integers instead.
+  - SPEC §4.7 says the lesson id pattern excludes `constructor`; it does not. All lookups use `Object.hasOwn`
+    (`isCompleted`, planners, validate) and there is a test with a lesson called `constructor`.
+- Not verified: nothing about the UI (none exists yet); CI on the pull request; the Opus review.

@@ -55,6 +55,11 @@ describe('updateCard (SPEC 4.5 rules)', () => {
     expect(updateCard(undefined, true, 1_000_000, T).avgMs).toBe(60_000);
     expect(updateCard(undefined, true, Number.NaN, T).avgMs).toBe(0);
   });
+  it('rule 4: the slow threshold is exactly 6 seconds', () => {
+    expect(SLOW_MS).toBe(6000);
+    expect(updateCard(card({ box: 2 }), true, 6000, T).box).toBe(3);
+    expect(updateCard(card({ box: 2 }), true, 6001, T).box).toBe(2);
+  });
   it('rule 4: a fast correct answer promotes one box', () => {
     const c = updateCard(card({ box: 2 }), true, SLOW_MS, T);
     expect(c.box).toBe(3);
