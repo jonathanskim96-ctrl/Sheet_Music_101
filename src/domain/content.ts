@@ -412,6 +412,9 @@ export const KEYBOARD_UNLOCKED = {
   button: 'Cool!',
 } as const;
 
+/** iPhones mute Web Audio in Silent mode; the app obeys that and says so (SPEC 7.7). */
+export const SILENT_HINT = "No sound? Check that your iPhone isn't on Silent.";
+
 export const LEAVE_LESSON = {
   title: 'Leave this lesson?',
   body: "Your answers in this lesson won't be saved.",

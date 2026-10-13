@@ -64,7 +64,7 @@ keeps the recommended option until the owner says otherwise.
 
 ## Next step
 1. M4 review follow-up merged (PR #10). Owner: close PR #8 (already in `main`).
-2. Sonnet fix session (prompt given to the owner on 2026-10-13): PR #10 items 1–2 (item 1 approved by the owner) and the iPhone Silent-mode lesson hint (SPEC 7.7). The Settings part of the hint comes with M5.
+2. Sonnet fix session done (PR open, awaiting review): read failures now show the "couldn't read" screen, failed lesson saves show once, and the iPhone Silent-mode hint shows in lessons (`pwa/platform.ts` `isIosDevice` is ready for M5's `install.ts`). The Settings part of the hint comes with M5.
 3. Opus review of that fix PR, then M5.
 3. M5 with the execution prompt in `docs/build/README.md`.
 

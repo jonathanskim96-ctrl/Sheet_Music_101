@@ -254,3 +254,11 @@
   flex-direction: column;
   gap: 8px;
 }
+
+.silentHint {
+  margin: 0;
+  padding: 0 var(--gutter) 8px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-muted);
+}

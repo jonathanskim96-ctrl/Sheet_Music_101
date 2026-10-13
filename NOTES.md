@@ -169,3 +169,15 @@
   picture labels stay with their marked notes; unused `replaceRoute` removed.
 - Mutation-checked both new store tests (each fails with its fix removed).
 
+
+## 2026-10-13: M4 review fix session (PR #10 items 1–2, Silent-mode hint)
+- Store: once the database has opened, a failing read (or failing first write) is `broken` with the error text as the
+  reason and the handle is closed; `unavailable` is now only "IndexedDB can't be opened". Two new store tests; both fail
+  with the fix removed (checked). The stored record is unchanged. With no handle kept, `startFresh` cannot run after a
+  read failure (deliberate: that data was never shown to be unreadable, only unreadable right now).
+- Lesson complete: `useCommit(planner, { toast: false })` so a failed result save shows only the inline alert.
+  Not tested end to end: planners cap their numbers, so the UI cannot produce an invalid result, and there is no DOM
+  unit-test setup. The change is two lines; `tsc`/lint cover it.
+- Silent-mode hint (SPEC 7.7, lessons only): `pwa/platform.ts` `isIosDevice` (reusable by M5 `install.ts`), text in
+  `content.ts` `SILENT_HINT`, a module flag keeps it to once per app run. e2e: iPhone UA shows then hides it; default UA
+  never shows it. Settings part comes with M5.
