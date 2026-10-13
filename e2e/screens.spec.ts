@@ -6,6 +6,7 @@ import {
   playLesson,
   progressAfter,
   seedProgress,
+  fireControllerChange,
   seedRecord,
 } from './helpers';
 
@@ -222,10 +223,7 @@ for (const scheme of ['light', 'dark'] as const) {
     await shot('start-over-2');
     await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
 
-    await page.evaluate(() => {
-      const fire: unknown = Reflect.get(window, '__e2eFireControllerChange');
-      if (typeof fire === 'function') fire();
-    });
+    await fireControllerChange(page);
     await expect(page.getByTestId('update-banner')).toBeVisible();
     await shot('update-banner');
 

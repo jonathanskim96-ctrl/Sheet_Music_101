@@ -117,7 +117,7 @@ test('the install card offers Install when the browser allows it', async ({ page
   });
   const card = page.getByTestId('install-card');
   await card.getByRole('button', { name: 'Install' }).click();
-  expect(await page.evaluate(() => Reflect.get(window, 'installPrompted'))).toBe(true);
+  expect(await page.evaluate((): unknown => Reflect.get(window, 'installPrompted'))).toBe(true);
   // the prompt can only be used once, so the card has nothing left to offer
   await expect(card).toHaveCount(0);
 });

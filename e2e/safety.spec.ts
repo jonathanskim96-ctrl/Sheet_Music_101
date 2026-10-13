@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { test, expect } from './fixtures';
-import { readStored, seedRecord, startFresh } from './helpers';
+import { fireControllerChange, readStored, seedRecord, startFresh } from './helpers';
 
 const BROKEN = { rev: 7, savedAt: '2026-10-12T10:00:00.000Z', doc: 'garbage' };
 const HEADING = "We couldn't read your saved progress.";
@@ -59,10 +59,7 @@ test('the update banner appears when a new version takes over, and Reload reload
 }) => {
   await startFresh(page);
   await expect(page.getByTestId('update-banner')).toHaveCount(0);
-  await page.evaluate(() => {
-    const fire: unknown = Reflect.get(window, '__e2eFireControllerChange');
-    if (typeof fire === 'function') fire();
-  });
+  await fireControllerChange(page);
   const banner = page.getByTestId('update-banner');
   await expect(banner).toHaveText(/A new version is ready\./);
   await banner.getByRole('button', { name: 'Reload' }).click();
