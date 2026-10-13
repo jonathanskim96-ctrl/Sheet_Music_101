@@ -156,6 +156,16 @@ export function createSynth(
     return c;
   };
 
+  // iOS Safari uses a non-standard 'interrupted' state after a call or app switch. Chrome rejects
+  // a pending resume() when we close a stuck engine; that engine is already replaced, so it isn't
+  // a sound failure and must not show the toast.
+  const wake = (c: AudioContextLike) => {
+    if (c.state === 'running') return;
+    c.resume().catch((e: unknown) => {
+      if (ctx === c) report(e);
+    });
+  };
+
   // iOS only lets a sound start inside a tap; a one-sample silent buffer counts as "playing".
   const primeWithSilence = (c: AudioContextLike) => {
     const source = c.createBufferSource();
@@ -168,8 +178,7 @@ export function createSynth(
     // A closed engine can never run again; build a new one.
     if (ctx?.state === 'closed') ctx = null;
     const c = ctx ?? build();
-    // iOS Safari uses a non-standard 'interrupted' state after a call or app switch.
-    if (c.state !== 'running') c.resume().catch(report);
+    wake(c);
     if (!master) throw new Error('Audio engine has no output');
     return { ctx: c, out: master };
   };
@@ -178,11 +187,11 @@ export function createSynth(
   // tap started is checked, so a tap rebuilds at most once and the replacement waits for the next tap.
   const rebuildIfStuck = (checked: AudioContextLike) => {
     try {
-      if (ctx !== checked || checked.state === 'running') return;
-      const fresh = checked.state === 'closed' ? null : checked.close();
-      fresh?.catch(report);
+      if (muted || ctx !== checked || checked.state === 'running') return;
+      const closing = checked.state === 'closed' ? null : checked.close();
+      closing?.catch(report);
       const c = build();
-      if (c.state !== 'running') c.resume().catch(report);
+      wake(c);
       primeWithSilence(c);
     } catch (e) {
       report(e);
@@ -212,6 +221,8 @@ export function createSynth(
   };
 
   const unlock = () => {
+    // Muted means every call is a no-op (SPEC 7.7): no engine, no toast.
+    if (muted) return;
     try {
       const { ctx: c } = ready();
       primeWithSilence(c);

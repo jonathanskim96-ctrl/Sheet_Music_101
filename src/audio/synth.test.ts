@@ -297,6 +297,28 @@ describe('unlock (first tap)', () => {
     expect(onError).toHaveBeenCalledTimes(1);
   });
 
+  it('does nothing while muted: no engine, no rebuild, no error', () => {
+    vi.useFakeTimers();
+    try {
+      const onError = vi.fn();
+      const factory = vi.fn(() => fakeContext('suspended').ctx);
+      const s = createSynth(factory, onError);
+      s.setMuted(true);
+      s.unlock();
+      vi.advanceTimersByTime(1000);
+      expect(factory).not.toHaveBeenCalled();
+      // muting during the 300 ms wait cancels the rebuild too
+      s.setMuted(false);
+      s.unlock();
+      s.setMuted(true);
+      vi.advanceTimersByTime(300);
+      expect(factory).toHaveBeenCalledTimes(1);
+      expect(onError).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('isRunning follows the engine state', () => {
     const f = fakeContext('suspended');
     const s = createSynth(() => f.ctx);
@@ -311,16 +333,25 @@ describe('unlock (first tap)', () => {
 /** A document stand-in: a real EventTarget plus a visibilityState we can change. */
 function fakeDocument() {
   const target = new EventTarget();
+  // Attached listeners, deduplicated by type and phase like the real DOM does.
+  const active = new Set<string>();
   const doc = {
     visibilityState: 'visible',
     addEventListener: (type: string, fn: () => void, capture?: boolean) => {
       target.addEventListener(type, fn, { capture: capture === true });
+      active.add(`${type}:${String(capture === true)}`);
     },
     removeEventListener: (type: string, fn: () => void, capture?: boolean) => {
       target.removeEventListener(type, fn, { capture: capture === true });
+      active.delete(`${type}:${String(capture === true)}`);
     },
   } satisfies UnlockTarget;
-  return { doc, fire: (type: string) => target.dispatchEvent(new Event(type)) };
+  return {
+    doc,
+    fire: (type: string) => target.dispatchEvent(new Event(type)),
+    /** Capture-phase tap listeners still attached. */
+    tapListeners: () => [...active].filter((k) => k.endsWith(':true')).length,
+  };
 }
 
 describe('installUnlock', () => {
@@ -351,6 +382,22 @@ describe('installUnlock', () => {
     d.fire('click');
     expect(f.created.resumed).toBe(2);
     expect(f.created.silent).toBe(2);
+  });
+
+  it('removes its tap listeners once a tap finds the engine running', () => {
+    const f = fakeContext('suspended');
+    const s = createSynth(() => f.ctx);
+    const d = fakeDocument();
+    installUnlock(s, d.doc);
+    expect(d.tapListeners()).toBe(4);
+    d.fire('click');
+    expect(d.tapListeners()).toBe(4);
+    (f.ctx as { state: string }).state = 'running';
+    d.fire('click');
+    expect(d.tapListeners()).toBe(0);
+    d.doc.visibilityState = 'hidden';
+    d.fire('visibilitychange');
+    expect(d.tapListeners()).toBe(4);
   });
 
   it('listens again after the page has been hidden', () => {
@@ -477,6 +524,35 @@ describe('restarting a stuck engine', () => {
     s.playNote('C4');
     expect(factory).toHaveBeenCalledTimes(2);
     expect(made[1]?.oscillators).toHaveLength(4);
+  });
+
+  it("doesn't show the toast when closing a stuck engine rejects its pending resume() (Chrome)", async () => {
+    vi.useFakeTimers();
+    try {
+      const onError = vi.fn();
+      const stuck = fakeContext('suspended');
+      let rejectResume: (e: Error) => void = () => undefined;
+      stuck.ctx.resume = () =>
+        new Promise<void>((_, reject) => {
+          rejectResume = reject;
+        });
+      stuck.ctx.close = () => {
+        rejectResume(new Error('Audio context is going away'));
+        return Promise.resolve();
+      };
+      const good = fakeContext('running');
+      const list = [stuck, good];
+      let n = 0;
+      const s = createSynth(() => (list[n++] ?? good).ctx, onError);
+      s.unlock();
+      vi.advanceTimersByTime(300);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(onError).not.toHaveBeenCalled();
+      s.playNote('C4');
+      expect(good.oscillators).toHaveLength(4);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('reports a failing close() once, and keeps working', async () => {
