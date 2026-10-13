@@ -6,6 +6,7 @@ import '@fontsource/nunito/latin-800.css';
 import './styles/tokens.css';
 import './styles/base.css';
 import { App } from './app/App';
+import { installAudioUnlock, synth } from './audio/synth';
 import { registerServiceWorker } from './pwa/register';
 
 // Frame-busting: this app must never run inside someone else's page.
@@ -18,6 +19,7 @@ try {
 }
 
 registerServiceWorker();
+installAudioUnlock(synth, document);
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Missing #root element');

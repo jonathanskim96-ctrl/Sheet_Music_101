@@ -1,10 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { frequency } from '../domain/notes';
 import {
   CORRECT_PLAN,
   FANFARE_PLAN,
+  LEAD,
   WRONG_PLAN,
   createSynth,
+  installAudioUnlock,
   notePlan,
   setAudioErrorHandler,
   synth,
@@ -14,14 +16,22 @@ import {
 type Call = [name: string, value: number, time: number];
 
 /** A fake AudioContext that records what was scheduled; never makes sound. */
-function fakeContext(state = 'running') {
+function fakeContext(initial = 'running') {
+  const control = { state: initial };
   const oscillators: { type: OscillatorType; freq: number; start: number; stop: number }[] = [];
   const gains: { calls: Call[] }[] = [];
-  const created = { resumed: 0 };
+  const created = { resumed: 0, silences: 0, closed: 0 };
   const ctx: AudioContextLike = {
     currentTime: 10,
-    state,
+    get state() {
+      return control.state;
+    },
     destination: {},
+    close: () => {
+      created.closed++;
+      control.state = 'closed';
+      return Promise.resolve();
+    },
     resume: () => {
       created.resumed++;
       return Promise.resolve();
@@ -75,8 +85,16 @@ function fakeContext(state = 'running') {
       };
     },
     createDynamicsCompressor: () => ({ connect: () => undefined }),
+    createBuffer: () => ({}),
+    createBufferSource: () => ({
+      buffer: null,
+      connect: () => undefined,
+      start: () => {
+        created.silences++;
+      },
+    }),
   };
-  return { ctx, oscillators, gains, created };
+  return { ctx, oscillators, gains, created, control };
 }
 
 describe('notePlan', () => {
@@ -130,6 +148,24 @@ describe('tone plans match SPEC 7.7', () => {
   });
 });
 
+describe('scheduling ahead', () => {
+  it('starts every sound 20 ms after the engine clock, not at it', () => {
+    expect(LEAD).toBe(0.02);
+    const f = fakeContext();
+    const s = createSynth(() => f.ctx);
+    s.playNote('C4');
+    s.playCorrect();
+    s.playWrong();
+    s.playFanfare();
+    const first = f.oscillators.filter((o) => o.start < 10 + LEAD - 1e-9);
+    expect(first).toHaveLength(0);
+    expect(f.oscillators[0]?.start).toBeCloseTo(10.02);
+    expect(f.oscillators[4]?.start).toBeCloseTo(10.02);
+    expect(f.oscillators[6]?.start).toBeCloseTo(10.02);
+    expect(f.oscillators[8]?.start).toBeCloseTo(10.02);
+  });
+});
+
 describe('createSynth', () => {
   it('creates no AudioContext until the first play call', () => {
     const factory = vi.fn(() => fakeContext().ctx);
@@ -147,19 +183,25 @@ describe('createSynth', () => {
     s.playNote('G4', 0.25, 1.2);
     expect(f.oscillators).toHaveLength(4);
     expect(f.oscillators.map((o) => o.type)).toEqual(['sine', 'sine', 'sine', 'sine']);
-    expect(f.oscillators[0]?.start).toBeCloseTo(10.25);
+    expect(f.oscillators[0]?.start).toBeCloseTo(10.27);
     expect(f.oscillators[0]?.freq).toBeCloseTo(frequency('G4'));
-    expect(f.oscillators[0]?.stop).toBeCloseTo(10.25 + 1.2 + 0.05);
+    expect(f.oscillators[0]?.stop).toBeCloseTo(10.27 + 1.2 + 0.05);
   });
 
   it('shapes each voice: 0, then the peak after 8 ms, then a decay to 0.0001', () => {
     const f = fakeContext();
     createSynth(() => f.ctx).playCorrect();
     // gains[0] is the master gain; voices follow in the order they were scheduled
-    expect(f.gains[1]?.calls).toEqual([
-      ['set', 0, 10],
-      ['lin', 0.15, 10.008],
-      ['exp', 0.0001, 10.18],
+    const calls = f.gains[1]?.calls ?? [];
+    expect(calls.map(([name, value]) => [name, value])).toEqual([
+      ['set', 0],
+      ['lin', 0.15],
+      ['exp', 0.0001],
+    ]);
+    expect(calls.map(([, , time]) => time)).toEqual([
+      expect.closeTo(10.02) as unknown,
+      expect.closeTo(10.028) as unknown,
+      expect.closeTo(10.2) as unknown,
     ]);
   });
 
@@ -179,10 +221,10 @@ describe('createSynth', () => {
       'triangle',
       'triangle',
     ]);
-    expect(f.oscillators[1]?.start).toBeCloseTo(10.09);
-    expect(f.oscillators[3]?.start).toBeCloseTo(10.12);
-    expect(f.oscillators[7]?.start).toBeCloseTo(10.36);
-    expect(f.oscillators[7]?.stop).toBeCloseTo(10.36 + 0.6 + 0.05);
+    expect(f.oscillators[1]?.start).toBeCloseTo(10.11);
+    expect(f.oscillators[3]?.start).toBeCloseTo(10.14);
+    expect(f.oscillators[7]?.start).toBeCloseTo(10.38);
+    expect(f.oscillators[7]?.stop).toBeCloseTo(10.38 + 0.6 + 0.05);
   });
 
   it('is silent when muted, and sound returns when unmuted', () => {
@@ -248,6 +290,268 @@ describe('createSynth', () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(onError).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('unlock (first tap)', () => {
+  it('creates the engine, resumes it and plays one silent buffer, with no oscillator', () => {
+    const f = fakeContext('suspended');
+    const factory = vi.fn(() => f.ctx);
+    const s = createSynth(factory);
+    s.unlock();
+    expect(factory).toHaveBeenCalledTimes(1);
+    expect(f.created.resumed).toBe(1);
+    expect(f.created.silences).toBe(1);
+    expect(f.oscillators).toHaveLength(0);
+  });
+
+  it('works even while muted (the learner may unmute later)', () => {
+    const f = fakeContext('suspended');
+    const s = createSynth(() => f.ctx);
+    s.setMuted(true);
+    s.unlock();
+    expect(f.created.resumed).toBe(1);
+  });
+
+  it('reuses the engine a later play call needs', () => {
+    const factory = vi.fn(() => fakeContext().ctx);
+    const s = createSynth(factory);
+    s.unlock();
+    s.playNote('C4');
+    expect(factory).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a failing engine once and does not throw', () => {
+    const onError = vi.fn();
+    const s = createSynth(() => {
+      throw new Error('no audio');
+    }, onError);
+    expect(() => {
+      s.unlock();
+      s.unlock();
+    }).not.toThrow();
+    expect(onError).toHaveBeenCalledTimes(1);
+  });
+
+  it('isRunning is false before the engine exists and follows its state after', () => {
+    const f = fakeContext('suspended');
+    const s = createSynth(() => f.ctx);
+    expect(s.isRunning()).toBe(false);
+    s.unlock();
+    expect(s.isRunning()).toBe(false);
+    const running = fakeContext('running');
+    const s2 = createSynth(() => running.ctx);
+    s2.unlock();
+    expect(s2.isRunning()).toBe(true);
+  });
+});
+
+/** A factory that hands out the given fake engines one by one. */
+function inOrder(engines: { ctx: AudioContextLike }[]) {
+  let next = 0;
+  return vi.fn(() => {
+    const e = engines[next++];
+    if (!e) throw new Error('more engines asked for than the test made');
+    return e.ctx;
+  });
+}
+
+describe('restarting a stuck engine', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('rebuilds an engine that is still not running 300 ms after the tap, once', () => {
+    vi.useFakeTimers();
+    const engines = [fakeContext('suspended'), fakeContext('suspended')];
+    const factory = inOrder(engines);
+    const s = createSynth(factory);
+    s.unlock();
+    vi.advanceTimersByTime(299);
+    expect(factory).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(1);
+    expect(factory).toHaveBeenCalledTimes(2);
+    expect(engines[0]?.created.closed).toBe(1);
+    expect(engines[1]?.created.resumed).toBe(1);
+    expect(engines[1]?.created.silences).toBe(1);
+    vi.advanceTimersByTime(5000);
+    expect(factory).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the engine when it is running by then', () => {
+    vi.useFakeTimers();
+    const f = fakeContext('suspended');
+    const factory = vi.fn(() => f.ctx);
+    createSynth(factory).unlock();
+    f.control.state = 'running';
+    vi.advanceTimersByTime(300);
+    expect(factory).toHaveBeenCalledTimes(1);
+    expect(f.created.closed).toBe(0);
+  });
+
+  it('also rebuilds an interrupted engine', () => {
+    vi.useFakeTimers();
+    const engines = [fakeContext('interrupted'), fakeContext('running')];
+    const factory = inOrder(engines);
+    const s = createSynth(factory);
+    s.unlock();
+    vi.advanceTimersByTime(300);
+    expect(factory).toHaveBeenCalledTimes(2);
+    expect(s.isRunning()).toBe(true);
+  });
+
+  it('plays on the new engine after a rebuild', () => {
+    vi.useFakeTimers();
+    const engines = [fakeContext('suspended'), fakeContext('running')];
+    const factory = inOrder(engines);
+    const s = createSynth(factory);
+    s.unlock();
+    vi.advanceTimersByTime(300);
+    s.playNote('C4');
+    expect(engines[0]?.oscillators).toHaveLength(0);
+    expect(engines[1]?.oscillators).toHaveLength(4);
+  });
+
+  it('does not rebuild an engine that a newer rebuild already replaced', () => {
+    vi.useFakeTimers();
+    const engines = [fakeContext('suspended'), fakeContext('suspended'), fakeContext('running')];
+    const factory = inOrder(engines);
+    const s = createSynth(factory);
+    s.unlock();
+    vi.advanceTimersByTime(100);
+    s.unlock(); // a second tap before the first check
+    vi.advanceTimersByTime(200); // first check: rebuilds (engine 2)
+    expect(factory).toHaveBeenCalledTimes(2);
+    vi.advanceTimersByTime(100); // second check was for engine 1, which is gone
+    expect(factory).toHaveBeenCalledTimes(2);
+  });
+
+  it('replaces a closed engine on the next play call, without any timer', () => {
+    const engines = [fakeContext('running'), fakeContext('running')];
+    const factory = inOrder(engines);
+    const s = createSynth(factory);
+    s.playCorrect();
+    engines[0]?.ctx.close().catch(() => undefined);
+    s.playCorrect();
+    expect(factory).toHaveBeenCalledTimes(2);
+    expect(engines[1]?.oscillators).toHaveLength(2);
+  });
+
+  it('reports a failing close or rebuild once and does not throw', async () => {
+    vi.useFakeTimers();
+    const onError = vi.fn();
+    const f = fakeContext('suspended');
+    f.ctx.close = () => Promise.reject(new Error('cannot close'));
+    let calls = 0;
+    const s = createSynth(() => {
+      calls++;
+      if (calls > 1) throw new Error('no second engine');
+      return f.ctx;
+    }, onError);
+    s.unlock();
+    expect(() => vi.advanceTimersByTime(300)).not.toThrow();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(onError).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('installAudioUnlock', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** A page stand-in: real event dispatch, with a visibility state we can change. */
+  function fakePage() {
+    const target = new EventTarget() as EventTarget & { visibilityState: string };
+    target.visibilityState = 'visible';
+    return target;
+  }
+  function engine(runningAfter: number) {
+    let calls = 0;
+    return {
+      calls: () => calls,
+      unlock: () => {
+        calls++;
+      },
+      isRunning: () => calls >= runningAfter,
+    };
+  }
+
+  it.each(['pointerup', 'touchend', 'click', 'keydown'])('unlocks on %s', (name) => {
+    vi.useFakeTimers();
+    const page = fakePage();
+    const e = engine(99);
+    installAudioUnlock(e, page);
+    page.dispatchEvent(new Event(name));
+    expect(e.calls()).toBe(1);
+  });
+
+  it('does nothing before the first tap', () => {
+    const e = engine(1);
+    installAudioUnlock(e, fakePage());
+    expect(e.calls()).toBe(0);
+  });
+
+  it('keeps listening until the engine is running, then stops', () => {
+    vi.useFakeTimers();
+    const page = fakePage();
+    const e = engine(2);
+    installAudioUnlock(e, page);
+    page.dispatchEvent(new Event('click'));
+    vi.runAllTimers();
+    page.dispatchEvent(new Event('click'));
+    vi.runAllTimers();
+    expect(e.calls()).toBe(2);
+    page.dispatchEvent(new Event('click'));
+    expect(e.calls()).toBe(2);
+  });
+
+  it('listens again after the page was hidden', () => {
+    vi.useFakeTimers();
+    const page = fakePage();
+    const e = engine(1);
+    installAudioUnlock(e, page);
+    page.dispatchEvent(new Event('click'));
+    vi.runAllTimers();
+    page.dispatchEvent(new Event('click'));
+    expect(e.calls()).toBe(1);
+    page.visibilityState = 'hidden';
+    page.dispatchEvent(new Event('visibilitychange'));
+    page.dispatchEvent(new Event('click'));
+    expect(e.calls()).toBe(2);
+  });
+
+  it('does not listen again when the page becomes visible', () => {
+    vi.useFakeTimers();
+    const page = fakePage();
+    const e = engine(1);
+    installAudioUnlock(e, page);
+    page.dispatchEvent(new Event('click'));
+    vi.runAllTimers();
+    page.dispatchEvent(new Event('visibilitychange'));
+    page.dispatchEvent(new Event('click'));
+    expect(e.calls()).toBe(1);
+  });
+
+  it('listens in the capture phase and can be removed', () => {
+    const target = {
+      added: [] as unknown[][],
+      removed: [] as unknown[][],
+      addEventListener(...a: unknown[]) {
+        this.added.push(a);
+      },
+      removeEventListener(...a: unknown[]) {
+        this.removed.push(a);
+      },
+    };
+    const off = installAudioUnlock(engine(1), target);
+    const tapListeners = target.added.filter((a) => a[0] !== 'visibilitychange');
+    expect(tapListeners.map((a) => a[0])).toEqual(['pointerup', 'touchend', 'click', 'keydown']);
+    expect(tapListeners.every((a) => (a[2] as { capture: boolean }).capture)).toBe(true);
+    off();
+    expect(target.removed.map((a) => a[0]).sort()).toEqual(
+      ['click', 'keydown', 'pointerup', 'touchend', 'visibilitychange'].sort(),
+    );
   });
 });
 

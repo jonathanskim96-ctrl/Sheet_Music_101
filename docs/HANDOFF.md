@@ -67,7 +67,7 @@ keeps the recommended option until the owner says otherwise.
 ## Next step
 1. M4 review follow-up merged (PR #10). Owner: close PR #8 (already in `main`).
 2. PR #12 (M4 review fix-up) reviewed by Opus on 2026-10-13. Small fixes pushed to it (see the PR comment). Ready to merge once CI is green.
-3. Sonnet session: iPhone sound hardening (the numbered list under "iPhone Safari sound bug" below). It can go before M5 or as M5's first commit.
+3. iPhone sound hardening is **built** (PR to `main`, branch `claude/cool-knuth-2gmoue`; items 1–4 below). After it is merged, the owner does the 1-minute phone check below and reports back. Then M5.
 4. M5 with the execution prompt in `docs/build/README.md`. Note for M5: after a failed *read* the store is `broken` but keeps no database handle, so the broken screen's "Download the saved data" and "Start fresh" must open the database themselves when tapped. `startFresh` still refuses inside its transaction if the record is readable, so this stays safe. If that open or read fails too, show the error. Never write.
 
 ### M4 choices the spec left open (owner may veto)
@@ -96,7 +96,7 @@ keeps the recommended option until the owner says otherwise.
 - The engine is created on the first sound call. That can be a Meet card's auto-play, which runs after the tap and not inside it. Safari then leaves the engine `suspended`.
 - After a call, a lock or an app switch, Safari puts the engine in `interrupted`. Sometimes it reports `running` but stays silent until the engine is rebuilt. Today the code only calls `resume()` without waiting, and never rebuilds.
 
-**Sonnet session (one commit per item, unit tests with the fake context in `synth.test.ts`):**
+**Sonnet session (done 2026-10-13: one commit per item, unit tests with the fake context in `synth.test.ts`; **owner confirmed on a real iPhone: sound works**; lock/app-switch not separately reported):**
 1. **Start on the first tap.** On the first `pointerup`/`touchend`/`click`/`keydown` anywhere (capture phase), create the engine inside that tap, call `resume()`, and play a one-sample silent buffer. Keep listening until the engine is `running`, and listen again after the page has been hidden.
 2. **Restart a stuck engine.** If the engine is `closed`, or still not `running` about 300 ms after a `resume()` that was triggered by a tap, close it and build a new one (master gain → compressor → destination). Never more than once per tap. Errors keep going to the one-time "Sound isn't available right now." toast.
 3. **Schedule a little ahead.** Start sounds at `currentTime + 0.02` s so the start of a note isn't cut off while the engine wakes up.

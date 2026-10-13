@@ -196,3 +196,16 @@
   checking sound only at mount, or not dismissing on answer each fail one test.
 - `e2e/screens.spec.ts` now also screenshots the lesson with the hint (iPhone user agent).
 - iPhone sound bug planned (HANDOFF): harden synth start-up; owner chose to keep obeying Silent.
+
+## 2026-10-13: iPhone sound hardening (Sonnet session)
+- Four commits, as planned in HANDOFF: (1) start the engine on the first tap (`installAudioUnlock`, `synth.unlock`,
+  silent one-sample buffer, listeners kept until `running` and re-armed when the page is hidden); (2) rebuild a closed
+  engine, or one still not `running` 300 ms after a tap, once per tap; (3) start sounds 20 ms ahead (`LEAD`);
+  (4) SPEC 7.7 and these notes. Silent mode is still obeyed (owner decision), and the hint is unchanged.
+- Gotcha: Node's `EventTarget` only removes a capture listener when given `{ capture: true }`; `removeEventListener(x, f, true)`
+  silently does nothing there. The code and tests use the object form.
+- Existing start-time expectations in `synth.test.ts` moved by exactly 20 ms because of item 3 (SPEC 7.7 changed; shapes
+  and gaps are untouched).
+- Mutation-checked: replacing the closed-state check makes the "replaces a closed engine" test fail.
+- Not verified: sound on a real iPhone (the cloud has none; tests use a fake AudioContext). The owner's 1-minute check
+  in HANDOFF is the real test.
