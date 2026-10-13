@@ -120,7 +120,8 @@ export function PathScreen() {
   const today = dayKeyOf(now());
 
   useEffect(() => {
-    currentRef.current?.scrollIntoView({ block: 'center' });
+    // 'nearest': no scroll when the bubble is already on screen, so the card above the path stays visible.
+    currentRef.current?.scrollIntoView({ block: 'nearest' });
   }, []);
 
   return (

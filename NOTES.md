@@ -196,3 +196,26 @@
   checking sound only at mount, or not dismissing on answer each fail one test.
 - `e2e/screens.spec.ts` now also screenshots the lesson with the hint (iPhone user agent).
 - iPhone sound bug planned (HANDOFF): harden synth start-up; owner chose to keep obeying Silent.
+
+## 2026-10-13: M5 executed (progress, settings, backups, safety nets)
+- Owner answered four open questions first (HANDOFF decisions): backup "Later" for this app run only, InstallCard only
+  when it can offer something, 17 shared chart columns, iPhone sound fix in its own session.
+- Data: `persist.ts` (persist once per run after the first completed session; `persisted()` for Settings), `files.ts`
+  (share sheet where files can be shared, else a Blob download; 1 MB cap before reading; raw-data export),
+  `backupHooks.ts`. Store: `readRawRecord` (own connection, never writes), `startFresh` opens the database itself after
+  a failed read, `lastGoodProgress` for the error screen.
+- UI: Path cards in priority order (StatusBanner, InstallCard, BackupReminderCard), unit level stars, gated Practise
+  button and keyboard sheet; Progress (mastery chart with tappable columns, legend, tiles, units); Settings; Start over
+  (two Sheets, shared with the broken screen); UpdateBanner; ErrorBoundary; global error toasts; broken-data screen.
+- e2e: `settings.spec.ts`, `backup.spec.ts`, `safety.spec.ts` (all M5 items incl. XSS import, 2 MB file, newer
+  version, broken data download + unchanged record, Cancel at either Sheet, update banner via the e2e-only hook).
+  `check-dist` bans `__e2e`.
+- Gotchas:
+  - `check-safety` matched the words "install prompt (" in a comment (looks like a `prompt(` call). Reworded.
+  - `getByRole('button', { name: 'Back' })` also matches "Save a backup": use `exact: true`.
+  - Clicking an SVG `rect` with `tabIndex` shows Chromium's default focus ring; hidden unless `:focus-visible`.
+  - Path scroll: `scrollIntoView({ block: 'center' })` pushed the InstallCard off a fresh Path; now `'nearest'`.
+  - The schema-1 fixture's last backup is 2026-10-05, so the backup reminder only shows from 2026-11-04.
+- Not verified: sharing to Files on a real iPhone (`navigator.share` with files) and the real Android install prompt
+  (both simulated or absent in Chromium tests); a real service-worker update (simulated with the e2e hook).
+
