@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useReducedMotion } from './useReducedMotion';
 import styles from './Confetti.module.css';
 
@@ -28,16 +28,21 @@ export function Confetti({ onDone }: { onDone?: () => void }) {
   const reduced = useReducedMotion();
   const [pieces] = useState(makePieces);
   const [alive, setAlive] = useState(true);
+  // Kept in a ref so a parent passing a new callback each render doesn't restart the timer.
+  const onDoneRef = useRef(onDone);
+  useEffect(() => {
+    onDoneRef.current = onDone;
+  });
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setAlive(false);
-      onDone?.();
+      onDoneRef.current?.();
     }, LIFETIME_MS);
     return () => {
       window.clearTimeout(timer);
     };
-  }, [onDone]);
+  }, []);
 
   if (reduced || !alive) return null;
   return (

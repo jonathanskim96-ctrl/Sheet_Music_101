@@ -3,7 +3,7 @@
 _Read this first in every new session. Keep it short and current._
 
 ## Where we are
-- **Phase:** M1 (scaffold, guardrails, CI, deploy) **merged and live**; M1 review fixes merged (PR #3). **M2 (domain core: pure logic + tests) merged** (PR #4, 2026-10-13, after the Opus review and its fixes). No screen changed in M2, so the live app looks the same. **M3 (look, sound, notation, Gallery) built, PR #6 open. Owner approved the look (2026-10-13).** Next after merge: **M4**.
+- **Phase:** M1 (scaffold, guardrails, CI, deploy) **merged and live**; M1 review fixes merged (PR #3). **M2 (domain core: pure logic + tests) merged** (PR #4, 2026-10-13, after the Opus review and its fixes). No screen changed in M2, so the live app looks the same. **M3 (look, sound, notation, Gallery) merged** (PR #6, 2026-10-13; owner approved the look). The Opus review fixes and the taller keyboard came after that merge and go in through their own PR (branch `claude/tender-bohr-dsybzk`). Next: **M4**.
 - Repo: `jonathanskim96-ctrl/Sheet_Music_101`. App name: **Sheet Music 101**.
 - Live URL (live; deployed from `main` by CI): https://jonathanskim96-ctrl.github.io/Sheet_Music_101/
 - How the build works: `docs/build/README.md` (milestones, session prompts, owner steps).
@@ -27,6 +27,7 @@ _Read this first in every new session. Keep it short and current._
 | 2026-10-12 | Planner decisions (owner may veto): whole notes only, naturals only, range C2–C6; landmark teaching method; Leitner spaced repetition; leaving a lesson saves nothing; checkpoints let you jump ahead; no octave numbers shown to learners. |
 | 2026-10-12 | Hosting: GitHub Pages; the repository will be made public (code only, no data). |
 | 2026-10-13 | M1 review: the service worker never reloads the page by itself (SPEC §7.8 enforced in code); offline update-check failures are only logged. |
+| 2026-10-13 | Keyboard keys taller than real proportions (white 1 × 5.8, black 0.6 × 3.6) so a two-octave keyboard is ≈ 150px tall on a phone and easier to tap (SPEC 7.4 updated; M3 review option b). |
 | 2026-10-13 | M2 gaps: concept cards show again on lesson replays; reviews and checkpoints count towards the daily goal (and earn +10 XP even when a checkpoint is failed). |
 | 2026-10-12 | Tech: versions in `docs/build/SPEC.md` §2 were verified to install, build and test together (with npm 11 for installs; npm 10 has a resolver bug). |
 
@@ -60,7 +61,7 @@ keeps the recommended option until the owner says otherwise.
 - [ ] Add the app to the home screen on each phone (SETUP sections 6–7) and confirm the icon.
 
 ## Next step
-1. Owner approved the M3 look ("the design is fine"). Next: Opus review of PR #6, then merge. Note: the Gallery is dev/e2e only, so the live phone app still shows "Coming soon" until M4 adds the real screens.
+1. Owner approved the M3 look ("the design is fine"). Opus review of PR #6 done (2026-10-13): small fixes made (see NOTES) and the taller keyboard (owner's choice), in the follow-up PR from `claude/tender-bohr-dsybzk`; merge it before starting M4. Still open: stacked Sheets (review item 1 on PR #6), to fix at the start of M4, before M5 builds the two-step "Start over" flow. Note: the Gallery is dev/e2e only, so the live phone app still shows "Coming soon" until M4 adds the real screens.
 2. M4 with the execution prompt in `docs/build/README.md`.
 
 ### M3 choices the spec left open (owner may veto)

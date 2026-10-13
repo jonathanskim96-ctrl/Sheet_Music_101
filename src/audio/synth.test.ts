@@ -6,6 +6,8 @@ import {
   WRONG_PLAN,
   createSynth,
   notePlan,
+  setAudioErrorHandler,
+  synth,
   type AudioContextLike,
 } from './synth';
 
@@ -216,6 +218,15 @@ describe('createSynth', () => {
     expect(f.created.resumed).toBe(1);
   });
 
+  it("resumes iOS Safari's 'interrupted' context too, but not a running one", () => {
+    const f = fakeContext('interrupted');
+    createSynth(() => f.ctx).playCorrect();
+    expect(f.created.resumed).toBe(1);
+    const running = fakeContext('running');
+    createSynth(() => running.ctx).playCorrect();
+    expect(running.created.resumed).toBe(0);
+  });
+
   it('swallows audio errors, reports the first one only, and keeps working', () => {
     const onError = vi.fn();
     const s = createSynth(() => {
@@ -237,5 +248,19 @@ describe('createSynth', () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(onError).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('app-wide synth', () => {
+  it('keeps the first audio error until a handler is registered, then delivers it once', () => {
+    // Node has no AudioContext, so the first play call fails before any handler exists.
+    synth.playNote('C4');
+    const handler = vi.fn();
+    setAudioErrorHandler(handler);
+    expect(handler).toHaveBeenCalledTimes(1);
+    setAudioErrorHandler(handler);
+    synth.playCorrect();
+    expect(handler).toHaveBeenCalledTimes(1);
+    setAudioErrorHandler(undefined);
   });
 });

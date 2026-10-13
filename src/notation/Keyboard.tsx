@@ -16,9 +16,10 @@ export interface KeyboardProps {
   ariaLabel?: string;
 }
 
-const KEY_HEIGHT = 4.2;
+// Taller than a real key (owner decision 2026-10-13) so a 14-key window is ~150 px on a phone.
+const KEY_HEIGHT = 5.8;
 const BLACK_WIDTH = 0.6;
-const BLACK_HEIGHT = 2.6;
+const BLACK_HEIGHT = 3.6;
 const BLACK_AFTER = new Set(['C', 'D', 'F', 'G', 'A']);
 
 /** All white keys from `from` to `to` inclusive (empty if the range is backwards). */

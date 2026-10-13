@@ -137,7 +137,8 @@ export function createSynth(
       master.connect(compressor as never);
       compressor.connect(ctx.destination as never);
     }
-    if (ctx.state === 'suspended') ctx.resume().catch(report);
+    // iOS Safari uses a non-standard 'interrupted' state after a call or app switch.
+    if (ctx.state !== 'running') ctx.resume().catch(report);
     return { ctx, out: master };
   };
 
@@ -214,17 +215,25 @@ export function createSynth(
 }
 
 let errorHandler: ((error: unknown) => void) | undefined;
+// The engine reports only its first error; keep it until a handler exists so it isn't lost.
+let pendingError: { error: unknown } | null = null;
 
 /** Registers what to do when sound fails (the app shows its one-time toast here). */
 export function setAudioErrorHandler(handler: ((error: unknown) => void) | undefined): void {
   errorHandler = handler;
+  if (handler && pendingError) {
+    const { error } = pendingError;
+    pendingError = null;
+    handler(error);
+  }
 }
 
 /** The app-wide engine, backed by the browser's AudioContext. */
 export const synth: Synth = createSynth(
   () => new AudioContext(),
   (e) => {
-    errorHandler?.(e);
+    if (errorHandler) errorHandler(e);
+    else pendingError = { error: e };
   },
 );
 

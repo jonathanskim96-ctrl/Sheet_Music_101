@@ -29,11 +29,11 @@
 }
 
 .eye {
-  fill: #ffffff;
+  fill: var(--paper);
 }
 
 .pupil {
-  fill: #111827;
+  fill: var(--ink);
 }
 
 .cheek {
@@ -41,12 +41,12 @@
 }
 
 .mouth {
-  stroke: #111827;
+  stroke: var(--ink);
   fill: none;
 }
 
 .mouthOpen {
-  fill: #111827;
+  fill: var(--ink);
 }
 
 .arm {
