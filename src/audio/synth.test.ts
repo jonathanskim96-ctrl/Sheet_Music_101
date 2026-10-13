@@ -28,6 +28,10 @@ function fakeContext(state = 'running') {
       created.resumed++;
       return Promise.resolve();
     },
+    close: () => {
+      created.closed++;
+      return Promise.resolve();
+    },
     createBuffer: () => ({}),
     createBufferSource: () => ({
       buffer: null,
@@ -373,6 +377,121 @@ describe('installUnlock', () => {
     d.fire('visibilitychange');
     d.fire('click');
     expect(factory).not.toHaveBeenCalled();
+  });
+});
+
+describe('restarting a stuck engine', () => {
+  /** A context factory that hands out fresh fakes and remembers them. */
+  function factoryOf(states: string[]) {
+    const made: ReturnType<typeof fakeContext>[] = [];
+    const factory = vi.fn(() => {
+      const f = fakeContext(states[made.length] ?? 'running');
+      made.push(f);
+      return f.ctx;
+    });
+    return { factory, made };
+  }
+
+  it('closes and rebuilds an engine still not running 300 ms after the tap', () => {
+    vi.useFakeTimers();
+    try {
+      const { factory, made } = factoryOf(['suspended', 'running']);
+      const s = createSynth(factory);
+      s.unlock();
+      vi.advanceTimersByTime(299);
+      expect(factory).toHaveBeenCalledTimes(1);
+      vi.advanceTimersByTime(1);
+      expect(factory).toHaveBeenCalledTimes(2);
+      expect(made[0]?.created.closed).toBe(1);
+      expect(made[1]?.created.resumed).toBe(0); // it was created running
+      expect(made[1]?.created.silent).toBe(1);
+      s.playNote('C4');
+      expect(made[1]?.oscillators).toHaveLength(4);
+      expect(made[0]?.oscillators).toHaveLength(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('leaves an engine alone that is running after 300 ms', () => {
+    vi.useFakeTimers();
+    try {
+      const f = fakeContext('suspended');
+      const factory = vi.fn(() => f.ctx);
+      const s = createSynth(factory);
+      s.unlock();
+      (f.ctx as { state: string }).state = 'running';
+      vi.advanceTimersByTime(1000);
+      expect(factory).toHaveBeenCalledTimes(1);
+      expect(f.created.closed).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('rebuilds at most once per tap, but again for the next tap', () => {
+    vi.useFakeTimers();
+    try {
+      const { factory } = factoryOf(['suspended', 'suspended', 'suspended']);
+      const s = createSynth(factory);
+      s.unlock();
+      vi.advanceTimersByTime(300);
+      expect(factory).toHaveBeenCalledTimes(2);
+      vi.advanceTimersByTime(5000);
+      expect(factory).toHaveBeenCalledTimes(2);
+      s.unlock();
+      vi.advanceTimersByTime(300);
+      expect(factory).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('two quick taps rebuild only once per tap, not twice for the same engine', () => {
+    vi.useFakeTimers();
+    try {
+      const { factory } = factoryOf(['suspended', 'suspended', 'running']);
+      const s = createSynth(factory);
+      s.unlock();
+      s.unlock();
+      vi.advanceTimersByTime(300);
+      // the first timer replaced the engine; the second sees a different engine and leaves it
+      expect(factory).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('replaces a closed engine on the next sound', () => {
+    const { factory, made } = factoryOf(['closed', 'running']);
+    const s = createSynth(factory);
+    s.playNote('C4');
+    expect(factory).toHaveBeenCalledTimes(1);
+    expect(made[0]?.oscillators).toHaveLength(4); // the first call had to use the engine it just built
+    s.playNote('C4');
+    expect(factory).toHaveBeenCalledTimes(2);
+    expect(made[1]?.oscillators).toHaveLength(4);
+  });
+
+  it('reports a failing close() once, and keeps working', async () => {
+    vi.useFakeTimers();
+    try {
+      const onError = vi.fn();
+      const bad = fakeContext('suspended');
+      bad.ctx.close = () => Promise.reject(new Error('cannot close'));
+      const good = fakeContext('running');
+      const list = [bad, good];
+      let n = 0;
+      const s = createSynth(() => (list[n++] ?? good).ctx, onError);
+      s.unlock();
+      vi.advanceTimersByTime(300);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(onError).toHaveBeenCalledTimes(1);
+      s.playNote('C4');
+      expect(good.oscillators).toHaveLength(4);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

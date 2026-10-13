@@ -29,6 +29,7 @@ export interface AudioContextLike {
   readonly state: string;
   readonly destination: unknown;
   resume(): Promise<void>;
+  close(): Promise<void>;
   createBuffer(channels: number, length: number, sampleRate: number): unknown;
   createBufferSource(): BufferSourceLike;
   createGain(): GainLike;
@@ -118,6 +119,9 @@ export interface Synth {
   isRunning: () => boolean;
 }
 
+/** How long after a tap's resume() the engine may stay not-running before it is rebuilt. */
+const STUCK_MS = 300;
+
 /**
  * The sound engine. The AudioContext is created on the first tap (`unlock`) or, failing
  * that, on the first play call. Errors never break a lesson: they go to `onError`, once.
@@ -159,11 +163,28 @@ export function createSynth(
   };
 
   const ready = (): { ctx: AudioContextLike; out: GainLike } => {
+    // A closed engine can never run again; build a new one.
+    if (ctx?.state === 'closed') ctx = null;
     const c = ctx ?? build();
     // iOS Safari uses a non-standard 'interrupted' state after a call or app switch.
     if (c.state !== 'running') c.resume().catch(report);
     if (!master) throw new Error('Audio engine has no output');
     return { ctx: c, out: master };
+  };
+
+  // After a tap, an engine that still isn't running is stuck: replace it. Only the engine the
+  // tap started is checked, so a tap rebuilds at most once and the replacement waits for the next tap.
+  const rebuildIfStuck = (checked: AudioContextLike) => {
+    try {
+      if (ctx !== checked || checked.state === 'running') return;
+      const fresh = checked.state === 'closed' ? null : checked.close();
+      fresh?.catch(report);
+      const c = build();
+      if (c.state !== 'running') c.resume().catch(report);
+      primeWithSilence(c);
+    } catch (e) {
+      report(e);
+    }
   };
 
   const voice = (
@@ -192,6 +213,9 @@ export function createSynth(
     try {
       const { ctx: c } = ready();
       primeWithSilence(c);
+      setTimeout(() => {
+        rebuildIfStuck(c);
+      }, STUCK_MS);
     } catch (e) {
       report(e);
     }
