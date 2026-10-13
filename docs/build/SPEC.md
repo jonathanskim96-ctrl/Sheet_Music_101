@@ -755,10 +755,11 @@ rotation, delay 0–300ms, CSS keyframe fall 1.8s; component unmounts itself aft
   `pointerup`, `touchend`, `click` and `keydown`. On such an event, if the engine isn't `running`, `synth.unlock()` creates
   the `AudioContext` inside that tap, calls `resume()` and plays a one-sample silent buffer. The listeners stay until a tap
   finds the engine `running`; after the page has been hidden (`visibilitychange`) they are attached again. If no tap came
-  first, the first play call still creates the engine as before.
+  first, the first play call still creates the engine as before. While muted, `unlock()` does nothing (no engine).
 - **Restart a stuck engine.** An engine whose state is `closed` is replaced on the next sound. 300 ms after an `unlock()`,
-  if that same engine still isn't `running`, it is closed and a new one is built (same graph, `resume()`, silent buffer).
-  This happens at most once per tap. Errors go to the one-time toast below.
+  if that same engine still isn't `running` (and sound isn't muted), it is closed and a new one is built (same graph, `resume()`, silent buffer).
+  This happens at most once per tap. Errors go to the one-time toast below, except a `resume()` rejection from an
+  engine that has already been replaced (Chrome rejects it when the stuck engine is closed; sound still works).
 - **Schedule a little ahead.** Every sound starts at `currentTime + 0.02` s (plus its own delay), so the first milliseconds
   aren't cut off while the engine wakes up.
 - `playNote(note, delay = 0, dur = 1.2)`: four sine partials (×1 amp 1.0, ×2 0.5, ×3 0.25,

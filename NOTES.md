@@ -252,3 +252,18 @@
 - Gotcha: Node's `EventTarget` doesn't remove a capture listener given a bare `true`; the test document passes `{ capture }`.
 - Not verified: real iPhone sound (a fake context cannot say whether Safari lets the sound out). The owner's phone check is
   in HANDOFF. The "running but silent" Safari state can't be detected from the page; only a stuck non-running engine is rebuilt.
+
+## 2026-10-13: Opus review of the iPhone sound hardening (PR #15)
+- `/code-review high` done. Each HANDOFF item is in its own commit and matches SPEC 7.7.
+- Mutation checks (break, run `synth.test.ts`, restore): no tap listener, only `click`, no re-attach after hidden, no
+  silent buffer, 3000 ms instead of 300, no stuck rebuild, no same-engine check, no closed-engine replacement, stuck
+  engine not closed, no 20 ms lead (each of the two sites separately), mute ignored: all fail a test. Two gaps fixed:
+  "never detach" passed every test (new listener-count test), and removing `installUnlock` from `main.tsx` passed
+  everything (new `e2e/sound-unlock.spec.ts`, counts AudioContexts; fails with the line removed).
+- Gotcha (fixed): Chromium rejects a pending `resume()` ("Audio context is going away") when the context is closed, so
+  the stuck-engine rebuild showed "Sound isn't available right now." just as sound recovered. `wake()` now ignores
+  rejections from an engine that was already replaced. WebKit leaves such a promise pending instead (checked in its
+  source), so iPhone was not affected.
+- Fixed: `unlock()` and the stuck-engine rebuild ignored mute, so with Sound off a tap still built an engine (and could
+  show the toast). SPEC 7.7 says muted means every call is a no-op; both now return early (test + mutation checked).
+- Larger items for a Sonnet fix session are listed in the PR #15 review comment (300 ms rebuild can kill a slow engine).
