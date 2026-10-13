@@ -59,7 +59,8 @@ export function LessonComplete({ result, before }: LessonCompleteProps) {
     if (started.current) return;
     started.current = true;
     synth.playFanfare();
-    void commit((p) => planCompleteSession(p, result, at)).then((r) => {
+    // The failure is shown below on this screen, so no toast for it.
+    void commit((p) => planCompleteSession(p, result, at), { toast: false }).then((r) => {
       setSaving(false);
       if (!r.ok) setError(r.message);
     });
