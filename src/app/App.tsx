@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { setAudioErrorHandler } from '../audio/synth';
 import { somethingWentWrong } from '../domain/content';
 import { findLesson } from '../domain/curriculum';
-import { isPlayable } from '../domain/unlocks';
+import { isPlayable, reviewAvailable } from '../domain/unlocks';
 import { ProgressProvider, createProgressStore, useProgress } from '../data/ProgressContext';
 import { UpdateBanner } from '../pwa/UpdateBanner';
 import { BrokenDataScreen } from '../screens/BrokenDataScreen';
@@ -84,8 +84,10 @@ function Shell() {
     if (progress && !progress.flags.welcomeSeen) route = { name: 'home' };
     else if (parsed.name === 'lesson') {
       if (progress && !isPlayable(progress, parsed.lessonId)) route = { name: 'home' };
-    } else if (parsed.name === 'review' || parsed.name === 'checkpoint') {
-      route = { name: 'home' }; // arrive in M6
+    } else if (parsed.name === 'review') {
+      if (progress && !reviewAvailable(progress)) route = { name: 'home' };
+    } else if (parsed.name === 'checkpoint') {
+      route = { name: 'home' }; // arrives in the next step
     }
   }
   const hash = routeToHash(route);
@@ -125,9 +127,11 @@ function Shell() {
   if (!progress?.flags.welcomeSeen) screen = <WelcomeScreen />;
   else if (route.name === 'lesson') {
     const def = findLesson(route.lessonId);
-    screen = def ? <LessonScreen key={def.id} def={def} /> : <PathScreen />;
+    screen = def ? <LessonScreen key={def.id} source={{ kind: 'lesson', def }} /> : <PathScreen />;
     banner = def !== undefined;
-  } else if (route.name === 'progress') screen = <ProgressScreen />;
+  } else if (route.name === 'review')
+    screen = <LessonScreen key="review" source={{ kind: 'review' }} />;
+  else if (route.name === 'progress') screen = <ProgressScreen />;
   else if (route.name === 'settings') screen = <SettingsScreen />;
   else {
     screen = <PathScreen />;

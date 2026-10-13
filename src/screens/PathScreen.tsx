@@ -13,10 +13,10 @@ import {
   isCompleted,
   isLevelAvailable,
   isPlayable,
-  isReviewPlayable,
   keyboardUnlocked,
   levelsPlayable,
   nextLevelLesson,
+  reviewAvailable,
   unitLevel,
   unitLevelCount,
 } from '../domain/unlocks';
@@ -171,7 +171,7 @@ export function PathScreen() {
       <PathCard />
 
       <main className={styles['path']}>
-        {isReviewPlayable(progress) && (
+        {reviewAvailable(progress) && (
           <div className={styles['practise']}>
             <Button
               variant="secondary"

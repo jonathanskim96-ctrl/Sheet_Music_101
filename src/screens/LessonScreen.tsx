@@ -2,10 +2,16 @@ import { useEffect, useReducer, useState } from 'react';
 import { navigate } from '../app/router';
 import { parseCardId } from '../domain/cards';
 import { LEAVE_LESSON, SILENT_HINT } from '../domain/content';
-import type { LessonDef } from '../domain/curriculum';
-import { dayKeyOf } from '../domain/days';
-import { buildLesson } from '../domain/lessonBuilder';
+import type { CheckpointDef, LessonDef } from '../domain/curriculum';
+import { dayKeyOf, type DayKey } from '../domain/days';
+import {
+  buildCheckpoint,
+  buildLesson,
+  buildReview,
+  type LessonPlan,
+} from '../domain/lessonBuilder';
 import { planSettings } from '../domain/planners';
+import type { Progress } from '../domain/progress';
 import { cardOf, checkAnswer, type Answer } from '../domain/questions';
 import { hashString } from '../domain/rng';
 import { currentQuestion, reduce, resultOf, startSession } from '../domain/session';
@@ -26,16 +32,44 @@ import styles from './lesson/lesson.module.css';
 // The Silent-mode hint shows at most once per app run (SPEC 7.7).
 let silentHintSpent = false;
 
-/** Plays one lesson: concept cards, Meet cards, questions, then the result screen. */
-export function LessonScreen({ def }: { def: LessonDef }) {
+/** What to play: one lesson, a review of the cards the learner has met, or a checkpoint. */
+export type LessonSource =
+  | { kind: 'lesson'; def: LessonDef }
+  | { kind: 'review' }
+  | { kind: 'checkpoint'; checkpoint: CheckpointDef };
+
+function planFor(source: LessonSource, p: Progress, today: DayKey, seed: number): LessonPlan {
+  switch (source.kind) {
+    case 'lesson':
+      return buildLesson(source.def, p, today, seed);
+    case 'review':
+      return buildReview(p, today, seed);
+    case 'checkpoint':
+      return buildCheckpoint(source.checkpoint, seed);
+    default: {
+      const never: never = source;
+      return never;
+    }
+  }
+}
+
+const idOf = (source: LessonSource): string =>
+  source.kind === 'lesson'
+    ? source.def.id
+    : source.kind === 'review'
+      ? 'review'
+      : source.checkpoint.id;
+
+/** Plays one session: concept cards, Meet cards, questions, then the result screen. */
+export function LessonScreen({ source }: { source: LessonSource }) {
   const progress = useLoadedProgress();
   const now = useNow();
   const commit = useCommit();
   // The plan and the progress it was built from are fixed for the whole lesson.
   const [before] = useState(progress);
   const [session, dispatch] = useReducer(reduce, undefined, () => {
-    const seed = (now().getTime() ^ hashString(def.id)) >>> 0;
-    const plan = buildLesson(def, before, dayKeyOf(now()), seed);
+    const seed = (now().getTime() ^ hashString(idOf(source))) >>> 0;
+    const plan = planFor(source, before, dayKeyOf(now()), seed);
     return startSession(plan, performance.now());
   });
   const [leaving, setLeaving] = useState(false);
