@@ -2,7 +2,9 @@
 import fc from 'fast-check';
 import { ALL_CARDS } from './cards';
 import { allLessonIds } from './curriculum';
+import { LETTERS } from './notes';
 import { type Progress, emptyProgress } from './progress';
+import { checkAnswer, type Answer, type ChoiceValue, type Question } from './questions';
 import type { Box, CardState } from './srs';
 
 /** Recursively freezes a value so any mutation attempt throws in strict mode. */
@@ -119,3 +121,29 @@ export const progressArb: fc.Arbitrary<Progress> = fc
     p.totals = r.totals;
     return p;
   });
+
+/** Some answer that `checkAnswer` rejects for `q` (a black key, an off-by-one letter, etc.). */
+export function wrongAnswerOf(q: Question): Answer {
+  const candidates: Answer[] = [
+    { kind: 'key', note: 'black' },
+    ...LETTERS.map((letter): Answer => ({ kind: 'letter', letter })),
+    ...Array.from({ length: 41 }, (_, i): Answer => ({ kind: 'position', position: i - 20 })),
+    ...CHOICE_VALUES.map((value): Answer => ({ kind: 'choice', value })),
+  ];
+  const hit = candidates.find((a) => !checkAnswer(q, a));
+  if (!hit) throw new Error('no wrong answer found');
+  return hit;
+}
+
+const CHOICE_VALUES: ChoiceValue[] = [
+  'line',
+  'space',
+  'first',
+  'second',
+  'treble',
+  'bass',
+  'step-up',
+  'step-down',
+  'skip-up',
+  'skip-down',
+];
