@@ -1,0 +1,62 @@
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: manipulation;
+}
+
+.key {
+  cursor: pointer;
+}
+
+.key:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.white {
+  fill: var(--paper);
+  stroke: var(--ink);
+}
+
+.black {
+  fill: var(--ink);
+  stroke: var(--ink);
+}
+
+.highlight .white,
+.highlight .black {
+  fill: var(--correct-ink);
+}
+
+.wrong .white,
+.wrong .black {
+  fill: var(--wrong-ink);
+}
+
+.dimmed {
+  opacity: 0.35;
+}
+
+.label {
+  fill: var(--ink);
+  font-family: inherit;
+  font-weight: 800;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.highlight .label,
+.wrong .label {
+  fill: #ffffff;
+}
+
+.dot {
+  fill: var(--primary);
+  pointer-events: none;
+}
+
+.highlight .dot,
+.wrong .dot {
+  fill: #ffffff;
+}

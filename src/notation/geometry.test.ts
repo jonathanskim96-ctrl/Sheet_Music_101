@@ -198,7 +198,8 @@ describe('layoutStaff', () => {
 
   it('spaces three or more notes apart and widens the staff to fit', () => {
     const l = layoutStaff('treble', 5);
-    for (let i = 1; i < 5; i++) expect((l.noteXs[i] ?? 0) - (l.noteXs[i - 1] ?? 0)).toBeCloseTo(35, 9);
+    for (let i = 1; i < 5; i++)
+      expect((l.noteXs[i] ?? 0) - (l.noteXs[i - 1] ?? 0)).toBeCloseTo(35, 9);
     expect(l.width).toBeGreaterThan((l.noteXs[4] ?? 0) + NOTE_WIDTH / 2);
   });
 

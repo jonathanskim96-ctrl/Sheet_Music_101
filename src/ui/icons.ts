@@ -1,0 +1,21 @@
+// The only place lucide icons are imported, so the bundle holds just these.
+export {
+  BarChart3,
+  CalendarDays,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Download,
+  Flame,
+  Lock,
+  Music,
+  Play,
+  Settings,
+  Share,
+  Star,
+  Trophy,
+  Upload,
+  Volume2,
+  VolumeX,
+  X,
+} from 'lucide-react';

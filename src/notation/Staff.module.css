@@ -1,0 +1,94 @@
+.paper {
+  background: var(--paper);
+  border-radius: var(--radius);
+  border: 2px solid var(--border);
+  padding: 4px 8px;
+  width: 100%;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: manipulation;
+}
+
+.line {
+  stroke: var(--ink);
+}
+
+.lineHighlight {
+  stroke: var(--primary);
+}
+
+.ink {
+  fill: var(--ink);
+  stroke: var(--ink);
+}
+
+.ledger {
+  stroke: var(--ink);
+}
+
+.correct {
+  fill: var(--correct-ink);
+  stroke: var(--correct-ink);
+}
+
+.wrong {
+  fill: var(--wrong-ink);
+  stroke: var(--wrong-ink);
+}
+
+.ghost {
+  opacity: 0.4;
+}
+
+.masteryNew {
+  fill: var(--locked);
+  stroke: var(--locked);
+}
+
+.masteryLearning {
+  fill: var(--wrong-ink);
+  stroke: var(--wrong-ink);
+}
+
+.masteryAlmost {
+  fill: var(--xp);
+  stroke: var(--xp);
+}
+
+.masteryKnown {
+  fill: var(--correct-ink);
+  stroke: var(--correct-ink);
+}
+
+.band {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.band:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .shake {
+    animation: shake 300ms;
+  }
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-6px);
+  }
+  75% {
+    transform: translateX(6px);
+  }
+}

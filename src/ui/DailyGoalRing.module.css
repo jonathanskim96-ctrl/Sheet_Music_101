@@ -1,0 +1,30 @@
+.wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.track {
+  stroke: var(--border);
+}
+
+.arc {
+  stroke: var(--xp);
+  transition: stroke-dashoffset 300ms ease-out;
+}
+
+.full {
+  stroke: var(--correct-ink);
+}
+
+.text {
+  position: absolute;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.check {
+  color: var(--correct-ink);
+}
