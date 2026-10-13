@@ -57,17 +57,19 @@ export function ConceptIllustration({ id }: { id: ConceptCardId }) {
     }
     case 'staff': {
       // The "marks" picture puts a note at each marked position, with its word beside it.
-      const marked: StaffNote[] = (ill.marks ?? []).flatMap((m) => {
+      // Labels follow the notes by index, so the marked notes come first and a mark without a
+      // note drops its label too.
+      const marked = (ill.marks ?? []).flatMap((m) => {
         const note = noteAtPosition('treble', m.position);
-        return note ? [{ clef: 'treble' as const, note }] : [];
+        return note ? [{ note: { clef: 'treble' as const, note }, label: m.label }] : [];
       });
-      const notes: StaffNote[] = [...ill.notes, ...marked];
+      const notes: StaffNote[] = [...marked.map((m) => m.note), ...ill.notes];
       return (
         <Staff
           mode={ill.mode}
           notes={notes}
           lineNumbers={ill.lineNumbers === true}
-          {...(ill.marks ? { noteLabels: ill.marks.map((m) => m.label) } : {})}
+          {...(ill.marks ? { noteLabels: marked.map((m) => m.label) } : {})}
           ariaLabel="Music staff"
         />
       );

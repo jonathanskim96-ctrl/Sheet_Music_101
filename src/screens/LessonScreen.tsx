@@ -80,7 +80,6 @@ export function LessonScreen({ def }: { def: LessonDef }) {
         type="button"
         className={styles['iconButton']}
         aria-label={soundOn ? 'Mute sound' : 'Turn sound on'}
-        aria-pressed={soundOn}
         onClick={() => {
           void commit((p) => planSettings(p, { soundOn: !p.settings.soundOn }));
         }}

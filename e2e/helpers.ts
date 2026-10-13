@@ -46,6 +46,8 @@ export function fixtureProgress(): Progress {
 export async function seedRecord(page: Page, record: unknown): Promise<void> {
   await page.goto('./');
   await expect(page.locator('main').first()).toBeVisible();
+  // The Loading screen is a <main> too: wait until the app has opened (and created) the database.
+  await expect(page.getByText('Loading…')).toHaveCount(0);
   await page.evaluate(async (rec) => {
     await new Promise<void>((resolve, reject) => {
       const open = indexedDB.open('sheet-music-101', 1);
