@@ -322,6 +322,11 @@ function assertNever(x: never): never {
   throw new Error(`Unexpected value: ${JSON.stringify(x)}`);
 }
 
+/** Extra feedback line for "Tap this note on the piano": any key with the letter counts (M6 step 1). */
+export function anyKeyWorks(letter: Letter): string {
+  return `Any ${letter} key works.`;
+}
+
 /** Letter of a card id such as 'treble-G4' (only used for the prompt text). */
 function letterOfCard(card: CardId): Letter {
   const parts = parseCardId(card);

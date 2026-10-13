@@ -11,6 +11,7 @@ import {
 import { Keyboard, whiteKeys, type KeyState } from '../../notation/Keyboard';
 import { Staff, type NoteState } from '../../notation/Staff';
 import { ChoiceButtons } from './questions/ChoiceButtons';
+import { FindKey } from './questions/FindKey';
 import { LetterPad, type ResultState } from './questions/LetterPad';
 import styles from './lesson.module.css';
 import qStyles from './questions/questions.module.css';
@@ -28,7 +29,7 @@ export interface QuestionViewProps {
 
 const choice = (value: ChoiceValue, label: string) => ({ value, label });
 
-/** The picture and answer controls for one question (note-naming and the unit-1 kinds). */
+/** The picture and answer controls for one question. */
 export function QuestionView({ question: q, answered, onAnswer }: QuestionViewProps) {
   const locked = answered !== null;
   // While feedback shows, taps do nothing (the reducer also ignores them).
@@ -185,9 +186,11 @@ export function QuestionView({ question: q, answered, onAnswer }: QuestionViewPr
       break;
     case 'find-key-letter':
     case 'find-key-exact':
+      body = <FindKey q={q} answered={answered} send={send} />;
+      break;
     case 'find-on-staff':
     case 'step-skip':
-      // These arrive in M6; lessons that need them are not reachable yet.
+      // These arrive in the next M6 steps; lessons that need them are not reachable yet.
       body = <p>This kind of question is not available yet.</p>;
       break;
     default: {

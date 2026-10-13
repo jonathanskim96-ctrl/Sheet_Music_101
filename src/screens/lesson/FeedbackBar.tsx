@@ -5,10 +5,12 @@ import {
   COMBO_MILESTONES,
   CORRECT_PHRASES,
   WRONG_PHRASES,
+  anyKeyWorks,
   cardName,
   fillWrongPhrase,
 } from '../../domain/content';
 import { describePosition, hintFor } from '../../domain/landmarks';
+import { letterOf } from '../../domain/notes';
 import type { Progress } from '../../domain/progress';
 import { cardOf, correctAnswerOf, type Answer, type Question } from '../../domain/questions';
 import { Button } from '../../ui/Button';
@@ -75,6 +77,9 @@ export function FeedbackBar({ question, result, progress, combo, onContinue }: F
               )}
               {card !== null && <HintLine card={card} progress={progress} />}
             </>
+          )}
+          {question.kind === 'find-key-letter' && parts && (
+            <p className={styles['feedbackLine']}>{anyKeyWorks(letterOf(parts.note))}</p>
           )}
         </div>
       </div>
