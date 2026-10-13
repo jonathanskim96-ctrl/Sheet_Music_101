@@ -3,7 +3,7 @@
 _Read this first in every new session. Keep it short and current._
 
 ## Where we are
-- **Phase:** M1 (scaffold, guardrails, CI, deploy) **merged and live**; M1 review fixes merged (PR #3). **M2 (domain core: pure logic + tests) merged** (PR #4, 2026-10-13, after the Opus review and its fixes). No screen changed in M2, so the live app looks the same. Next: **M3** (`docs/build/M3.md`).
+- **Phase:** M1 (scaffold, guardrails, CI, deploy) **merged and live**; M1 review fixes merged (PR #3). **M2 (domain core: pure logic + tests) merged** (PR #4, 2026-10-13, after the Opus review and its fixes). No screen changed in M2, so the live app looks the same. **M3 (look, sound, notation, Gallery) built, PR open, waiting for the owner to approve the look** (step 12). Next after merge: **M4**.
 - Repo: `jonathanskim96-ctrl/Sheet_Music_101`. App name: **Sheet Music 101**.
 - Live URL (live; deployed from `main` by CI): https://jonathanskim96-ctrl.github.io/Sheet_Music_101/
 - How the build works: `docs/build/README.md` (milestones, session prompts, owner steps).
@@ -57,7 +57,15 @@ keeps the recommended option until the owner says otherwise.
 - [ ] Add the app to the home screen on each phone (SETUP sections 6–7) and confirm the icon.
 
 ## Next step
-1. M3 with the execution prompt in `docs/build/README.md`.
+1. Owner: look at the M3 screenshots (sent in the session; also produced by `npx playwright test e2e/screens.spec.ts` into `test-results/screens/`) and answer "Does this look and feel right?". Record the answer here. Then review + merge the M3 PR.
+2. M4 with the execution prompt in `docs/build/README.md`.
+
+### M3 choices the spec left open (owner may veto)
+- Staffs with 3+ notes (not in the spec; only used by the Gallery and later the Progress chart) space notes 3.5 staff spaces apart and widen the viewBox to fit.
+- Fanfare note lengths 200 ms (last 600 ms) and peak 0.15 were not specified; the correct/wrong sounds follow SPEC 7.7 exactly.
+- The danger button is a light-orange fill with orange edge and dark-orange text (white on the bright orange token fails contrast).
+- The Gallery also has small extra sections (tappable staff, no-clef staff, highlighted lines, progress bar, goal ring, Sheet demo) so every M3 building block can be checked.
+- Gallery code is lazy-loaded and absent from production builds (checked: `dist/` has no Gallery chunk).
 
 ## How to run checks
 `npm ci`, then `npm run verify` (check-safety, typecheck, lint, format, unit tests, build,
