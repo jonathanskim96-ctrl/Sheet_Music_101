@@ -1,0 +1,214 @@
+{
+  "schemaVersion": 1,
+  "createdDay": "2026-09-20",
+  "settings": {
+    "soundOn": true,
+    "dailyGoal": 2
+  },
+  "xp": 135,
+  "lessons": {
+    "u1-l1": {
+      "timesCompleted": 2,
+      "bestAccuracy": 100,
+      "firstCompletedDay": "2026-09-20",
+      "lastCompletedDay": "2026-09-21"
+    },
+    "u1-l2": {
+      "timesCompleted": 1,
+      "bestAccuracy": 90,
+      "firstCompletedDay": "2026-09-20",
+      "lastCompletedDay": "2026-09-20"
+    },
+    "u1-l3": {
+      "timesCompleted": 1,
+      "bestAccuracy": 80,
+      "firstCompletedDay": "2026-09-21",
+      "lastCompletedDay": "2026-09-21"
+    },
+    "u1-l4": {
+      "timesCompleted": 2,
+      "bestAccuracy": 100,
+      "firstCompletedDay": "2026-09-23",
+      "lastCompletedDay": "2026-09-25"
+    },
+    "u2-l1": {
+      "timesCompleted": 1,
+      "bestAccuracy": 70,
+      "firstCompletedDay": "2026-09-23",
+      "lastCompletedDay": "2026-09-23"
+    },
+    "u2-l2": {
+      "timesCompleted": 1,
+      "bestAccuracy": 90,
+      "firstCompletedDay": "2026-09-25",
+      "lastCompletedDay": "2026-09-25"
+    },
+    "u2-l3": {
+      "timesCompleted": 2,
+      "bestAccuracy": 100,
+      "firstCompletedDay": "2026-09-28",
+      "lastCompletedDay": "2026-09-30"
+    },
+    "u3-l1": {
+      "timesCompleted": 1,
+      "bestAccuracy": 80,
+      "firstCompletedDay": "2026-09-28",
+      "lastCompletedDay": "2026-09-28"
+    },
+    "u3-l2": {
+      "timesCompleted": 1,
+      "bestAccuracy": 90,
+      "firstCompletedDay": "2026-09-30",
+      "lastCompletedDay": "2026-09-30"
+    },
+    "u3-l3": {
+      "timesCompleted": 2,
+      "bestAccuracy": 100,
+      "firstCompletedDay": "2026-10-02",
+      "lastCompletedDay": "2026-10-05"
+    },
+    "u3-l4": {
+      "timesCompleted": 1,
+      "bestAccuracy": 80,
+      "firstCompletedDay": "2026-10-02",
+      "lastCompletedDay": "2026-10-02"
+    },
+    "u4-l1": {
+      "timesCompleted": 1,
+      "bestAccuracy": 90,
+      "firstCompletedDay": "2026-10-05",
+      "lastCompletedDay": "2026-10-05"
+    },
+    "u4-l2": {
+      "timesCompleted": 2,
+      "bestAccuracy": 100,
+      "firstCompletedDay": "2026-10-12",
+      "lastCompletedDay": "2026-10-12"
+    }
+  },
+  "cards": {
+    "treble-C4": {
+      "box": 4,
+      "lastSeenDay": "2026-10-12",
+      "lastPromotedDay": "2026-10-12",
+      "seen": 6,
+      "correct": 6,
+      "avgMs": 1800
+    },
+    "treble-G4": {
+      "box": 4,
+      "lastSeenDay": "2026-10-05",
+      "lastPromotedDay": null,
+      "seen": 7,
+      "correct": 6,
+      "avgMs": 2150
+    },
+    "treble-C5": {
+      "box": 3,
+      "lastSeenDay": "2026-10-02",
+      "lastPromotedDay": "2026-10-12",
+      "seen": 8,
+      "correct": 6,
+      "avgMs": 2500
+    },
+    "treble-D4": {
+      "box": 3,
+      "lastSeenDay": "2026-10-12",
+      "lastPromotedDay": null,
+      "seen": 9,
+      "correct": 9,
+      "avgMs": 2850
+    },
+    "treble-F4": {
+      "box": 2,
+      "lastSeenDay": "2026-10-05",
+      "lastPromotedDay": "2026-10-12",
+      "seen": 10,
+      "correct": 9,
+      "avgMs": 3200
+    },
+    "treble-A4": {
+      "box": 2,
+      "lastSeenDay": "2026-10-02",
+      "lastPromotedDay": null,
+      "seen": 11,
+      "correct": 9,
+      "avgMs": 3550
+    },
+    "treble-B4": {
+      "box": 3,
+      "lastSeenDay": "2026-10-12",
+      "lastPromotedDay": "2026-10-12",
+      "seen": 12,
+      "correct": 12,
+      "avgMs": 3900
+    },
+    "treble-D5": {
+      "box": 1,
+      "lastSeenDay": "2026-10-05",
+      "lastPromotedDay": null,
+      "seen": 13,
+      "correct": 12,
+      "avgMs": 4250
+    },
+    "treble-E4": {
+      "box": 2,
+      "lastSeenDay": "2026-10-02",
+      "lastPromotedDay": "2026-10-12",
+      "seen": 14,
+      "correct": 12,
+      "avgMs": 4600
+    },
+    "treble-E5": {
+      "box": 1,
+      "lastSeenDay": "2026-10-12",
+      "lastPromotedDay": null,
+      "seen": 15,
+      "correct": 15,
+      "avgMs": 4950
+    },
+    "treble-F5": {
+      "box": 1,
+      "lastSeenDay": "2026-10-05",
+      "lastPromotedDay": "2026-10-12",
+      "seen": 16,
+      "correct": 15,
+      "avgMs": 5300
+    },
+    "bass-C4": {
+      "box": 1,
+      "lastSeenDay": "2026-10-02",
+      "lastPromotedDay": null,
+      "seen": 17,
+      "correct": 15,
+      "avgMs": 5650
+    }
+  },
+  "daysPracticed": [
+    "2026-09-20",
+    "2026-09-21",
+    "2026-09-23",
+    "2026-09-25",
+    "2026-09-28",
+    "2026-09-30",
+    "2026-10-02",
+    "2026-10-05",
+    "2026-10-12"
+  ],
+  "today": {
+    "day": "2026-10-12",
+    "lessonsDone": 1
+  },
+  "flags": {
+    "welcomeSeen": true,
+    "keyboardUnlockSeen": false,
+    "installCardDismissedDay": "2026-10-01",
+    "lastExportDay": "2026-10-05"
+  },
+  "totals": {
+    "questionsAnswered": 142,
+    "correctFirstTry": 121,
+    "reviewsDone": 1,
+    "lessonsDone": 15
+  }
+}
