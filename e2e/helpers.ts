@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
-import type { Page } from '@playwright/test';
-import { pathLessons } from '../src/domain/curriculum';
+import type { Locator, Page } from '@playwright/test';
+import { allLessonIds, pathLessons } from '../src/domain/curriculum';
 import { emptyProgress, type Progress } from '../src/domain/progress';
 import type { Answer } from '../src/domain/questions';
 import { LETTERS } from '../src/domain/notes';
@@ -13,6 +13,10 @@ const CHOICE_LABEL: Record<string, string> = {
   second: 'Second note',
   treble: 'Treble clef',
   bass: 'Bass clef',
+  'step-up': 'Step up',
+  'step-down': 'Step down',
+  'skip-up': 'Skip up',
+  'skip-down': 'Skip down',
 };
 
 /** Opens the app on a fresh phone and taps "Let's start". */
@@ -95,9 +99,9 @@ export async function readStored(page: Page): Promise<unknown> {
 }
 
 /** What is on screen during a lesson. */
-type Screen = 'complete' | 'feedback' | 'card' | 'question';
+export type Screen = 'complete' | 'feedback' | 'card' | 'question';
 
-async function whatIsShown(page: Page): Promise<Screen> {
+export async function whatIsShown(page: Page): Promise<Screen> {
   await page
     .locator(
       '[data-testid=lesson-complete],[data-testid=feedback],[data-testid=concept-card],[data-testid=meet-card],[data-testid=question]',
@@ -133,6 +137,10 @@ export async function answerQuestion(page: Page, correct: boolean): Promise<Answ
       second: 'first',
       treble: 'bass',
       bass: 'treble',
+      'step-up': 'step-down',
+      'step-down': 'step-up',
+      'skip-up': 'skip-down',
+      'skip-down': 'skip-up',
     };
     const value = correct ? right.value : (pairs[right.value] ?? right.value);
     await q.getByRole('button', { name: CHOICE_LABEL[value] ?? value, exact: true }).click();
@@ -143,7 +151,10 @@ export async function answerQuestion(page: Page, correct: boolean): Promise<Answ
       : (LETTERS[(LETTERS.indexOf(note.charAt(0) as (typeof LETTERS)[number]) + 1) % 7] ?? 'D');
     await q.locator(`[data-note="${letter}${note.charAt(1)}"]`).click();
   } else {
-    throw new Error('position answers are not used in M4');
+    // find-on-staff: tap the band, then Check. A wrong answer is the position next to the right one.
+    const position = correct ? right.position : right.position + (right.position < 12 ? 1 : -1);
+    await q.locator(`[data-position="${String(position)}"]`).click();
+    await q.getByRole('button', { name: 'Check' }).click();
   }
   return right;
 }
@@ -179,3 +190,52 @@ export async function fireControllerChange(page: Page): Promise<void> {
     w.__e2eFireControllerChange();
   });
 }
+
+/** Opens a route inside the running app (the hash changes, the page does not reload). */
+export async function go(page: Page, hash: string): Promise<void> {
+  await page.evaluate((h) => {
+    window.location.hash = h;
+  }, hash);
+}
+
+/** From the completion screen: wait for the save, then back to the Path. */
+export async function finish(page: Page): Promise<void> {
+  await expect(page.getByTestId('lesson-complete')).toBeVisible();
+  await expect(page.getByText('Saving…')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByTestId('xp-value')).toBeVisible();
+}
+
+/** Answers questions correctly until one of this kind is on screen, unanswered. */
+export async function reachQuestion(page: Page, kind: string): Promise<Locator> {
+  for (let guard = 0; guard < 80; guard++) {
+    const shown = await whatIsShown(page);
+    if (shown === 'complete') throw new Error(`No ${kind} question in this lesson`);
+    if (shown === 'card') await page.getByRole('button', { name: 'Got it' }).click();
+    else if (shown === 'feedback') await page.getByRole('button', { name: 'Continue' }).click();
+    else {
+      const q = page.getByTestId('question');
+      if ((await q.getAttribute('data-kind')) === kind) return q;
+      await answerQuestion(page, true);
+      await expect(page.getByTestId('feedback')).toBeVisible();
+    }
+  }
+  throw new Error(`Gave up looking for a ${kind} question`);
+}
+
+export const answerOf = async (q: Locator): Promise<Answer> =>
+  JSON.parse((await q.getAttribute('data-answer')) ?? 'null') as Answer;
+
+/** Every lesson of every level is already done, so any of them can be opened and replayed. */
+export const everythingDone = () =>
+  progressAfter(pathLessons().length, (p) => {
+    p.flags.keyboardUnlockSeen = true;
+    for (const id of allLessonIds()) {
+      p.lessons[id] ??= {
+        timesCompleted: 1,
+        bestAccuracy: 100,
+        firstCompletedDay: '2026-10-01',
+        lastCompletedDay: '2026-10-01',
+      };
+    }
+  });

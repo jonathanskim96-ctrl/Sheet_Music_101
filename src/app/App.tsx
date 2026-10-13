@@ -130,6 +130,14 @@ function Shell() {
     const def = findLesson(route.lessonId);
     screen = def ? <LessonScreen key={def.id} source={{ kind: 'lesson', def }} /> : <PathScreen />;
     banner = def !== undefined;
+  } else if (route.name === 'checkpoint') {
+    const checkpoint = CHECKPOINTS.find((c) => c.id === route.checkpointId);
+    screen = checkpoint ? (
+      <LessonScreen key={checkpoint.id} source={{ kind: 'checkpoint', checkpoint }} />
+    ) : (
+      <PathScreen />
+    );
+    banner = checkpoint !== undefined;
   } else if (route.name === 'review')
     screen = <LessonScreen key="review" source={{ kind: 'review' }} />;
   else if (route.name === 'progress') screen = <ProgressScreen />;

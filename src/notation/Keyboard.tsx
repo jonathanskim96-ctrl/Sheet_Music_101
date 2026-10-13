@@ -79,6 +79,7 @@ export function Keyboard({
             aria-label={note === 'C4' ? `${letterOf(note)}, Middle C` : letterOf(note)}
             aria-disabled={disabled}
             data-note={note}
+            data-key-state={states[note] ?? 'normal'}
             onClick={() => {
               press(note);
             }}
