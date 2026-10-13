@@ -142,3 +142,23 @@ for (const scheme of ['light', 'dark'] as const) {
     await shot('path-mid-course-320');
   });
 }
+
+// The iPhone Silent-mode hint under the lesson header (SPEC 7.7).
+test.describe('on an iPhone', () => {
+  test.use({
+    userAgent:
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+  });
+  for (const scheme of ['light', 'dark'] as const) {
+    test(`lesson with the Silent-mode hint, ${scheme} mode`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
+      await page.goto('./');
+      await page.getByRole('button', { name: "Let's start" }).click();
+      await page.getByTestId('bubble-u1-l1').click();
+      await expect(page.getByTestId('silent-hint')).toBeVisible();
+      await page.screenshot({ path: `test-results/screens/app-silent-hint-${scheme}.png` });
+      await page.setViewportSize({ width: 320, height: 640 });
+      await page.screenshot({ path: `test-results/screens/app-silent-hint-320-${scheme}.png` });
+    });
+  }
+});

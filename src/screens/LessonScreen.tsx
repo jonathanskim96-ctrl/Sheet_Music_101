@@ -40,11 +40,13 @@ export function LessonScreen({ def }: { def: LessonDef }) {
   });
   const [leaving, setLeaving] = useState(false);
   const soundOn = progress.settings.soundOn;
-  // Only on iPhone/iPad, with sound on, on the first screen; gone after the first "Got it" or answer.
-  const [hintOpen, setHintOpen] = useState(() => !silentHintSpent && soundOn && isIosDevice());
+  // Only on iPhone/iPad, on the first screen, while sound is on; gone after the first "Got it" or
+  // answer. It counts as used only once it has actually been shown.
+  const [hintOpen, setHintOpen] = useState(() => !silentHintSpent && isIosDevice());
+  const showHint = hintOpen && soundOn && session.phase !== 'complete';
   useEffect(() => {
-    if (hintOpen) silentHintSpent = true;
-  }, [hintOpen]);
+    if (showHint) silentHintSpent = true;
+  }, [showHint]);
 
   const current = currentQuestion(session);
   const total = session.queue.length;
@@ -157,7 +159,7 @@ export function LessonScreen({ def }: { def: LessonDef }) {
   return (
     <div className={styles['page']}>
       {session.phase !== 'complete' && header}
-      {hintOpen && soundOn && session.phase !== 'complete' && (
+      {showHint && (
         <p className={styles['silentHint']} data-testid="silent-hint">
           {SILENT_HINT}
         </p>
