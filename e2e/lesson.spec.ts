@@ -140,3 +140,35 @@ test('mid-course progress from the fixture shows done, current and locked bubble
   await expect(page.getByTestId('bubble-u4-l4')).toHaveAttribute('data-state', 'locked');
   await expect(xp(page)).toHaveText('135');
 });
+
+test('every playable lesson (units 1–4) can be finished, in order', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'phone project only, to keep the run short');
+  test.slow();
+  await startFresh(page);
+  const order = [
+    'u1-l1',
+    'u1-l2',
+    'u1-l3',
+    'u1-l4',
+    'u2-l1',
+    'u2-l2',
+    'u2-l3',
+    'u3-l1',
+    'u3-l2',
+    'u3-l3',
+    'u3-l4',
+    'u4-l1',
+    'u4-l2',
+    'u4-l3',
+    'u4-l4',
+    'u4-l5',
+  ];
+  for (const id of order) {
+    await expect(page.getByTestId(`bubble-${id}`)).toHaveAttribute('data-state', 'current');
+    await page.getByTestId(`bubble-${id}`).click();
+    await playLesson(page);
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await expect(page.getByTestId(`bubble-${id}`)).toHaveAttribute('data-state', 'completed');
+  }
+  await expect(page.getByText('More units are coming soon.')).toBeVisible();
+});

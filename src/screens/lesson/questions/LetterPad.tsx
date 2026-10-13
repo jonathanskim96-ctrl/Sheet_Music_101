@@ -1,5 +1,8 @@
-import { LETTERS, type Letter } from '../../../domain/notes';
+import type { Letter } from '../../../domain/notes';
 import styles from './questions.module.css';
+
+// The pad reads A to G (the order of the musical alphabet taught in unit 1), not C to B.
+const PAD_ORDER: readonly Letter[] = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
 
 export type ResultState = 'correct' | 'wrong';
 
@@ -13,7 +16,7 @@ export interface LetterPadProps {
 export function LetterPad({ onPick, states = {} }: LetterPadProps) {
   return (
     <div className={styles['pad']} role="group" aria-label="Answer with a letter">
-      {LETTERS.map((letter) => {
+      {PAD_ORDER.map((letter) => {
         const state = states[letter];
         return (
           <button

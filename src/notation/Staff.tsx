@@ -124,15 +124,22 @@ export function Staff({
         {lineNumbers &&
           firstStave &&
           [0, 2, 4, 6, 8].map((p, i) => (
-            <text
-              key={`n${String(p)}`}
-              className={styles['text']}
-              x={8}
-              y={yOf(firstStave.bottomLineY, p) + 3}
-              textAnchor="middle"
-            >
-              {i + 1}
-            </text>
+            <g key={`n${String(p)}`}>
+              <circle
+                className={styles['numberDisc']}
+                cx={10}
+                cy={yOf(firstStave.bottomLineY, p)}
+                r={5.5}
+              />
+              <text
+                className={styles['numberText']}
+                x={10}
+                y={yOf(firstStave.bottomLineY, p) + 2.6}
+                textAnchor="middle"
+              >
+                {i + 1}
+              </text>
+            </g>
           ))}
         {mode === 'grand' && firstStave && lastStave && (
           <>

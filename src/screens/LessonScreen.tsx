@@ -145,7 +145,7 @@ export function LessonScreen({ def }: { def: LessonDef }) {
 
   return (
     <div className={styles['page']}>
-      {header}
+      {session.phase !== 'complete' && header}
       <main className={styles['main']}>{body}</main>
       <Sheet
         open={leaving}
