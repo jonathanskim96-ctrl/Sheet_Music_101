@@ -218,10 +218,10 @@ test('Progress shows the totals, the mastery chart and level stars', async ({ pa
 
 test("unit level stars on the path fill when a unit's lessons are done", async ({ page }) => {
   await seedProgress(page, progressAfter(4)); // all of unit 1
-  const unit1 = page.getByRole('region', { name: 'Unit 1' });
+  const unit1 = page.getByRole('region', { name: 'Unit 1', exact: true });
   await expect(unit1.getByTestId('level-stars')).toHaveAttribute('data-level', '1');
   await expect(unit1.getByRole('img', { name: '1 of 1 star' })).toBeVisible();
-  const unit2 = page.getByRole('region', { name: 'Unit 2' });
+  const unit2 = page.getByRole('region', { name: 'Unit 2', exact: true });
   await expect(unit2.getByRole('img', { name: '0 of 3 stars' })).toBeVisible();
   // no cards met yet, so there is nothing to practise
   await expect(page.getByRole('button', { name: 'Practise' })).toHaveCount(0);

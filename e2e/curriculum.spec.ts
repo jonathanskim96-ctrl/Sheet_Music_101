@@ -293,7 +293,9 @@ test.describe('levels and the keyboard', () => {
     await expect(page.getByTestId('unit-5-level-2')).toHaveCount(0);
     await expect(page.getByTestId('unit-1-level-2')).toHaveCount(0);
     await expect(page.getByTestId('unit-2-level-3')).toHaveCount(0);
-    const stars = page.getByRole('region', { name: 'Unit 2' }).getByTestId('level-stars');
+    const stars = page
+      .getByRole('region', { name: 'Unit 2', exact: true })
+      .getByTestId('level-stars');
     await expect(stars).toHaveAttribute('data-level', '1');
 
     // Level 2: lesson a first, then b; the stars fill when both are done and Level 3 appears
