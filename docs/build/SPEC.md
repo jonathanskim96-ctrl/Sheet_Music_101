@@ -743,8 +743,18 @@ rotation, delay 0–300ms, CSS keyframe fall 1.8s; component unmounts itself aft
 `pointer-events: none`. Not rendered under reduced motion.
 
 ### 7.7 Audio (`audio/synth.ts`)
-- One lazily created `AudioContext` on the first play call (always inside a tap handler);
-  `resume()` if suspended. Master `GainNode` 0.6 → `DynamicsCompressorNode` → destination.
+- One lazily created `AudioContext`. Master `GainNode` 0.6 → `DynamicsCompressorNode` → destination.
+  `resume()` whenever the state is not `running` (iOS Safari also uses `interrupted`).
+- **Start on the first tap (iPhone Safari).** On the first `pointerup`, `touchend`, `click` or `keydown`
+  anywhere (capture phase) the engine is created inside that tap, `resume()`d, and a one-sample silent
+  buffer is played. The listeners stay until the engine reports `running` (checked after the tap), and are
+  put back whenever the page becomes hidden (a call or app switch can stop the engine). `installAudioUnlock`
+  in `synth.ts`, installed from `main.tsx`. Works while muted.
+- **Restart a stuck engine.** A `closed` engine is replaced on the next call. If, 300 ms after a tap, the
+  engine is still not `running`, it is closed and a new one is built (same graph) and woken the same way:
+  at most once per tap, and not if a newer rebuild already replaced it. Failures go to the one-time toast.
+- **Schedule a little ahead.** Every sound starts at `currentTime + 0.02` s (`LEAD`), so the start of a
+  note is not cut off while the engine wakes up. The shapes and gaps below are unchanged.
 - `playNote(note, delay = 0, dur = 1.2)`: four sine partials (×1 amp 1.0, ×2 0.5, ×3 0.25,
   ×4 0.12), each gain `0 → 0.25*amp` linear in 8ms, then exponential to 0.0001 by
   `dur / sqrt(partial)`; stop at end + 0.05s.
