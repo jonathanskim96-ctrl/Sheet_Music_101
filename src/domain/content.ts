@@ -416,6 +416,9 @@ export const LESSON_COMPLETE = {
   statLabels: { xp: 'XP earned', accuracy: 'Accuracy', time: 'Time', combo: 'Best combo' },
 } as const;
 
+/** The checkpoint node on the Path: SPEC 7.2 ("Jump ahead" until the unit before it is done). */
+export const CHECKPOINT_NODE = { jumpAhead: 'Jump ahead', testYourself: 'Test yourself' } as const;
+
 export const WELCOME = {
   bubble: "Hi, I'm Quaver!",
   body: "I'll help you read piano music, one note at a time. A few minutes a day is all it takes.",

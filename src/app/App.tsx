@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { setAudioErrorHandler } from '../audio/synth';
 import { somethingWentWrong } from '../domain/content';
-import { findLesson } from '../domain/curriculum';
+import { CHECKPOINTS, findLesson } from '../domain/curriculum';
 import { isPlayable, reviewAvailable } from '../domain/unlocks';
 import { ProgressProvider, createProgressStore, useProgress } from '../data/ProgressContext';
 import { UpdateBanner } from '../pwa/UpdateBanner';
@@ -87,7 +87,8 @@ function Shell() {
     } else if (parsed.name === 'review') {
       if (progress && !reviewAvailable(progress)) route = { name: 'home' };
     } else if (parsed.name === 'checkpoint') {
-      route = { name: 'home' }; // arrives in the next step
+      const known = CHECKPOINTS.some((c) => c.id === parsed.checkpointId);
+      if (!known) route = { name: 'home' };
     }
   }
   const hash = routeToHash(route);

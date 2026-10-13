@@ -1,0 +1,50 @@
+.node {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  align-self: stretch;
+  min-height: 72px;
+  margin: 28px 0 8px;
+  padding: 10px 16px;
+  border: 2px solid var(--border);
+  border-bottom-width: 5px;
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  color: var(--text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.node:active {
+  transform: translateY(2px);
+  border-bottom-width: 3px;
+}
+
+.trophy {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--xp);
+  color: #fff;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+}
+
+.title {
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.hint {
+  font-weight: 700;
+  color: var(--text-muted);
+}

@@ -1,15 +1,16 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useToast } from '../app/toasts';
 import { navigate } from '../app/router';
 import { KEYBOARD_UNLOCKED, TOASTS, somethingWentWrong } from '../domain/content';
 import { dayKeyOf } from '../domain/days';
-import { UNITS, pathLessons } from '../domain/curriculum';
+import { CHECKPOINTS, UNITS, pathLessons } from '../domain/curriculum';
 import { backupReminderDue, installCardSnoozed } from '../domain/nudges';
 import { planFlag } from '../domain/planners';
 import { lessonsDoneToday } from '../domain/progress';
 import {
   MAX_UNIT_M4,
   currentPlayableLesson,
+  checkpointReached,
   isCompleted,
   isLevelAvailable,
   isPlayable,
@@ -26,6 +27,7 @@ import { Keyboard } from '../notation/Keyboard';
 import { canOfferInstall, promptInstall, useInstallInfo } from '../pwa/install';
 import { BackupReminderCard } from '../ui/BackupReminderCard';
 import { Button } from '../ui/Button';
+import { CheckpointNode } from '../ui/CheckpointNode';
 import { DailyGoalRing } from '../ui/DailyGoalRing';
 import { BarChart3, CalendarDays, Music, Settings, Star } from '../ui/icons';
 import { InstallCard } from '../ui/InstallCard';
@@ -186,57 +188,70 @@ export function PathScreen() {
           </div>
         )}
         {UNITS.filter((u) => u.n <= MAX_UNIT_M4).map((unit) => (
-          <section key={unit.n} className={styles['unit']} aria-label={`Unit ${String(unit.n)}`}>
-            <UnitHeader
-              n={unit.n}
-              title={unit.title}
-              subtitle={unit.subtitle}
-              color={unit.color}
-              stars={{ level: unitLevel(progress, unit.n), max: unitLevelCount(unit.n) }}
-              levels={([2, 3] as const).flatMap((level) => {
-                const target = isLevelAvailable(progress, unit.n, level)
-                  ? nextLevelLesson(progress, unit.n, level)
-                  : null;
-                return target === null
-                  ? []
-                  : [
-                      {
-                        level,
-                        onPress: () => {
-                          navigate({ name: 'lesson', lessonId: target.id });
+          <Fragment key={unit.n}>
+            <section className={styles['unit']} aria-label={`Unit ${String(unit.n)}`}>
+              <UnitHeader
+                n={unit.n}
+                title={unit.title}
+                subtitle={unit.subtitle}
+                color={unit.color}
+                stars={{ level: unitLevel(progress, unit.n), max: unitLevelCount(unit.n) }}
+                levels={([2, 3] as const).flatMap((level) => {
+                  const target = isLevelAvailable(progress, unit.n, level)
+                    ? nextLevelLesson(progress, unit.n, level)
+                    : null;
+                  return target === null
+                    ? []
+                    : [
+                        {
+                          level,
+                          onPress: () => {
+                            navigate({ name: 'lesson', lessonId: target.id });
+                          },
                         },
-                      },
-                    ];
+                      ];
+                })}
+              />
+              {unit.lessons.map((lesson) => {
+                const offset = ZIGZAG[(PATH_INDEX.get(lesson.id) ?? 0) % ZIGZAG.length] ?? 0;
+                const isCurrent = current?.id === lesson.id;
+                const state: BubbleState = isCompleted(progress, lesson.id)
+                  ? 'completed'
+                  : isCurrent
+                    ? 'current'
+                    : 'locked';
+                return (
+                  <LessonBubble
+                    key={lesson.id}
+                    lessonId={lesson.id}
+                    title={lesson.title}
+                    state={state}
+                    color={unit.color}
+                    offset={offset}
+                    bubbleRef={isCurrent ? currentRef : undefined}
+                    onPress={() => {
+                      if (isPlayable(progress, lesson.id)) {
+                        navigate({ name: 'lesson', lessonId: lesson.id });
+                      } else {
+                        toast(TOASTS.lockedLesson);
+                      }
+                    }}
+                  />
+                );
               })}
-            />
-            {unit.lessons.map((lesson) => {
-              const offset = ZIGZAG[(PATH_INDEX.get(lesson.id) ?? 0) % ZIGZAG.length] ?? 0;
-              const isCurrent = current?.id === lesson.id;
-              const state: BubbleState = isCompleted(progress, lesson.id)
-                ? 'completed'
-                : isCurrent
-                  ? 'current'
-                  : 'locked';
-              return (
-                <LessonBubble
-                  key={lesson.id}
-                  lessonId={lesson.id}
-                  title={lesson.title}
-                  state={state}
-                  color={unit.color}
-                  offset={offset}
-                  bubbleRef={isCurrent ? currentRef : undefined}
-                  onPress={() => {
-                    if (isPlayable(progress, lesson.id)) {
-                      navigate({ name: 'lesson', lessonId: lesson.id });
-                    } else {
-                      toast(TOASTS.lockedLesson);
-                    }
-                  }}
-                />
-              );
-            })}
-          </section>
+            </section>
+            {CHECKPOINTS.filter((cp) => cp.afterUnit === unit.n).map((cp) => (
+              <CheckpointNode
+                key={cp.id}
+                id={cp.id}
+                title={cp.title}
+                reached={checkpointReached(progress, cp)}
+                onPress={() => {
+                  navigate({ name: 'checkpoint', checkpointId: cp.id });
+                }}
+              />
+            ))}
+          </Fragment>
         ))}
         <p className={styles['more']}>More units are coming soon.</p>
       </main>

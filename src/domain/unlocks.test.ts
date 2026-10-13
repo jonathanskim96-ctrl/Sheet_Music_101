@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { UNITS, allLessonIds, levelLessons, pathLessons } from './curriculum';
+import { CHECKPOINTS, UNITS, allLessonIds, levelLessons, pathLessons } from './curriculum';
 import { emptyProgress, type LessonRecord, type Progress } from './progress';
 import type { CardState } from './srs';
 import {
   MAX_UNIT_M4,
+  checkpointReached,
   currentLesson,
   currentPlayableLesson,
   isAvailable,
@@ -283,6 +284,24 @@ describe('M4 gate (TODO M6: remove with MAX_UNIT_M4)', () => {
     expect(isReviewPlayable(p)).toBe(false);
     expect(keyboardUnlocked(p)).toBe(true);
     expect(levelsPlayable()).toBe(false);
+  });
+});
+
+describe('checkpointReached', () => {
+  const cp = (id: string) => CHECKPOINTS.find((c) => c.id === id) as (typeof CHECKPOINTS)[number];
+  it('is false until every lesson of the unit before the checkpoint is done', () => {
+    expect(checkpointReached(done(), cp('cp-a'))).toBe(false);
+    expect(checkpointReached(done(...upTo('u4-l4')), cp('cp-a'))).toBe(false);
+    expect(checkpointReached(done(...upTo('u4-l5')), cp('cp-a'))).toBe(true);
+  });
+  it('looks only at its own unit: cp-b needs unit 7, cp-c needs unit 10', () => {
+    expect(checkpointReached(done(...upTo('u7-l3')), cp('cp-b'))).toBe(false);
+    expect(checkpointReached(done(...upTo('u7-l4')), cp('cp-b'))).toBe(true);
+    expect(checkpointReached(done(...upTo('u10-l4')), cp('cp-c'))).toBe(false);
+    expect(checkpointReached(done(...upTo('u10-l5')), cp('cp-c'))).toBe(true);
+  });
+  it('passing a checkpoint counts: its skipped lessons are completed records', () => {
+    expect(checkpointReached(done(...level1Of(4)), cp('cp-a'))).toBe(true);
   });
 });
 

@@ -4,6 +4,7 @@ import {
   findLesson,
   levelLessons,
   pathLessons,
+  type CheckpointDef,
   type LessonDef,
 } from './curriculum';
 import type { Progress } from './progress';
@@ -65,6 +66,11 @@ export function isLevelAvailable(p: Progress, unit: number, level: 2 | 3): boole
 export function nextLevelLesson(p: Progress, unit: number, level: 2 | 3): LessonDef | null {
   const lessons = levelLessons(unit, level);
   return lessons.find((l) => !isCompleted(p, l.id)) ?? lessons[0] ?? null;
+}
+
+/** True once the learner has finished the unit before the checkpoint ("Test yourself", else "Jump ahead"). */
+export function checkpointReached(p: Progress, cp: CheckpointDef): boolean {
+  return allCompleted(p, level1Of(cp.afterUnit));
 }
 
 /** Review needs at least three cards the learner has met. */
