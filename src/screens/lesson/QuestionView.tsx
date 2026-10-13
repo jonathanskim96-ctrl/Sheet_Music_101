@@ -12,6 +12,7 @@ import { Keyboard, whiteKeys, type KeyState } from '../../notation/Keyboard';
 import { Staff, type NoteState } from '../../notation/Staff';
 import { ChoiceButtons } from './questions/ChoiceButtons';
 import { FindKey } from './questions/FindKey';
+import { FindOnStaff } from './questions/FindOnStaff';
 import { LetterPad, type ResultState } from './questions/LetterPad';
 import styles from './lesson.module.css';
 import qStyles from './questions/questions.module.css';
@@ -189,8 +190,10 @@ export function QuestionView({ question: q, answered, onAnswer }: QuestionViewPr
       body = <FindKey q={q} answered={answered} send={send} />;
       break;
     case 'find-on-staff':
+      body = <FindOnStaff q={q} answered={answered} send={send} />;
+      break;
     case 'step-skip':
-      // These arrive in the next M6 steps; lessons that need them are not reachable yet.
+      // These arrive in the next M6 step; lessons that need them are not reachable yet.
       body = <p>This kind of question is not available yet.</p>;
       break;
     default: {

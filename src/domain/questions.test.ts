@@ -14,6 +14,7 @@ import {
   cardOf,
   checkAnswer,
   correctAnswerOf,
+  nearestCorrectPosition,
   stepSkipValue,
   type Answer,
   type ChoiceValue,
@@ -355,5 +356,52 @@ describe('bad input', () => {
   });
   it('letterOf agrees with the card letters used above', () => {
     expect(letterOf('G4')).toBe('G');
+  });
+});
+
+describe('nearestCorrectPosition', () => {
+  const q = (card: CardId): Question => ({ kind: 'find-on-staff', card });
+
+  it("is the card's own position when the learner is closest to it", () => {
+    // treble G4 is position 2; a tap one above (3) is nearest to it
+    expect(nearestCorrectPosition('treble-G4', 3)).toBe(2);
+    expect(nearestCorrectPosition('treble-G4', 2)).toBe(2);
+  });
+  it('picks the same letter in another octave when that is nearer', () => {
+    // G4 = 2, G5 = 9: a note placed at 8 is nearer to G5
+    expect(nearestCorrectPosition('treble-G4', 8)).toBe(9);
+    expect(nearestCorrectPosition('treble-G4', 12)).toBe(9);
+  });
+  it('picks the nearer of two octaves on either side of the middle', () => {
+    // E4 = 0 and E5 = 7 are 7 apart, so 3 is nearer the lower and 4 the higher (no exact tie exists)
+    expect(nearestCorrectPosition('treble-E4', 3)).toBe(0);
+    expect(nearestCorrectPosition('treble-E4', 4)).toBe(7);
+  });
+  it('always returns a position that checkAnswer accepts, for every card and every tap', () => {
+    for (const card of ALL_CARDS) {
+      for (let tap = -4; tap <= 12; tap++) {
+        const p = nearestCorrectPosition(card, tap);
+        expect(p).toBeGreaterThanOrEqual(-4);
+        expect(p).toBeLessThanOrEqual(12);
+        expect(
+          checkAnswer(q(card), { kind: 'position', position: p }),
+          `${card} @${String(tap)}`,
+        ).toBe(true);
+      }
+    }
+  });
+  it('is never further away than another right position', () => {
+    for (const card of ALL_CARDS) {
+      const parts = parseCardId(card);
+      if (!parts) throw new Error(card);
+      for (let tap = -4; tap <= 12; tap++) {
+        const best = Math.abs(nearestCorrectPosition(card, tap) - tap);
+        for (let p = -4; p <= 12; p++) {
+          if (checkAnswer(q(card), { kind: 'position', position: p })) {
+            expect(Math.abs(p - tap)).toBeGreaterThanOrEqual(best);
+          }
+        }
+      }
+    }
   });
 });

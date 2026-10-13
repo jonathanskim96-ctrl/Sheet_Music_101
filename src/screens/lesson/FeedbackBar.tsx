@@ -10,9 +10,15 @@ import {
   fillWrongPhrase,
 } from '../../domain/content';
 import { describePosition, hintFor } from '../../domain/landmarks';
-import { letterOf } from '../../domain/notes';
+import { letterOf, noteAtPosition } from '../../domain/notes';
 import type { Progress } from '../../domain/progress';
-import { cardOf, correctAnswerOf, type Answer, type Question } from '../../domain/questions';
+import {
+  cardOf,
+  correctAnswerOf,
+  nearestCorrectPosition,
+  type Answer,
+  type Question,
+} from '../../domain/questions';
 import { Button } from '../../ui/Button';
 import { Check } from '../../ui/icons';
 import { Mascot } from '../../ui/Mascot';
@@ -46,6 +52,14 @@ export function FeedbackBar({ question, result, progress, combo, onContinue }: F
   const [phrase] = useState(() => (result.correct ? pick(CORRECT_PHRASES) : pick(WRONG_PHRASES)));
   const card = cardOf(question);
   const parts = card === null ? null : parseCardId(card);
+  // Find-on-staff draws the nearest right note beside the learner's, so describe that one.
+  const shown =
+    parts && question.kind === 'find-on-staff' && result.answer.kind === 'position'
+      ? (noteAtPosition(
+          parts.clef,
+          nearestCorrectPosition(question.card, result.answer.position),
+        ) ?? parts.note)
+      : parts?.note;
   const milestone = COMBO_MILESTONES.find((m) => m.at === combo);
 
   return (
@@ -72,8 +86,8 @@ export function FeedbackBar({ question, result, progress, combo, onContinue }: F
               <p className={styles['feedbackTitle']}>
                 {fillWrongPhrase(phrase, answerText(question))}
               </p>
-              {parts && (
-                <p className={styles['feedbackLine']}>{describePosition(parts.clef, parts.note)}</p>
+              {parts && shown && (
+                <p className={styles['feedbackLine']}>{describePosition(parts.clef, shown)}</p>
               )}
               {card !== null && <HintLine card={card} progress={progress} />}
             </>

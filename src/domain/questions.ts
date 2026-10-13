@@ -130,6 +130,26 @@ export function checkAnswer(q: Question, a: Answer): boolean {
   }
 }
 
+/**
+ * The staff position (-4..12, the tappable range) holding the card's letter that is nearest to
+ * `position`; a tie goes to the lower one. Feedback for find-on-staff draws a note there.
+ */
+export function nearestCorrectPosition(card: CardId, position: number): number {
+  const { clef, note } = cardParts(card);
+  let best = staffPosition(clef, note);
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (let p = -4; p <= 12; p++) {
+    const at = noteAtPosition(clef, p);
+    if (at === null || letterOf(at) !== letterOf(note)) continue;
+    const distance = Math.abs(p - position);
+    if (distance < bestDistance) {
+      best = p;
+      bestDistance = distance;
+    }
+  }
+  return best;
+}
+
 /** The card a question is about; only note questions have one. */
 export function cardOf(q: Question): CardId | null {
   switch (q.kind) {
