@@ -279,7 +279,7 @@ browser won't let the app save progress. It will reset when you close it." · re
 
 **Import preview sheet:** title "Restore this backup?" · lines "Saved on {date}",
 "{xp} XP · {lessons} lessons · {days} days practised" · warning "This replaces your current
-progress on this phone." · "Replace my progress" (danger) / "Cancel".
+progress on this phone." · "Save a backup first" (secondary; saves the current progress, the sheet stays open) · "Replace my progress" (danger) / "Cancel".
 
 **Start over:** Sheet 1 title "Save a backup first?" body "Then you can get your progress back
 later." buttons "Save backup" / "Continue without backup" / "Cancel". Sheet 2 title "Erase all

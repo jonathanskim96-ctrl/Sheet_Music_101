@@ -270,6 +270,16 @@ export function SettingsScreen() {
             <p className={styles['warning']}>{IMPORT_PREVIEW.warning}</p>
             <div className={styles['buttons']}>
               <Button
+                variant="secondary"
+                fullWidth
+                onClick={() => {
+                  // Offer an export before anything is replaced (CLAUDE.md); the preview stays open.
+                  void exportBackup();
+                }}
+              >
+                {IMPORT_PREVIEW.saveFirst}
+              </Button>
+              <Button
                 variant="danger"
                 fullWidth
                 onClick={() => {

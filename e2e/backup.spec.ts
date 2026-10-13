@@ -99,6 +99,30 @@ test('Cancel in the import preview changes nothing', async ({ page }) => {
   expect(await readStored(page)).toEqual(before);
 });
 
+test('the restore preview offers a backup of the current progress first, and replaces nothing until asked', async ({
+  page,
+}) => {
+  const p = fixtureProgress();
+  await seedProgress(page, p);
+  const { text } = await saveBackup(page);
+  // the file to restore: a different progress
+  const other = JSON.parse(text) as { progress: Progress };
+  other.progress.xp = 999;
+  await chooseFile(page, 'other.json', JSON.stringify(other));
+  const preview = page.getByRole('dialog', { name: 'Restore this backup?' });
+  const download = page.waitForEvent('download');
+  await preview.getByRole('button', { name: 'Save a backup first' }).click();
+  const file = await download;
+  const saved = parseBackup(readFileSync(await file.path(), 'utf8'));
+  expect(saved.ok && saved.progress.xp).toBe(p.xp);
+  // still on the preview, nothing replaced yet
+  await expect(preview).toBeVisible();
+  expect((await storedDoc(page)).xp).toBe(p.xp);
+  await preview.getByRole('button', { name: 'Replace my progress' }).click();
+  await expect(page.getByTestId('toast').filter({ hasText: 'Progress restored.' })).toBeVisible();
+  expect((await storedDoc(page)).xp).toBe(999);
+});
+
 const bad: [string, () => string | Buffer, string][] = [
   [
     'a JSON file that is not a backup',

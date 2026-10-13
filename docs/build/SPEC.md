@@ -687,7 +687,8 @@ button "Let's start" → `planFlag(welcomeSeen)` → Path.
 per platform) (installed: "The app is installed."; iPhone: the Share steps; install prompt available:
 "Install" button; otherwise "Use your browser's menu to add this app to your home screen."; owner
 decision 2026-10-13) · Backup: "Save a backup" (export), "Last backup: never / today / n days ago",
-"Restore from backup" (import → preview Sheet with summary → "Replace my progress"
+"Restore from backup" (import → preview Sheet with summary → "Save a backup first" (exports the
+current progress, the Sheet stays open; owner decision 2026-10-13) / "Replace my progress"
 (danger) / "Cancel") · Storage status · "Start over" (danger; Sheet 1: "Save a backup first?"
 [Save backup] [Continue without backup]; Sheet 2: "Erase all progress? This can't be undone."
 [Erase everything] (danger) [Cancel]) · About: version and build id, Bravura credit
