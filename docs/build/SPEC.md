@@ -719,12 +719,13 @@ Units: staff space `S = 10` SVG units. Glyph scale `k = S / 250 = 0.04`; draw gl
   sets for A3/C4/C6 treble and C2/E4 bass; positions round-trip with `noteAtPosition`.
 
 ### 7.4 Keyboard (`notation/Keyboard.tsx`)
-SVG. White key width 1 unit, height 4.2; black key width 0.6, height 2.6, centred on the
+SVG. White key width 1 unit, height 5.8; black key width 0.6, height 3.6, centred on the
 boundary after C, D, F, G, A. Range props `from`/`to` (white notes). Labels: "C" text at the
 bottom of each C key; Middle C additionally has a small dot marker. States per key: normal /
 highlight (`--correct-ink` fill) / wrong (`--wrong-ink` fill) / dimmed. `onPress(note | 'black')`.
 Each key is a `<button>`-like element with `role="button"`, `aria-label` = letter (+ "Middle C"),
-keyboard focusable. Height on phone ≈ 150px.
+keyboard focusable. Height on phone ≈ 150px (a 14-key window at 390px wide; keys are taller than
+real piano proportions for easier tapping, owner decision 2026-10-13).
 
 ### 7.5 Mascot (`ui/Mascot.tsx`)
 "Quaver": an eighth note drawn in SVG. Filled oval head (`--primary`), stem and flag, two

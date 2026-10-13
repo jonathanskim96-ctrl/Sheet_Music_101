@@ -27,6 +27,7 @@ _Read this first in every new session. Keep it short and current._
 | 2026-10-12 | Planner decisions (owner may veto): whole notes only, naturals only, range C2–C6; landmark teaching method; Leitner spaced repetition; leaving a lesson saves nothing; checkpoints let you jump ahead; no octave numbers shown to learners. |
 | 2026-10-12 | Hosting: GitHub Pages; the repository will be made public (code only, no data). |
 | 2026-10-13 | M1 review: the service worker never reloads the page by itself (SPEC §7.8 enforced in code); offline update-check failures are only logged. |
+| 2026-10-13 | Keyboard keys taller than real proportions (white 1 × 5.8, black 0.6 × 3.6) so a two-octave keyboard is ≈ 150px tall on a phone and easier to tap (SPEC 7.4 updated; M3 review option b). |
 | 2026-10-13 | M2 gaps: concept cards show again on lesson replays; reviews and checkpoints count towards the daily goal (and earn +10 XP even when a checkpoint is failed). |
 | 2026-10-12 | Tech: versions in `docs/build/SPEC.md` §2 were verified to install, build and test together (with npm 11 for installs; npm 10 has a resolver bug). |
 
@@ -60,7 +61,7 @@ keeps the recommended option until the owner says otherwise.
 - [ ] Add the app to the home screen on each phone (SETUP sections 6–7) and confirm the icon.
 
 ## Next step
-1. Owner approved the M3 look ("the design is fine"). Opus review of PR #6 done (2026-10-13): small fixes pushed (see NOTES); two larger items listed on the PR for a Sonnet fix session (stacked Sheets; keyboard height vs SPEC 7.4, which needs an owner/planner decision). Then merge. Note: the Gallery is dev/e2e only, so the live phone app still shows "Coming soon" until M4 adds the real screens.
+1. Owner approved the M3 look ("the design is fine"). Opus review of PR #6 done (2026-10-13): small fixes pushed (see NOTES); one larger item listed on the PR for a Sonnet fix session (stacked Sheets, must be fixed before M5). Keyboard height: owner chose taller keys (done). Then merge. Note: the Gallery is dev/e2e only, so the live phone app still shows "Coming soon" until M4 adds the real screens.
 2. M4 with the execution prompt in `docs/build/README.md`.
 
 ### M3 choices the spec left open (owner may veto)

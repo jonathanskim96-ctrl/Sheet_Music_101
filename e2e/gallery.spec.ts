@@ -46,6 +46,16 @@ test('tapping a keyboard key shows which key was pressed', async ({ page }) => {
   await expect(page.getByTestId('last-key')).toHaveText('Last key: black');
 });
 
+test('a two-octave keyboard is about 150 px tall on a phone (SPEC 7.4)', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(!isMobile, 'phone size only');
+  const box = await page.getByTestId('keyboard').first().boundingBox();
+  expect(box?.height).toBeGreaterThan(135);
+  expect(box?.height).toBeLessThan(165);
+});
+
 test('keys can be pressed with the keyboard', async ({ page }) => {
   const key = page.getByTestId('keyboard').first().locator('[data-note="E3"]');
   await key.focus();
