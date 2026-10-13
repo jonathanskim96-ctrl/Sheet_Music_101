@@ -33,6 +33,7 @@ _Read this first in every new session. Keep it short and current._
 | 2026-10-13 | No sound on iPhone was Silent mode (confirmed by the owner). The app **obeys Silent** and shows the hint "No sound? Check that your iPhone isn't on Silent." (iPhone/iPad only; in lessons and Settings; SPEC 7.7). |
 | 2026-10-13 | PR #12 review: on the very first run, if the browser opens storage but refuses the first save (nothing saved yet), the app plays in memory with the "won't save" warning (`unavailable`), not the "couldn't read" screen. A failed read of existing data stays `broken`. |
 | 2026-10-13 | iPhone sound bug (Play makes no sound): keep obeying Silent; a Sonnet session hardens the sound start-up (start on the first tap, restart a stuck engine; SPEC 7.7), then the owner does the 1-minute phone check below. Not chosen: ignoring Silent (pauses the learner's music) or a Settings switch for it (needs a schema change). |
+| 2026-10-13 | PR #15 review item 1 (owner approved): the stuck-engine rebuild happens at most once each time the page is shown (reset when the page is hidden), not once per tap; a slow engine (Bluetooth) is no longer closed again and again. |
 | 2026-10-13 | M5: the backup reminder's "Later" hides the card until the app is opened again (nothing saved; Settings' "Last backup" stays truthful). |
 | 2026-10-13 | M5: the Path's InstallCard shows only when it can offer something (an Install button or the iPhone Share steps). Settings says "The app is installed." when installed, else "Use your browser's menu to add this app to your home screen." when neither is possible. |
 | 2026-10-13 | M5: the Progress mastery chart uses 17 shared columns (each staff spreads its 17 notes in pitch order). |
@@ -72,7 +73,7 @@ keeps the recommended option until the owner says otherwise.
 
 ## Next step
 1. M5 PR (#14) reviewed by Opus on 2026-10-13 (code review + security review: no security findings). Small fixes pushed (sound switch double tap, export double tap, XSS test dialog check, dead CSS). Open: **owner question** on the import preview (CLAUDE.md says import must offer a backup first; SPEC/CURRICULUM only list Replace/Cancel), then a Sonnet fix session for the numbered list in the PR comment.
-2. iPhone sound hardening is **built** (its own PR, branch `claude/adoring-mccarthy-mk8l41`): items 1–3 and the SPEC update are done. Opus review done 2026-10-13 (small fixes pushed to the same branch). Next: a Sonnet session fixes item 1 of the review comment on PR #15 (the 300 ms rebuild must happen at most once each time the page is shown), then the owner merges and does the 1-minute phone check below. Then M6.
+2. iPhone sound hardening is **built** (its own PR, branch `claude/adoring-mccarthy-mk8l41`): items 1–3 and the SPEC update are done. Opus review done 2026-10-13 (small fixes pushed to the same branch). The 300 ms rebuild fix (item 1 of the review comment on PR #15) is done: the rebuild happens at most once each time the page is shown. Next: the owner merges PR #15, then does the 1-minute phone check below. Then M6.
 3. Owner: close PR #8 if still open (already in `main`).
 
 ### M5 choices the spec left open (owner may veto)

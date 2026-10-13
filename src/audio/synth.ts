@@ -115,6 +115,8 @@ export interface Synth {
   subscribe: (listener: () => void) => () => void;
   /** Called from a tap: starts the engine inside the gesture and restarts a stuck one. */
   unlock: () => void;
+  /** Allows one more stuck-engine rebuild; called when the page is hidden. */
+  allowRebuild: () => void;
   /** True when the engine exists and reports `running`. */
   isRunning: () => boolean;
 }
@@ -136,6 +138,9 @@ export function createSynth(
   let master: GainLike | null = null;
   let muted = false;
   let reported = false;
+  // A slow engine (Bluetooth, just after an interruption) must not be closed again and again, so
+  // the stuck-engine rebuild happens once each time the page is shown.
+  let rebuildUsed = false;
   const listeners = new Set<() => void>();
 
   const report = (e: unknown) => {
@@ -183,11 +188,12 @@ export function createSynth(
     return { ctx: c, out: master };
   };
 
-  // After a tap, an engine that still isn't running is stuck: replace it. Only the engine the
-  // tap started is checked, so a tap rebuilds at most once and the replacement waits for the next tap.
+  // After a tap, an engine that still isn't running is stuck: replace it, once until the page has
+  // been hidden. Only the engine the tap started is checked; later taps still call `unlock()`.
   const rebuildIfStuck = (checked: AudioContextLike) => {
     try {
-      if (muted || ctx !== checked || checked.state === 'running') return;
+      if (rebuildUsed || muted || ctx !== checked || checked.state === 'running') return;
+      rebuildUsed = true;
       const closing = checked.state === 'closed' ? null : checked.close();
       closing?.catch(report);
       const c = build();
@@ -276,6 +282,9 @@ export function createSynth(
     },
     isMuted: () => muted,
     unlock,
+    allowRebuild: () => {
+      rebuildUsed = false;
+    },
     isRunning: () => ctx?.state === 'running',
     subscribe(listener) {
       listeners.add(listener);
@@ -346,7 +355,9 @@ export function installUnlock(s: Synth, doc: UnlockTarget): () => void {
     for (const t of UNLOCK_EVENTS) doc.removeEventListener(t, onTap, true);
   };
   const onVisibility = () => {
-    if (doc.visibilityState === 'hidden') attach();
+    if (doc.visibilityState !== 'hidden') return;
+    s.allowRebuild();
+    attach();
   };
   attach();
   doc.addEventListener('visibilitychange', onVisibility);

@@ -482,16 +482,64 @@ describe('restarting a stuck engine', () => {
     }
   });
 
-  it('rebuilds at most once per tap, but again for the next tap', () => {
+  it('rebuilds at most once each time the page is shown, however many taps are stuck', () => {
     vi.useFakeTimers();
     try {
-      const { factory } = factoryOf(['suspended', 'suspended', 'suspended']);
+      const { factory, made } = factoryOf(['suspended', 'suspended', 'suspended']);
       const s = createSynth(factory);
       s.unlock();
       vi.advanceTimersByTime(300);
       expect(factory).toHaveBeenCalledTimes(2);
       vi.advanceTimersByTime(5000);
+      s.unlock(); // a later tap still resumes the engine...
+      vi.advanceTimersByTime(300);
+      s.unlock();
+      vi.advanceTimersByTime(5000);
+      // ...but never closes it again
       expect(factory).toHaveBeenCalledTimes(2);
+      expect(made[1]?.created.closed).toBe(0);
+      expect(made[1]?.created.resumed).toBeGreaterThanOrEqual(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('may rebuild again after the page has been hidden (installUnlock)', () => {
+    vi.useFakeTimers();
+    try {
+      const { factory } = factoryOf(['suspended', 'suspended', 'suspended']);
+      const s = createSynth(factory);
+      const d = fakeDocument();
+      installUnlock(s, d.doc);
+      d.fire('click');
+      vi.advanceTimersByTime(300);
+      expect(factory).toHaveBeenCalledTimes(2);
+      d.fire('click');
+      vi.advanceTimersByTime(300);
+      expect(factory).toHaveBeenCalledTimes(2); // used up
+      d.doc.visibilityState = 'hidden';
+      d.fire('visibilitychange');
+      d.doc.visibilityState = 'visible';
+      d.fire('click');
+      vi.advanceTimersByTime(300);
+      expect(factory).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('allowRebuild() re-allows exactly one rebuild', () => {
+    vi.useFakeTimers();
+    try {
+      const { factory } = factoryOf(['suspended', 'suspended', 'suspended', 'suspended']);
+      const s = createSynth(factory);
+      s.unlock();
+      vi.advanceTimersByTime(300);
+      expect(factory).toHaveBeenCalledTimes(2);
+      s.allowRebuild();
+      s.unlock();
+      vi.advanceTimersByTime(300);
+      expect(factory).toHaveBeenCalledTimes(3);
       s.unlock();
       vi.advanceTimersByTime(300);
       expect(factory).toHaveBeenCalledTimes(3);
