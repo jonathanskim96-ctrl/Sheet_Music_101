@@ -79,7 +79,7 @@ function applyAll(base: Progress, planners: readonly Planner[]): Progress {
 }
 
 function messageOf(e: unknown): string {
-  return e instanceof Error ? e.message : 'Unknown error';
+  return e instanceof Error && e.message !== '' ? e.message : 'Unknown error';
 }
 
 export class ProgressStore {
@@ -135,17 +135,25 @@ export class ProgressStore {
     let record: db.StoredRecord | null;
     try {
       record = await this.deps.readRecord(handle);
-      if (record === null) {
-        const fresh = emptyProgress(today);
-        const written = await this.deps.writeFresh(handle, fresh, now.toISOString());
-        record = written.record;
-      }
     } catch (e) {
       // The database opened but its contents can't be read: never pretend there is no progress.
       console.warn('Saved progress could not be read', e);
       handle.close();
       this.set({ status: 'broken', reason: messageOf(e) });
       return;
+    }
+    if (record === null) {
+      const fresh = emptyProgress(today);
+      try {
+        record = (await this.deps.writeFresh(handle, fresh, now.toISOString())).record;
+      } catch (e) {
+        // Nothing was saved before, so nothing is lost: play in memory, with the warning
+        // (owner decision 2026-10-13).
+        console.warn('Saved progress is not available in this browser', e);
+        handle.close();
+        this.set({ status: 'unavailable', progress: fresh });
+        return;
+      }
     }
     this.handle = handle;
     const result = interpret(record.doc);

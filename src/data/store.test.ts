@@ -89,10 +89,14 @@ describe('load', () => {
     expect(close).toHaveBeenCalledOnce();
     expect(await stored(name)).toEqual(record);
     await expect(store.commit(addXp(1))).rejects.toThrow();
+    await store.retrySave();
+    // No handle is kept, so even the confirmed "start fresh" can't replace this record.
+    await expect(store.startFresh(NOW)).rejects.toThrow();
+    expect(store.getState().status).toBe('broken');
     expect(await stored(name)).toEqual(record);
   });
 
-  it('shows `broken` when the first record cannot be created', async () => {
+  it('plays in memory (`unavailable`) when nothing is saved yet and the first record cannot be created', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const close = vi.fn();
     const store = new ProgressStore(freshName(), {
@@ -102,7 +106,10 @@ describe('load', () => {
       transactCommit,
     });
     await store.load(NOW);
-    expect(store.getState()).toEqual({ status: 'broken', reason: 'disk full' });
+    expect(store.getState()).toEqual({
+      status: 'unavailable',
+      progress: emptyProgress('2026-10-14'),
+    });
     expect(close).toHaveBeenCalledOnce();
   });
 

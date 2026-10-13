@@ -520,6 +520,9 @@ class ProgressStore {
 - `load`: read record → none: create `emptyProgress`, `writeFresh`. Present: `upgradeToCurrent`
   → `checkProgress(repair)` → null ⇒ `broken`; else `ready` (issues in `repaired`, shown once
   as a toast "Some saved data was damaged and has been repaired.").
+  Failures (owner decisions 2026-10-13): the database can't be opened → `unavailable`; it opens but
+  the record can't be read → `broken` with the error text as the reason (handle closed, nothing
+  written); no record and the first `writeFresh` fails → `unavailable` (nothing existed to lose).
 - `commit`: calls are **queued** (a promise chain; one at a time). In one `readwrite`
   transaction: read the record; if its `rev` differs from ours (another tab saved), take the
   stored doc (upgrade + repair) as the base; `next = planner(base)`; **`checkProgress(next,
