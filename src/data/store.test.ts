@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
-import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import fixtureText from '../../tests/fixtures/progress-v1.json?raw';
 import { emptyProgress, type Progress } from '../domain/progress';
 import { planSettings } from '../domain/planners';
 import { openDb, readRecord, readRaw } from './db';
@@ -113,7 +113,7 @@ describe('load', () => {
 describe('saved data from earlier versions', () => {
   it('loads the schema-1 fixture without loss and without repairs', async () => {
     const name = freshName();
-    const fixture = JSON.parse(readFileSync('tests/fixtures/progress-v1.json', 'utf8')) as Progress;
+    const fixture = JSON.parse(fixtureText) as Progress;
     await seed(name, { rev: 9, savedAt: 'x', doc: fixture });
     const store = new ProgressStore(name);
     await store.load(NOW);
