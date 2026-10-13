@@ -3,7 +3,7 @@
 _Read this first in every new session. Keep it short and current._
 
 ## Where we are
-- **Phase:** M1 (scaffold, guardrails, CI, deploy) **merged and live** (PR #1, 2026-10-13). Next: **M2** (`docs/build/M2.md`). The Opus review of M1 (README review prompt: `/code-review high` + `/security-review`) has not been run yet.
+- **Phase:** M1 (scaffold, guardrails, CI, deploy) **merged and live** (PR #1, 2026-10-13). Opus review of M1 done (2026-10-13): security review clean; six small guardrail/PWA fixes in a follow-up PR (see `NOTES.md`). Next: **M2** (`docs/build/M2.md`).
 - Repo: `jonathanskim96-ctrl/Sheet_Music_101`. App name: **Sheet Music 101**.
 - Live URL (live; deployed from `main` by CI): https://jonathanskim96-ctrl.github.io/Sheet_Music_101/
 - How the build works: `docs/build/README.md` (milestones, session prompts, owner steps).
@@ -26,6 +26,7 @@ _Read this first in every new session. Keep it short and current._
 | 2026-10-12 | Bright, colourful, entertaining style; mascot "Quaver". |
 | 2026-10-12 | Planner decisions (owner may veto): whole notes only, naturals only, range C2–C6; landmark teaching method; Leitner spaced repetition; leaving a lesson saves nothing; checkpoints let you jump ahead; no octave numbers shown to learners. |
 | 2026-10-12 | Hosting: GitHub Pages; the repository will be made public (code only, no data). |
+| 2026-10-13 | M1 review: the service worker never reloads the page by itself (SPEC §7.8 enforced in code); offline update-check failures are only logged. |
 | 2026-10-12 | Tech: versions in `docs/build/SPEC.md` §2 were verified to install, build and test together (with npm 11 for installs; npm 10 has a resolver bug). |
 
 ## Waiting on the owner
@@ -37,7 +38,7 @@ _Read this first in every new session. Keep it short and current._
 - [ ] Add the app to the home screen on each phone (SETUP sections 6–7) and confirm the icon.
 
 ## Next step
-1. Optional but planned: Opus 5.5 review of M1 (code review + security review).
+1. Merge the M1 review-fixes PR.
 2. Then M2 with the execution prompt in `docs/build/README.md`.
 
 ## How to run checks

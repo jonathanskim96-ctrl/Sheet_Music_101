@@ -20,7 +20,11 @@ const banned = [
   [/\beval\s*\(/, 'eval('],
   [/new\s+Function\s*\(/, 'new Function('],
   [/document\.write/, 'document.write'],
-  [/\b(window\.)?(alert|confirm|prompt)\s*\(/, 'alert/confirm/prompt'],
+  // Global alert/confirm/prompt only: `installEvent.prompt()` (SPEC §7.8) is a method and allowed.
+  [
+    /(?<![.\w$])(alert|confirm|prompt)\s*\(|\bwindow\.(alert|confirm|prompt)\b/,
+    'alert/confirm/prompt',
+  ],
   [/\b(localStorage|sessionStorage)\b/, 'localStorage/sessionStorage'],
 ];
 for (const file of tracked.filter((f) => /^src\/.*\.(ts|tsx)$/.test(f))) {
@@ -53,6 +57,9 @@ for (const file of tracked) {
 
 // 3. Fixtures are permanent: every locked fixture must exist with the same hash.
 const lockPath = 'tests/fixtures/fixtures.lock.json';
+const fixtureFiles = tracked.filter((f) => /^tests\/fixtures\/.*\.json$/.test(f) && f !== lockPath);
+if (fixtureFiles.length > 0 && !existsSync(lockPath))
+  problems.push(`${lockPath}: missing (fixtures exist, so their lock must too)`);
 if (existsSync(lockPath)) {
   const lock = JSON.parse(readFileSync(lockPath, 'utf8'));
   for (const [file, hash] of Object.entries(lock)) {
@@ -63,10 +70,9 @@ if (existsSync(lockPath)) {
         `${path}: locked fixture was changed (fixtures are never edited; add a new one)`,
       );
   }
-  for (const file of tracked.filter((f) => /^tests\/fixtures\/.*\.json$/.test(f))) {
+  for (const file of fixtureFiles) {
     const name = file.slice('tests/fixtures/'.length);
-    if (name !== 'fixtures.lock.json' && !(name in lock))
-      problems.push(`${file}: fixture not in fixtures.lock.json`);
+    if (!(name in lock)) problems.push(`${file}: fixture not in fixtures.lock.json`);
   }
 }
 

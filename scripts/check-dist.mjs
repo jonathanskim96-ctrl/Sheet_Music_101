@@ -21,8 +21,15 @@ walk(dist);
 const html = readFileSync(join(dist, 'index.html'), 'utf8');
 if (!html.includes('http-equiv="Content-Security-Policy"'))
   problems.push('index.html: CSP meta missing');
-if (!html.includes('script-src &#39;self&#39;') && !html.includes("script-src 'self'"))
-  problems.push('index.html: CSP script-src is not self-only');
+const csp = /http-equiv="Content-Security-Policy"\s+content="([^"]*)"/
+  .exec(html)?.[1]
+  ?.replaceAll('&#39;', "'");
+const scriptSrc = csp
+  ?.split(';')
+  .map((d) => d.trim())
+  .find((d) => d.startsWith('script-src '));
+if (scriptSrc !== "script-src 'self'")
+  problems.push(`index.html: CSP script-src is not self-only (${scriptSrc ?? 'missing'})`);
 for (const required of ['sw.js', 'manifest.webmanifest']) {
   if (!existsSync(join(dist, required))) problems.push(`${required} missing`);
 }
@@ -30,6 +37,9 @@ for (const file of files) {
   if (file.endsWith('.map')) problems.push(`${file}: source maps must not ship`);
   if (!/\.(js|css|html|webmanifest|svg)$/.test(file)) continue;
   const text = readFileSync(file, 'utf8');
+  // XML namespace identifiers (React, SVG) are names, not requests; any other http:// is.
+  const insecure = text.match(/http:\/\/(?!www\.w3\.org\/)[^\s"'`)<>]*/);
+  if (insecure) problems.push(`${file}: insecure URL ${insecure[0]}`);
   if (text.includes('data-answer'))
     problems.push(`${file}: e2e answer hook leaked into production`);
   if (/<script(?![^>]*\bsrc=)[^>]*>\s*\S/.test(text) && file.endsWith('.html'))

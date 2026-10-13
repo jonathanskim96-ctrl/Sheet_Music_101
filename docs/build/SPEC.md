@@ -760,9 +760,12 @@ rotation, delay 0–300ms, CSS keyframe fall 1.8s; component unmounts itself aft
 - Workbox `generateSW`: `skipWaiting: true`, `clientsClaim: true`,
   `cleanupOutdatedCaches: true`, `globPatterns: ['**/*.{js,css,html,woff2,png,svg,webmanifest}']`,
   `navigateFallback: 'index.html'`. `injectRegister: false`, `registerType: 'autoUpdate'`.
-- `register.ts`: `registerSW({ immediate: true, onRegisteredSW(url, reg) { setInterval(() =>
-  reg?.update(), 60 * 60 * 1000); document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') reg?.update(); }); } })`. Listen to
+- `register.ts`: `registerSW({ immediate: true, onNeedReload() {}, onRegisterError(e) {
+  console.error(…) }, onRegisteredSW(url, reg) { setInterval(check, 60 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState ===
+  'visible') check(); }); } })`, where `check` calls `reg.update()` and logs a rejection with
+  `console.warn` (it fails whenever the phone is offline). `onNeedReload` **must** stay set:
+  without it, `autoUpdate` mode reloads the page by itself when a new version activates. Listen to
   `navigator.serviceWorker` `controllerchange`; if there **was** a controller before, show
   UpdateBanner "A new version is ready." [Reload]. Never reload automatically (could interrupt a lesson).
 - `install.ts`: capture `beforeinstallprompt` (preventDefault, keep the event) → InstallCard
@@ -786,7 +789,8 @@ rotation, delay 0–300ms, CSS keyframe fall 1.8s; component unmounts itself aft
 - ErrorBoundary: Mascot (encouraging) + "Something went wrong." + the error message in a
   `<pre>` (text node) + "Reload" + "Save a backup" (uses the store's last good progress).
 - `window` `error` and `unhandledrejection` → toast "Something went wrong: <message>".
-- Never `catch` and ignore, except the explicitly listed cases (audio, persist, share cancel).
+- Never `catch` and ignore, except the explicitly listed cases (audio, persist, share cancel,
+  service-worker update check while offline: logged with `console.warn`).
 
 ### 7.11 E2E test hooks (only in `--mode e2e` builds)
 - Every question container gets `data-testid="question"` and `data-answer="<JSON of correctAnswerOf(q)>"`
