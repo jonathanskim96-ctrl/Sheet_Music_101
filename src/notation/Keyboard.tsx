@@ -80,7 +80,8 @@ export function Keyboard({
             aria-disabled={disabled}
             data-note={note}
             data-key-state={states[note] ?? 'normal'}
-            onClick={() => {
+            onClick={(e) => {
+              e.currentTarget.blur(); // a focused key is painted over its result colour
               press(note);
             }}
             onKeyDown={(e) => {
@@ -117,7 +118,8 @@ export function Keyboard({
             tabIndex={0}
             aria-label="Black key"
             aria-disabled={disabled}
-            onClick={() => {
+            onClick={(e) => {
+              e.currentTarget.blur();
               press('black');
             }}
             onKeyDown={(e) => {

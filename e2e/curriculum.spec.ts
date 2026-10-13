@@ -135,6 +135,10 @@ test.describe('find the key', () => {
     await wrong.click();
     await expect(page.getByTestId('feedback')).toHaveAttribute('data-correct', 'false');
     await expect(wrong).toHaveAttribute('data-key-state', 'wrong');
+    // a tapped key must not keep the browser's focus paint, which hides its result colour
+    expect(
+      await page.evaluate(() => document.activeElement?.hasAttribute('data-note') ?? false),
+    ).toBe(false);
     await expect(q.locator(`[data-note="${right.note}"]`)).toHaveAttribute(
       'data-key-state',
       'highlight',

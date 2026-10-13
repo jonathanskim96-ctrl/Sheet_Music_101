@@ -2,6 +2,10 @@ import { readFileSync } from 'node:fs';
 import { test, expect } from './fixtures';
 import {
   answerQuestion,
+  everythingDone,
+  finish,
+  go,
+  reachQuestion,
   fixtureProgress,
   playLesson,
   progressAfter,
@@ -258,3 +262,130 @@ test.describe('on an iPhone (M5)', () => {
     });
   }
 });
+
+// M6 screens: the new question kinds, Level buttons, checkpoint node, checkpoint results, practice.
+for (const scheme of ['light', 'dark'] as const) {
+  test(`M6 screens, ${scheme} mode`, async ({ page }) => {
+    test.slow();
+    const shot = (name: string) =>
+      page.screenshot({ path: `test-results/screens/m6-${name}-${scheme}.png` });
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
+    await page.clock.setFixedTime(new Date('2026-10-13T10:00:00'));
+
+    // Path: the keyboard sheet, then Level buttons and a checkpoint node
+    await seedProgress(
+      page,
+      progressAfter(16, (p) => {
+        p.xp = 120;
+      }),
+    );
+    await expect(page.getByRole('dialog', { name: 'New: piano keyboard!' })).toBeVisible();
+    await shot('keyboard-unlocked-sheet');
+    await page.getByRole('button', { name: 'Cool!' }).click();
+    await page.getByTestId('unit-2-level-2').scrollIntoViewIfNeeded();
+    await page.evaluate(() => {
+      document.querySelector('[data-testid=unit-2-level-2]')?.scrollIntoView({ block: 'center' });
+    });
+    await shot('path-level-buttons');
+    await page.evaluate(() => {
+      document.querySelector('[data-testid=checkpoint-cp-b]')?.scrollIntoView({ block: 'center' });
+    });
+    await shot('path-checkpoint-jump-ahead');
+    await page.evaluate(() => {
+      document.querySelector('[data-testid=checkpoint-cp-a]')?.scrollIntoView({ block: 'center' });
+    });
+    await shot('path-checkpoint-test-yourself');
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.evaluate(() => {
+      document.querySelector('[data-testid=unit-2-level-2]')?.scrollIntoView({ block: 'center' });
+    });
+    await shot('path-level-buttons-320');
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    // find-key on a single staff (treble), exact and letter
+    await seedProgress(page, everythingDone());
+    await go(page, '#/lesson/u2-lv2-a');
+    await reachQuestion(page, 'find-key-letter');
+    await shot('find-key-letter');
+    await answerQuestion(page, false);
+    await shot('find-key-letter-wrong');
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByRole('button', { name: 'Close lesson' }).click();
+    await page.getByRole('button', { name: 'Leave' }).click();
+
+    await go(page, '#/lesson/u2-lv3-a');
+    await reachQuestion(page, 'find-key-exact');
+    await shot('find-key-exact');
+    await answerQuestion(page, false);
+    await shot('find-key-exact-wrong');
+    await page.getByRole('button', { name: 'Continue' }).click();
+
+    // find-on-staff: empty, ghost note, right, wrong (treble)
+    const staffQ = await reachQuestion(page, 'find-on-staff');
+    await shot('find-on-staff');
+    await staffQ.locator('[data-position="3"]').click();
+    await shot('find-on-staff-ghost');
+    await answerQuestion(page, true);
+    await shot('find-on-staff-right');
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await reachQuestion(page, 'find-on-staff');
+    await answerQuestion(page, false);
+    await shot('find-on-staff-wrong');
+    await page.getByRole('button', { name: 'Close lesson' }).click();
+    await page.getByRole('button', { name: 'Leave' }).click();
+
+    // bass staff with ledger lines (unit 10 level 3) and a 320 px wide screen
+    await go(page, '#/lesson/u10-lv3-b');
+    await reachQuestion(page, 'find-on-staff');
+    await answerQuestion(page, false);
+    await shot('find-on-staff-wrong-unit10');
+    await page.setViewportSize({ width: 320, height: 640 });
+    await shot('find-on-staff-wrong-320');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByRole('button', { name: 'Close lesson' }).click();
+    await page.getByRole('button', { name: 'Leave' }).click();
+
+    // find-key on a grand staff
+    await go(page, '#/lesson/u8-lv2-a');
+    await reachQuestion(page, 'find-key-letter');
+    await shot('find-key-grand');
+    await answerQuestion(page, false);
+    await shot('find-key-grand-wrong');
+    await page.getByRole('button', { name: 'Close lesson' }).click();
+    await page.getByRole('button', { name: 'Leave' }).click();
+
+    // step-skip with 2 and 4 buttons, bass included
+    await go(page, '#/lesson/u11-l1');
+    await page.getByRole('button', { name: 'Got it' }).click();
+    await shot('step-skip-2');
+    await answerQuestion(page, false);
+    await shot('step-skip-2-wrong');
+    await page.getByRole('button', { name: 'Close lesson' }).click();
+    await page.getByRole('button', { name: 'Leave' }).click();
+    await go(page, '#/lesson/u11-l3');
+    await shot('step-skip-4-bass');
+    await answerQuestion(page, true);
+    await shot('step-skip-4-bass-right');
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await answerQuestion(page, false);
+    await shot('step-skip-4-bass-wrong');
+    await page.setViewportSize({ width: 320, height: 640 });
+    await shot('step-skip-4-bass-wrong-320');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByRole('button', { name: 'Close lesson' }).click();
+    await page.getByRole('button', { name: 'Leave' }).click();
+
+    // checkpoint: a question, then passed and failed results
+    await seedProgress(page, progressAfter(0));
+    await page.getByTestId('checkpoint-cp-a').click();
+    await expect(page.getByTestId('question')).toBeVisible();
+    await shot('checkpoint-question');
+    await playLesson(page);
+    await shot('checkpoint-passed');
+    await finish(page);
+    await seedProgress(page, progressAfter(0));
+    await go(page, '#/checkpoint/cp-b');
+    await playLesson(page, 4);
+    await shot('checkpoint-failed');
+  });
+}
