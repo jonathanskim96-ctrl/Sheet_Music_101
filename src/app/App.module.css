@@ -11,20 +11,6 @@
   text-align: center;
 }
 
-.reload {
-  min-height: 52px;
-  padding: 10px 24px;
-  border-radius: var(--radius);
-  border: 2px solid var(--primary-edge);
-  border-bottom-width: 4px;
-  background: var(--primary);
-  color: var(--on-primary);
-  font-family: inherit;
-  font-size: 18px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
 .message {
   max-width: 100%;
   margin: 8px 0;
@@ -43,8 +29,4 @@
   gap: 10px;
   width: 100%;
   margin-top: 8px;
-}
-
-.text {
-  margin: 0;
 }

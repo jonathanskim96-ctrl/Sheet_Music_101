@@ -1,5 +1,5 @@
 // The backup actions screens use: export, import, and the broken-data rescue.
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useToast } from '../app/toasts';
 import type { ParseBackupResult } from '../domain/backup';
 import { TOASTS } from '../domain/content';
@@ -22,10 +22,13 @@ export function useExportBackup(): () => Promise<boolean> {
   const commit = useCommit();
   const now = useNow();
   const toast = useToast();
+  // A second tap while the share sheet is still open would make share() fail.
+  const busy = useRef(false);
   const progress =
     state.status === 'ready' || state.status === 'unavailable' ? state.progress : null;
   return useCallback(async () => {
-    if (!progress) return false;
+    if (!progress || busy.current) return false;
+    busy.current = true;
     const at = now();
     try {
       const outcome = await exportBackup(progress, at);
@@ -33,6 +36,8 @@ export function useExportBackup(): () => Promise<boolean> {
     } catch (e) {
       toast(`Something went wrong: ${messageOf(e)}`, 'error');
       return false;
+    } finally {
+      busy.current = false;
     }
     toast(TOASTS.exportDone);
     // A failure to record the day is shown by commit itself; the file is saved either way.

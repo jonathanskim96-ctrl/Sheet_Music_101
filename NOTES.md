@@ -219,3 +219,13 @@
 - Not verified: sharing to Files on a real iPhone (`navigator.share` with files) and the real Android install prompt
   (both simulated or absent in Chromium tests); a real service-worker update (simulated with the e2e hook).
 
+
+## 2026-10-13: M5 Opus review (PR #14)
+- `/code-review high` and `/security-review`: no security findings (import path, preview text, Blob URLs, e2e hook all safe).
+- Fixed in review: the Settings sound switch flipped the value captured at render, so a double tap wrote the same value
+  twice (new e2e test fails on the old code); "Save a backup" now ignores a second tap while the share sheet is open;
+  the XSS e2e test records dialogs and asserts none opened (a throw inside `page.on('dialog')` doesn't fail the test);
+  unused `.reload`/`.text` CSS removed from `App.module.css`.
+- Gotcha: run `npm run build:e2e` before a narrow `npx playwright test`; it serves the last `dist-e2e` build.
+- Left for the owner/Sonnet: listed in the PR comment (import offers no backup first; broken screen's "Save backup" with a
+  failed raw read; mastery chart tap targets; global error toast noise; small cleanups).

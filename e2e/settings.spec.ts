@@ -40,6 +40,23 @@ test('the sound switch is saved across a reload and mutes the lesson', async ({ 
   await expect(page.getByRole('button', { name: 'Turn sound on' })).toBeVisible();
 });
 
+test('two quick taps on the sound switch leave it as it was', async ({ page }) => {
+  await startFresh(page);
+  await page.goto('./#/settings');
+  const sound = page.getByRole('switch', { name: 'Sound' });
+  await sound.dblclick();
+  await expect(sound).toHaveAttribute('aria-checked', 'true');
+  await expect
+    .poll(async () => {
+      const stored = (await readStored(page)) as {
+        rev: number;
+        doc: { settings: { soundOn: boolean } };
+      };
+      return [stored.rev > 1, stored.doc.settings.soundOn];
+    })
+    .toEqual([true, true]);
+});
+
 test('Settings shows backup, storage and about information', async ({ page }) => {
   await startFresh(page);
   await page.goto('./#/settings');

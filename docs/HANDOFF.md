@@ -69,7 +69,7 @@ keeps the recommended option until the owner says otherwise.
 - [ ] Add the app to the home screen on each phone (SETUP sections 6–7) and confirm the icon.
 
 ## Next step
-1. Opus review of the M5 PR (review prompt in `docs/build/README.md`, with `/security-review`: M5 is on the list).
+1. M5 PR (#14) reviewed by Opus on 2026-10-13 (code review + security review: no security findings). Small fixes pushed (sound switch double tap, export double tap, XSS test dialog check, dead CSS). Open: **owner question** on the import preview (CLAUDE.md says import must offer a backup first; SPEC/CURRICULUM only list Replace/Cancel), then a Sonnet fix session for the numbered list in the PR comment.
 2. Sonnet session: iPhone sound hardening (the numbered list under "iPhone Safari sound bug" below), as its own PR.
 3. Owner: close PR #8 if still open (already in `main`).
 

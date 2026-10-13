@@ -101,8 +101,8 @@ export function SettingsScreen() {
               className={styles['switch']}
               data-testid="sound-switch"
               onClick={() => {
-                const soundOn = !progress.settings.soundOn;
-                void commit((p) => planSettings(p, { soundOn }));
+                // Flip the latest value, so two quick taps cancel out.
+                void commit((p) => planSettings(p, { soundOn: !p.settings.soundOn }));
               }}
             >
               <span className={styles['knob']} />

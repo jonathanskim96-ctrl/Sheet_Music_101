@@ -148,8 +148,10 @@ for (const [label, content, message] of bad) {
 test('XSS: a backup carrying markup in ids and days is rejected and nothing of it is shown', async ({
   page,
 }) => {
+  const dialogs: string[] = [];
   page.on('dialog', (d) => {
-    throw new Error(`A dialog opened: ${d.message()}`);
+    dialogs.push(d.message());
+    void d.dismiss();
   });
   const img = '<img src=x onerror=alert(1)>';
   const script = '"><script>alert(1)</script>';
@@ -184,6 +186,7 @@ test('XSS: a backup carrying markup in ids and days is rejected and nothing of i
   expect(html).not.toContain('<img src=x');
   expect(await page.locator('img').count()).toBe(0);
   expect(await readStored(page)).toEqual(before);
+  expect(dialogs).toEqual([]);
 });
 
 for (const where of ['first', 'second'] as const) {
