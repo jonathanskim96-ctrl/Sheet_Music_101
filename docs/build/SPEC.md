@@ -750,7 +750,12 @@ rotation, delay 0–300ms, CSS keyframe fall 1.8s; component unmounts itself aft
 - `playFanfare()`: triangle C5, E5, G5, C6 at 0/120/240/360ms; last one 600ms.
 - `setMuted(bool)`; muted → every call is a no-op. Any audio exception is caught; show the
   toast "Sound isn't available right now." at most once per app run; never break a lesson.
-- Settings note under the toggle: "No sound on iPhone? Check the silent switch."
+- iPhones mute Web Audio in Silent mode; the app obeys that (owner decision 2026-10-13). Hint text, iPhone/iPad
+  only (detected as in §7.8 `install.ts`: `/iPhone|iPad|iPod/` in the user agent, or `MacIntel` with touch points > 1):
+  "No sound? Check that your iPhone isn't on Silent."
+  - Settings: shown under the Sound toggle.
+  - Lessons: a small muted line under the lesson header on the first screen of a lesson, while sound is on; at most once
+    per app run; gone after the first "Got it" or answer.
 
 ### 7.8 PWA (`pwa/*`, vite config)
 - Manifest: name "Sheet Music 101", short_name "Music 101", description "Learn to read piano
