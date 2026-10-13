@@ -1,0 +1,75 @@
+.page {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: var(--gutter) var(--gutter) 48px;
+}
+
+.section {
+  margin-bottom: 32px;
+}
+
+.section h2 {
+  font-size: 22px;
+  margin-bottom: 12px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.letter {
+  font-weight: 800;
+  font-size: 20px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.muted {
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius);
+  font-weight: 700;
+}
+
+.barCorrect {
+  background: var(--correct-bg);
+  color: var(--correct-text);
+}
+
+.barWrong {
+  background: var(--wrong-bg);
+  color: var(--wrong-text);
+}
+
+.barTitle {
+  font-weight: 800;
+  font-size: 19px;
+  margin: 0 0 4px;
+}

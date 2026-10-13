@@ -175,7 +175,7 @@ export function Staff({
               aria-label={`Position ${String(p)}`}
               data-position={p}
               onClick={() => {
-                onTapPosition?.(p);
+                onTapPosition(p);
               }}
               onKeyDown={(e) => {
                 onBandKey(e, p);

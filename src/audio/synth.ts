@@ -99,13 +99,13 @@ export const FANFARE_PLAN: TonePlan = {
 };
 
 export interface Synth {
-  playNote(note: Note, delay?: number, dur?: number): void;
-  playCorrect(): void;
-  playWrong(): void;
-  playFanfare(): void;
-  setMuted(muted: boolean): void;
-  isMuted(): boolean;
-  subscribe(listener: () => void): () => void;
+  playNote: (note: Note, delay?: number, dur?: number) => void;
+  playCorrect: () => void;
+  playWrong: () => void;
+  playFanfare: () => void;
+  setMuted: (muted: boolean) => void;
+  isMuted: () => boolean;
+  subscribe: (listener: () => void) => () => void;
 }
 
 /**
@@ -222,7 +222,7 @@ export function setAudioErrorHandler(handler: ((error: unknown) => void) | undef
 
 /** The app-wide engine, backed by the browser's AudioContext. */
 export const synth: Synth = createSynth(
-  () => new AudioContext() as unknown as AudioContextLike,
+  () => new AudioContext(),
   (e) => {
     errorHandler?.(e);
   },
