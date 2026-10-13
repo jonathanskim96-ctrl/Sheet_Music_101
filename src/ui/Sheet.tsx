@@ -1,5 +1,6 @@
-import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { isTopModal, pushModal, type ModalEntry } from './modalStack';
 import styles from './Sheet.module.css';
 
 export interface SheetProps {
@@ -22,30 +23,31 @@ export function Sheet({ open, title, children, dismissible = true, onClose }: Sh
   useEffect(() => {
     onCloseRef.current = onClose;
   });
+  const entry = useMemo<ModalEntry>(() => ({ panel: () => panelRef.current }), []);
 
   useEffect(() => {
     if (!open) return;
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const root = document.getElementById('root');
-    if (root) root.inert = true;
+    // Shared stack: #root stays inert until the last sheet closes, lower sheets while covered.
+    const release = pushModal(entry);
     const panel = panelRef.current;
     (panel?.querySelector<HTMLElement>(FOCUSABLE) ?? panel)?.focus();
     return () => {
-      if (root) root.inert = false;
+      release();
       previous?.focus();
     };
-  }, [open]);
+  }, [open, entry]);
 
   useEffect(() => {
     if (!open || !dismissible) return;
     const onKeyDown = (e: globalThis.KeyboardEvent) => {
-      if (e.key === 'Escape') onCloseRef.current?.();
+      if (e.key === 'Escape' && isTopModal(entry)) onCloseRef.current?.();
     };
     document.addEventListener('keydown', onKeyDown);
     return () => {
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [open, dismissible]);
+  }, [open, dismissible, entry]);
 
   if (!open) return null;
 

@@ -138,3 +138,12 @@
   (only the cheek pink has no token). Button press no longer adds a 2px margin that jolted the buttons below.
 - Gallery: the tappable staff's ghost note now sits at the tapped position (e2e-checked).
 
+
+## 2026-10-13: stacked Sheets (M3 review item 1)
+- Bug: each Sheet set `#root.inert` on its own, so closing the top of two stacked sheets made the page live again
+  while the first sheet was still open, and Escape closed every open sheet at once.
+- Fix: `src/ui/modalStack.ts` is a small shared stack. Only the top sheet answers Escape; `#root` stays inert until the
+  last sheet leaves the stack; sheets below the top are inert too, so focus can't reach them. Focus goes back to the
+  button that opened each sheet (first sheet's button for the second, the page's button for the first).
+- Test first: the new e2e "stacked sheets" test failed on the old Sheet code, then passed. The Gallery has a new
+  "Open stacked sheets" demo (separate from "Open a sheet" so the existing focus-trap test keeps its two buttons).
