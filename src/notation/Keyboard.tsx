@@ -9,6 +9,10 @@ export interface KeyboardProps {
   from: Note;
   to: Note;
   states?: Partial<Record<Note, KeyState>>;
+  /** State of the black key just after a white key (keyed by that white key). */
+  blackStates?: Partial<Record<Note, KeyState>>;
+  /** Writes the letter on every white key, not only on the Cs (concept cards). */
+  labelAll?: boolean;
   /** Called with the white key's note, or 'black' for any black key. */
   onPress?: (key: Note | 'black') => void;
   /** Ignores presses (while feedback is showing). */
@@ -37,6 +41,8 @@ export function Keyboard({
   from,
   to,
   states = {},
+  blackStates = {},
+  labelAll = false,
   onPress,
   disabled = false,
   ariaLabel = 'Piano keyboard',
@@ -89,9 +95,9 @@ export function Keyboard({
               rx={0.08}
               strokeWidth={0.03}
             />
-            {isC && (
+            {(isC || labelAll) && (
               <text className={styles['label']} x={i + 0.5} y={KEY_HEIGHT - 0.2} fontSize={0.42}>
-                C
+                {letterOf(note)}
               </text>
             )}
             {note === 'C4' && (
@@ -105,7 +111,7 @@ export function Keyboard({
         return (
           <g
             key={`black-${note}`}
-            className={styles['key']}
+            className={`${styles['key'] ?? ''} ${stateClass(blackStates[note]) ?? ''}`}
             role="button"
             tabIndex={0}
             aria-label="Black key"

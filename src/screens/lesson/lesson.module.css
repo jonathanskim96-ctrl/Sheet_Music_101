@@ -1,0 +1,256 @@
+.page {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px var(--gutter);
+  background: var(--bg);
+}
+
+.iconButton {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.barWrap {
+  flex: 1;
+}
+
+.combo {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--wrong-bg);
+  color: var(--wrong-text);
+  font-weight: 800;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px var(--gutter) 24px;
+}
+
+.prompt {
+  font-size: 22px;
+  margin: 0;
+  text-align: center;
+}
+
+.cardTitle {
+  font-size: 26px;
+  margin: 0;
+  text-align: center;
+}
+
+.cardBody {
+  font-size: 18px;
+  margin: 0;
+  text-align: center;
+}
+
+.tip {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  font-weight: 700;
+}
+
+.chip {
+  align-self: center;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.letters {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.letterTile {
+  width: 40px;
+  height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: var(--unit-1);
+  color: #fff;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.letterAgain {
+  opacity: 0.45;
+}
+
+.bottom {
+  position: sticky;
+  bottom: 0;
+  padding: 12px var(--gutter) calc(12px + env(safe-area-inset-bottom));
+  background: var(--bg);
+}
+
+.feedback {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px var(--gutter) calc(16px + env(safe-area-inset-bottom));
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .feedback {
+    animation: slide-up 200ms ease-out;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.feedbackCorrect {
+  background: var(--correct-bg);
+  color: var(--correct-text);
+}
+
+.feedbackWrong {
+  background: var(--wrong-bg);
+  color: var(--wrong-text);
+}
+
+.feedbackRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-weight: 700;
+}
+
+.feedbackTitle {
+  margin: 0 0 4px;
+  font-weight: 800;
+  font-size: 19px;
+}
+
+.feedbackLine {
+  margin: 0 0 4px;
+}
+
+.completeTitle {
+  font-size: 30px;
+  margin: 0;
+  text-align: center;
+}
+
+.content:has(> [data-testid='mascot']) {
+  align-items: center;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 0;
+  width: 100%;
+}
+
+.stat {
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  text-align: center;
+}
+
+.stat dt {
+  font-weight: 700;
+  color: var(--text-muted);
+  font-size: 15px;
+}
+
+.stat dd {
+  margin: 0;
+  font-weight: 800;
+  font-size: 26px;
+}
+
+.goalBanner {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  background: var(--correct-bg);
+  color: var(--correct-text);
+  font-weight: 800;
+  text-align: center;
+}
+
+.errorBanner {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  background: var(--wrong-bg);
+  color: var(--wrong-text);
+  font-weight: 700;
+}
+
+.saving {
+  margin: 0;
+  color: var(--text-muted);
+  font-weight: 700;
+  text-align: center;
+}
+
+.sheetButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

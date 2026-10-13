@@ -1,4 +1,11 @@
 import { test, expect } from './fixtures';
+import {
+  answerQuestion,
+  fixtureProgress,
+  playLesson,
+  progressAfter,
+  seedProgress,
+} from './helpers';
 
 const SECTIONS = [
   'treble-cards',
@@ -41,4 +48,97 @@ for (const scheme of ['light', 'dark'] as const) {
       expect(overflow).toBeLessThanOrEqual(0);
     });
   }
+}
+
+// Real screens (M4): welcome, path, cards, questions, feedback, completion.
+for (const scheme of ['light', 'dark'] as const) {
+  test(`app screens, ${scheme} mode`, async ({ page }) => {
+    test.slow();
+    const shot = (name: string) =>
+      page.screenshot({ path: `test-results/screens/app-${name}-${scheme}.png` });
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
+
+    await page.goto('./');
+    await expect(page.getByRole('button', { name: "Let's start" })).toBeVisible();
+    await shot('welcome');
+    await page.getByRole('button', { name: "Let's start" }).click();
+    await expect(page.getByTestId('bubble-u1-l1')).toBeVisible();
+    await shot('path-fresh');
+
+    // unit 1: concept card, each kind of question, feedback, completion
+    await page.getByTestId('bubble-u1-l1').click();
+    await shot('concept-card');
+    await page.getByRole('button', { name: 'Got it' }).click();
+    await shot('question-alphabet');
+    await answerQuestion(page, true);
+    await shot('feedback-correct');
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await answerQuestion(page, false);
+    await shot('feedback-wrong');
+    await page.getByRole('button', { name: 'Close lesson' }).click();
+    await shot('leave-sheet');
+    await page.getByRole('button', { name: 'Leave' }).click();
+
+    // later unit 1 lessons: the other question kinds
+    await seedProgress(page, progressAfter(1));
+    await page.getByTestId('bubble-u1-l2').click();
+    for (let i = 0; i < 3; i++) {
+      await shot(
+        `concept-${(await page.getByTestId('concept-card').getAttribute('data-card')) ?? 'x'}`,
+      );
+      await page.getByRole('button', { name: 'Got it' }).click();
+    }
+    await shot('question-keyboard-letter');
+    await page.getByRole('button', { name: 'Close lesson' }).click();
+    await page.getByRole('button', { name: 'Leave' }).click();
+    await seedProgress(page, progressAfter(2));
+    await page.getByTestId('bubble-u1-l3').click();
+    for (let i = 0; i < 3; i++) {
+      await shot(
+        `concept-${(await page.getByTestId('concept-card').getAttribute('data-card')) ?? 'x'}`,
+      );
+      await page.getByRole('button', { name: 'Got it' }).click();
+    }
+    for (let i = 0; i < 4; i++) {
+      const kind = await page.getByTestId('question').getAttribute('data-kind');
+      await shot(`question-${kind ?? 'unknown'}-${String(i)}`);
+      await answerQuestion(page, true);
+      await page.getByRole('button', { name: 'Continue' }).click();
+    }
+    await page.getByRole('button', { name: 'Close lesson' }).click();
+    await page.getByRole('button', { name: 'Leave' }).click();
+    await seedProgress(page, progressAfter(3));
+    await page.getByTestId('bubble-u1-l4').click();
+    await shot('concept-card-grand');
+    await page.getByRole('button', { name: 'Got it' }).click();
+    await shot('concept-card-bass');
+    await page.getByRole('button', { name: 'Got it' }).click();
+    await page.getByRole('button', { name: 'Got it' }).click();
+    await shot('question-clef');
+    await page.getByRole('button', { name: 'Close lesson' }).click();
+    await page.getByRole('button', { name: 'Leave' }).click();
+
+    // unit 2: concept card, Meet card, a note question
+    await seedProgress(page, progressAfter(4));
+    await page.getByTestId('bubble-u2-l1').click();
+    await shot('concept-card-landmarks');
+    await page.getByRole('button', { name: 'Got it' }).click();
+    await shot('meet-card');
+    await page.getByRole('button', { name: 'Got it' }).click();
+    await shot('meet-card-2');
+    await page.getByRole('button', { name: 'Got it' }).click();
+    await shot('question-name-note');
+    await answerQuestion(page, false);
+    await shot('feedback-wrong-note');
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await playLesson(page);
+    await shot('lesson-complete');
+    await page.getByRole('button', { name: 'Continue' }).click();
+
+    await seedProgress(page, fixtureProgress());
+    await expect(page.getByTestId('bubble-u4-l3')).toBeVisible();
+    await shot('path-mid-course');
+    await page.setViewportSize({ width: 320, height: 640 });
+    await shot('path-mid-course-320');
+  });
 }

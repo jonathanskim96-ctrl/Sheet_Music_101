@@ -62,6 +62,8 @@ export function GalleryScreen() {
   const ghost = lastPosition === null ? null : noteAtPosition('treble', lastPosition);
   const [confettiRun, setConfettiRun] = useState(0);
   const [sheet, setSheet] = useState(false);
+  const [stackA, setStackA] = useState(false);
+  const [sheet2, setSheet2] = useState(false);
 
   return (
     <main className={styles['page']}>
@@ -242,6 +244,47 @@ export function GalleryScreen() {
               Leave
             </Button>
           </div>
+        </Sheet>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setStackA(true);
+          }}
+        >
+          Open stacked sheets
+        </Button>
+        <Sheet
+          open={stackA}
+          title="First of two"
+          onClose={() => {
+            setStackA(false);
+          }}
+        >
+          <Button
+            fullWidth
+            onClick={() => {
+              setSheet2(true);
+            }}
+          >
+            Open a second sheet
+          </Button>
+        </Sheet>
+        <Sheet
+          open={sheet2}
+          title="Second sheet"
+          onClose={() => {
+            setSheet2(false);
+          }}
+        >
+          <p>This one sits on top of the first.</p>
+          <Button
+            fullWidth
+            onClick={() => {
+              setSheet2(false);
+            }}
+          >
+            Close second
+          </Button>
         </Sheet>
       </Section>
 

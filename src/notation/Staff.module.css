@@ -92,3 +92,26 @@
     transform: translateX(6px);
   }
 }
+
+.text {
+  font-family: inherit;
+  font-size: 7px;
+  font-weight: 800;
+  fill: var(--ink);
+  stroke: var(--paper);
+  stroke-width: 2.5px;
+  paint-order: stroke;
+}
+
+.numberDisc {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 1px;
+}
+
+.numberText {
+  font-family: inherit;
+  font-size: 7px;
+  font-weight: 800;
+  fill: var(--ink);
+}

@@ -3,7 +3,7 @@
 _Read this first in every new session. Keep it short and current._
 
 ## Where we are
-- **Phase:** M1 (scaffold, guardrails, CI, deploy) **merged and live**; M1 review fixes merged (PR #3). **M2 (domain core: pure logic + tests) merged** (PR #4, 2026-10-13, after the Opus review and its fixes). No screen changed in M2, so the live app looks the same. **M3 (look, sound, notation, Gallery) merged** (PR #6, 2026-10-13; owner approved the look). The Opus review fixes and the taller keyboard came after that merge and go in through their own PR (branch `claude/tender-bohr-dsybzk`). Next: **M4**.
+- **Phase:** M1 (scaffold, guardrails, CI, deploy) **merged and live**; M1 review fixes merged (PR #3). **M2 (domain core: pure logic + tests) merged** (PR #4, 2026-10-13, after the Opus review and its fixes). No screen changed in M2, so the live app looks the same. **M3 (look, sound, notation, Gallery) merged** (PR #6, 2026-10-13; owner approved the look). The Opus review fixes and the taller keyboard came after that merge and go in through their own PR (branch `claude/tender-bohr-dsybzk`). **M4 (saving + first playable lessons, units 1–4) is built and in a pull request** (branch `claude/wonderful-maxwell-qahnmu`); the stacked-Sheets fix (M3 review item 1) is in it too. **Schema version 1 is now frozen**: once M4 is merged real progress exists on the owner's phone, so any change to `Progress` needs a schema bump and an upgrade step (SPEC 4.8).
 - Repo: `jonathanskim96-ctrl/Sheet_Music_101`. App name: **Sheet Music 101**.
 - Live URL (live; deployed from `main` by CI): https://jonathanskim96-ctrl.github.io/Sheet_Music_101/
 - How the build works: `docs/build/README.md` (milestones, session prompts, owner steps).
@@ -61,8 +61,20 @@ keeps the recommended option until the owner says otherwise.
 - [ ] Add the app to the home screen on each phone (SETUP sections 6–7) and confirm the icon.
 
 ## Next step
-1. Owner approved the M3 look ("the design is fine"). Opus review of PR #6 done (2026-10-13): small fixes made (see NOTES) and the taller keyboard (owner's choice), in the follow-up PR from `claude/tender-bohr-dsybzk`; merge it before starting M4. Still open: stacked Sheets (review item 1 on PR #6), to fix at the start of M4, before M5 builds the two-step "Start over" flow. Note: the Gallery is dev/e2e only, so the live phone app still shows "Coming soon" until M4 adds the real screens.
-2. M4 with the execution prompt in `docs/build/README.md`.
+1. Owner: review and merge the M4 pull request, then open the live app on the phone, play a few lessons, close it and reopen it (progress should be kept). Opus review of M4 next (`/code-review high` and `/security-review`: this is a data-layer milestone).
+2. M5 with the execution prompt in `docs/build/README.md`.
+
+### M4 choices the spec left open (owner may veto)
+- Path shows only units 1–4 (the playable ones) and a line "More units are coming soon." under them. A temporary `MAX_UNIT_M4 = 4` gate lives in `domain/unlocks.ts` as `isPlayable` / `currentPlayableLesson` (the domain's own `isAvailable` is unchanged, so the M2 tests still describe the whole course). M6 removes it (TODO comment in the code).
+- Progress and Settings are "Coming soon" screens; `#/review` and `#/checkpoint/*` go home until M6.
+- A thin warning banner for "browser won't save" and "save failed, Try again" is shown at the top of every screen already (needed by the M4 e2e test); M5 may restyle it as the Path cards.
+- If saved data can't be read, a minimal screen says so with "Try again" (it never touches the data); M5 builds the full broken-data screen.
+- The A–G letter pad reads A B C D E F G (not C–B). The "alphabet" question shows the letter in a big card.
+- The correct-answer feedback bar shows a check mark (SPEC 7.2); SPEC 7.1 also mentions a mascot bounce on correct, which is not shown. Quaver appears on wrong answers and on completion.
+- The lesson header (X, bar, combo, sound) is hidden on the completion screen.
+- Concept cards: black keys alternate green (groups of 2) and orange (groups of 3); staff pictures gained optional line numbers and note labels.
+- First visit to any route other than the Gallery shows the Welcome screen until "Let's start".
+- An invalid write planner (a bug) raises an error toast and saves nothing; a failed disk write keeps the change in memory and retries together with the next change.
 
 ### M3 choices the spec left open (owner may veto)
 - Staffs with 3+ notes (not in the spec; only used by the Gallery and later the Progress chart) space notes 3.5 staff spaces apart and widen the viewBox to fit.

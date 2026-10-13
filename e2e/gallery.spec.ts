@@ -91,6 +91,25 @@ test('the sheet traps focus, closes with Escape and returns focus', async ({ pag
   await expect(opener).toBeFocused();
 });
 
+test('stacked sheets: Escape closes only the top one and the page stays inert', async ({
+  page,
+}) => {
+  await page.getByRole('button', { name: 'Open stacked sheets' }).click();
+  await page.getByRole('button', { name: 'Open a second sheet' }).click();
+  const first = page.getByRole('dialog', { name: 'First of two' });
+  const second = page.getByRole('dialog', { name: 'Second sheet' });
+  await expect(second).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(second).toBeHidden();
+  await expect(first).toBeVisible();
+  // the page behind is still unusable and focus is back inside the first sheet
+  expect(await page.evaluate(() => document.getElementById('root')?.inert)).toBe(true);
+  await expect(page.getByRole('button', { name: 'Open a second sheet' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(first).toBeHidden();
+  expect(await page.evaluate(() => document.getElementById('root')?.inert)).toBe(false);
+});
+
 test('confetti appears and goes away by itself', async ({ page }) => {
   await page.getByRole('button', { name: 'Fire confetti' }).click();
   await expect(page.getByTestId('confetti')).toBeVisible();

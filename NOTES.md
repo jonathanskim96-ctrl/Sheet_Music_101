@@ -138,3 +138,21 @@
   (only the cheek pink has no token). Button press no longer adds a 2px margin that jolted the buttons below.
 - Gallery: the tappable staff's ghost note now sits at the tapped position (e2e-checked).
 
+
+## 2026-10-13: M4 executed (saving + first playable lessons)
+- First commit: stacked Sheets fixed (M3 review item 1): a shared stack of open sheets, so only the top one answers Escape,
+  lower ones are inert, and the page behind stays inert until the last closes. Gallery demo + e2e test.
+- Data layer: `data/db.ts` (only `idb` importer), `data/store.ts` (serialised commits, stale-tab merge, strict validation of
+  every planner result, save-failure keeps the change and retries with the next one, broken data never overwritten,
+  in-memory fallback), `ProgressContext`, toasts. 16 store tests on fake-indexeddb, including the schema-1 fixture.
+- Screens: Welcome, Path (units 1–4), Lesson (concept cards, Meet cards, name-note + the five unit-1 kinds, feedback bar,
+  completion saved on appear), "Coming soon" placeholders. `data-answer` hook in e2e builds only.
+- Mutation checks, all "failed as expected" then restored: planner result not validated; commits not serialised; stale-tab
+  merge removed; broken data overwritten at load; saveError dropped.
+- Gotchas:
+  - Playwright refuses to click an `aria-disabled` button; the locked-bubble test uses `{ force: true }`.
+  - The store's "storage unavailable" log is `console.warn`: the e2e fixture fails on `console.error`, and the problem is
+    shown in the UI anyway.
+  - react-hooks v7 rejects `setState` in an effect and reassigning a variable during render (use a ref / a precomputed map).
+  - `LETTERS` is C–B; the answer pad needs its own A–G order.
+- Not verified: sound on a real phone; install-to-home-screen and reopen on a real phone; CI on the pull request; Opus review.

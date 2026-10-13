@@ -1,0 +1,25 @@
+.header {
+  color: #fff;
+  border-radius: var(--radius);
+  padding: 14px var(--gutter);
+  margin: 24px 0 20px;
+  align-self: stretch;
+}
+
+.kicker {
+  margin: 0;
+  font-weight: 800;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.title {
+  margin: 2px 0;
+  font-size: 22px;
+}
+
+.subtitle {
+  margin: 0;
+  font-weight: 700;
+}

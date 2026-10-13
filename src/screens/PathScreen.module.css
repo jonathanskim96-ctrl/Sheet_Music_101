@@ -1,0 +1,75 @@
+.page {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 var(--gutter) 48px;
+}
+
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  background: var(--bg);
+  border-bottom: 2px solid var(--border);
+}
+
+.stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 800;
+}
+
+.xpIcon {
+  color: var(--xp);
+  fill: currentcolor;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.iconButton {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.path {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+}
+
+.more {
+  margin: 32px 0 0;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

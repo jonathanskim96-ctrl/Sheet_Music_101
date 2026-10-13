@@ -9,6 +9,8 @@ export interface ButtonProps {
   onClick?: () => void;
   disabled?: boolean;
   fullWidth?: boolean;
+  /** Shows the result on an answer button after feedback. */
+  state?: 'correct' | 'wrong';
   /** Needed when the button shows only an icon. */
   ariaLabel?: string;
   type?: 'button' | 'submit';
@@ -21,10 +23,16 @@ export function Button({
   onClick,
   disabled = false,
   fullWidth = false,
+  state,
   ariaLabel,
   type = 'button',
 }: ButtonProps) {
-  const className = [styles['button'], styles[variant], fullWidth ? styles['full'] : '']
+  const className = [
+    styles['button'],
+    styles[variant],
+    fullWidth ? styles['full'] : '',
+    state ? styles[state] : '',
+  ]
     .filter(Boolean)
     .join(' ');
   return (

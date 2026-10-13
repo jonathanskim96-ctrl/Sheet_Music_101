@@ -43,6 +43,10 @@ export interface StaffProps {
   onTapPosition?: (position: number) => void;
   /** Staff lines 1–5 (bottom to top) drawn in the accent colour (concept cards). */
   highlightLines?: readonly number[];
+  /** Writes 1–5 on the five lines (concept card "The staff"). */
+  lineNumbers?: boolean;
+  /** Words to the left of the note at the same index (concept card "Lines and spaces"). */
+  noteLabels?: readonly string[];
   ariaLabel?: string;
   /** Plays the 300 ms shake after a wrong answer. */
   shake?: boolean;
@@ -65,6 +69,8 @@ export function Staff({
   notes,
   onTapPosition,
   highlightLines,
+  lineNumbers = false,
+  noteLabels,
   ariaLabel = notes.length === 1 ? 'Music staff with one note' : 'Music staff',
   shake = false,
 }: StaffProps) {
@@ -115,6 +121,26 @@ export function Staff({
             )}
           </g>
         ))}
+        {lineNumbers &&
+          firstStave &&
+          [0, 2, 4, 6, 8].map((p, i) => (
+            <g key={`n${String(p)}`}>
+              <circle
+                className={styles['numberDisc']}
+                cx={10}
+                cy={yOf(firstStave.bottomLineY, p)}
+                r={5.5}
+              />
+              <text
+                className={styles['numberText']}
+                x={10}
+                y={yOf(firstStave.bottomLineY, p) + 2.6}
+                textAnchor="middle"
+              >
+                {i + 1}
+              </text>
+            </g>
+          ))}
         {mode === 'grand' && firstStave && lastStave && (
           <>
             <line
@@ -152,6 +178,16 @@ export function Staff({
                   strokeWidth={LEDGER_WIDTH}
                 />
               ))}
+              {noteLabels?.[i] !== undefined && (
+                <text
+                  className={styles['text']}
+                  x={x - NOTE_WIDTH / 2 - 4}
+                  y={y + 3}
+                  textAnchor="end"
+                >
+                  {noteLabels[i]}
+                </text>
+              )}
               <path
                 strokeWidth={0}
                 d={GLYPHS.noteheadWhole.d}

@@ -14,9 +14,22 @@ export interface SheetProps {
 const FOCUSABLE =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+// Open sheets, bottom to top. Only the top one is interactive and answers Escape; the page behind
+// (#root) stays inert until the last one closes.
+const openSheets: HTMLElement[] = [];
+
+function syncInert(): void {
+  const root = document.getElementById('root');
+  if (root) root.inert = openSheets.length > 0;
+  openSheets.forEach((el, i) => {
+    el.inert = i < openSheets.length - 1;
+  });
+}
+
 /** Modal bottom sheet: traps focus, hides the page behind it, and returns focus on close. */
 export function Sheet({ open, title, children, dismissible = true, onClose }: SheetProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const onCloseRef = useRef(onClose);
   useEffect(() => {
@@ -26,12 +39,15 @@ export function Sheet({ open, title, children, dismissible = true, onClose }: Sh
   useEffect(() => {
     if (!open) return;
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const root = document.getElementById('root');
-    if (root) root.inert = true;
+    const backdrop = backdropRef.current;
+    if (backdrop) openSheets.push(backdrop);
+    syncInert();
     const panel = panelRef.current;
     (panel?.querySelector<HTMLElement>(FOCUSABLE) ?? panel)?.focus();
     return () => {
-      if (root) root.inert = false;
+      const i = backdrop ? openSheets.indexOf(backdrop) : -1;
+      if (i >= 0) openSheets.splice(i, 1);
+      syncInert();
       previous?.focus();
     };
   }, [open]);
@@ -39,7 +55,10 @@ export function Sheet({ open, title, children, dismissible = true, onClose }: Sh
   useEffect(() => {
     if (!open || !dismissible) return;
     const onKeyDown = (e: globalThis.KeyboardEvent) => {
-      if (e.key === 'Escape') onCloseRef.current?.();
+      const top = openSheets[openSheets.length - 1];
+      if (e.key === 'Escape' && top !== undefined && top === backdropRef.current) {
+        onCloseRef.current?.();
+      }
     };
     document.addEventListener('keydown', onKeyDown);
     return () => {
@@ -72,6 +91,7 @@ export function Sheet({ open, title, children, dismissible = true, onClose }: Sh
 
   return createPortal(
     <div
+      ref={backdropRef}
       className={styles['backdrop']}
       data-testid="sheet-backdrop"
       onClick={(e) => {
