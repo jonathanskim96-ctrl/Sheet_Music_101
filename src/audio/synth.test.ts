@@ -1,10 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { frequency } from '../domain/notes';
 import {
   CORRECT_PLAN,
   FANFARE_PLAN,
   WRONG_PLAN,
   createSynth,
+  installAudioUnlock,
   notePlan,
   setAudioErrorHandler,
   synth,
@@ -17,7 +18,7 @@ type Call = [name: string, value: number, time: number];
 function fakeContext(state = 'running') {
   const oscillators: { type: OscillatorType; freq: number; start: number; stop: number }[] = [];
   const gains: { calls: Call[] }[] = [];
-  const created = { resumed: 0 };
+  const created = { resumed: 0, silences: 0 };
   const ctx: AudioContextLike = {
     currentTime: 10,
     state,
@@ -75,6 +76,14 @@ function fakeContext(state = 'running') {
       };
     },
     createDynamicsCompressor: () => ({ connect: () => undefined }),
+    createBuffer: () => ({}),
+    createBufferSource: () => ({
+      buffer: null,
+      connect: () => undefined,
+      start: () => {
+        created.silences++;
+      },
+    }),
   };
   return { ctx, oscillators, gains, created };
 }
@@ -248,6 +257,159 @@ describe('createSynth', () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(onError).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('unlock (first tap)', () => {
+  it('creates the engine, resumes it and plays one silent buffer, with no oscillator', () => {
+    const f = fakeContext('suspended');
+    const factory = vi.fn(() => f.ctx);
+    const s = createSynth(factory);
+    s.unlock();
+    expect(factory).toHaveBeenCalledTimes(1);
+    expect(f.created.resumed).toBe(1);
+    expect(f.created.silences).toBe(1);
+    expect(f.oscillators).toHaveLength(0);
+  });
+
+  it('works even while muted (the learner may unmute later)', () => {
+    const f = fakeContext('suspended');
+    const s = createSynth(() => f.ctx);
+    s.setMuted(true);
+    s.unlock();
+    expect(f.created.resumed).toBe(1);
+  });
+
+  it('reuses the engine a later play call needs', () => {
+    const factory = vi.fn(() => fakeContext().ctx);
+    const s = createSynth(factory);
+    s.unlock();
+    s.playNote('C4');
+    expect(factory).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a failing engine once and does not throw', () => {
+    const onError = vi.fn();
+    const s = createSynth(() => {
+      throw new Error('no audio');
+    }, onError);
+    expect(() => {
+      s.unlock();
+      s.unlock();
+    }).not.toThrow();
+    expect(onError).toHaveBeenCalledTimes(1);
+  });
+
+  it('isRunning is false before the engine exists and follows its state after', () => {
+    const f = fakeContext('suspended');
+    const s = createSynth(() => f.ctx);
+    expect(s.isRunning()).toBe(false);
+    s.unlock();
+    expect(s.isRunning()).toBe(false);
+    const running = fakeContext('running');
+    const s2 = createSynth(() => running.ctx);
+    s2.unlock();
+    expect(s2.isRunning()).toBe(true);
+  });
+});
+
+describe('installAudioUnlock', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** A page stand-in: real event dispatch, with a visibility state we can change. */
+  function fakePage() {
+    const target = new EventTarget() as EventTarget & { visibilityState: string };
+    target.visibilityState = 'visible';
+    return target;
+  }
+  function engine(runningAfter: number) {
+    let calls = 0;
+    return {
+      calls: () => calls,
+      unlock: () => {
+        calls++;
+      },
+      isRunning: () => calls >= runningAfter,
+    };
+  }
+
+  it.each(['pointerup', 'touchend', 'click', 'keydown'])('unlocks on %s', (name) => {
+    vi.useFakeTimers();
+    const page = fakePage();
+    const e = engine(99);
+    installAudioUnlock(e, page);
+    page.dispatchEvent(new Event(name));
+    expect(e.calls()).toBe(1);
+  });
+
+  it('does nothing before the first tap', () => {
+    const e = engine(1);
+    installAudioUnlock(e, fakePage());
+    expect(e.calls()).toBe(0);
+  });
+
+  it('keeps listening until the engine is running, then stops', () => {
+    vi.useFakeTimers();
+    const page = fakePage();
+    const e = engine(2);
+    installAudioUnlock(e, page);
+    page.dispatchEvent(new Event('click'));
+    vi.runAllTimers();
+    page.dispatchEvent(new Event('click'));
+    vi.runAllTimers();
+    expect(e.calls()).toBe(2);
+    page.dispatchEvent(new Event('click'));
+    expect(e.calls()).toBe(2);
+  });
+
+  it('listens again after the page was hidden', () => {
+    vi.useFakeTimers();
+    const page = fakePage();
+    const e = engine(1);
+    installAudioUnlock(e, page);
+    page.dispatchEvent(new Event('click'));
+    vi.runAllTimers();
+    page.dispatchEvent(new Event('click'));
+    expect(e.calls()).toBe(1);
+    page.visibilityState = 'hidden';
+    page.dispatchEvent(new Event('visibilitychange'));
+    page.dispatchEvent(new Event('click'));
+    expect(e.calls()).toBe(2);
+  });
+
+  it('does not listen again when the page becomes visible', () => {
+    vi.useFakeTimers();
+    const page = fakePage();
+    const e = engine(1);
+    installAudioUnlock(e, page);
+    page.dispatchEvent(new Event('click'));
+    vi.runAllTimers();
+    page.dispatchEvent(new Event('visibilitychange'));
+    page.dispatchEvent(new Event('click'));
+    expect(e.calls()).toBe(1);
+  });
+
+  it('listens in the capture phase and can be removed', () => {
+    const target = {
+      added: [] as unknown[][],
+      removed: [] as unknown[][],
+      addEventListener(...a: unknown[]) {
+        this.added.push(a);
+      },
+      removeEventListener(...a: unknown[]) {
+        this.removed.push(a);
+      },
+    };
+    const off = installAudioUnlock(engine(1), target);
+    const tapListeners = target.added.filter((a) => a[0] !== 'visibilitychange');
+    expect(tapListeners.map((a) => a[0])).toEqual(['pointerup', 'touchend', 'click', 'keydown']);
+    expect(tapListeners.every((a) => (a[2] as { capture: boolean }).capture)).toBe(true);
+    off();
+    expect(target.removed.map((a) => a[0]).sort()).toEqual(
+      ['click', 'keydown', 'pointerup', 'touchend', 'visibilitychange'].sort(),
+    );
   });
 });
 
