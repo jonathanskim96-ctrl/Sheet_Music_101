@@ -170,5 +170,7 @@ test('every playable lesson (units 1–4) can be finished, in order', async ({ p
     await page.getByRole('button', { name: 'Continue' }).click();
     await expect(page.getByTestId(`bubble-${id}`)).toHaveAttribute('data-state', 'completed');
   }
-  await expect(page.getByText('More units are coming soon.')).toBeVisible();
+  // the course goes on: unit 5 is now open, with the checkpoint node before it
+  await expect(page.getByTestId('bubble-u5-l1')).toHaveAttribute('data-state', 'current');
+  await expect(page.getByTestId('checkpoint-cp-a')).toContainText('Test yourself');
 });

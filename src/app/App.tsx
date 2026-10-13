@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { setAudioErrorHandler } from '../audio/synth';
 import { somethingWentWrong } from '../domain/content';
 import { CHECKPOINTS, findLesson } from '../domain/curriculum';
-import { isPlayable, reviewAvailable } from '../domain/unlocks';
+import { isAvailable, reviewAvailable } from '../domain/unlocks';
 import { ProgressProvider, createProgressStore, useProgress } from '../data/ProgressContext';
 import { UpdateBanner } from '../pwa/UpdateBanner';
 import { BrokenDataScreen } from '../screens/BrokenDataScreen';
@@ -77,13 +77,13 @@ function Shell() {
   const loaded = state.status === 'ready' || state.status === 'unavailable';
   const progress = loaded ? state.progress : null;
 
-  // Routes the build can't show (yet) go home; so does a locked or unknown lesson (SPEC 7.2).
+  // A locked or unknown lesson, or a review with too few cards, goes home (SPEC 7.2).
   let route: Route = parsed;
   if (parsed.name === 'gallery' && !GalleryScreen) route = { name: 'home' };
   else if (parsed.name !== 'gallery') {
     if (progress && !progress.flags.welcomeSeen) route = { name: 'home' };
     else if (parsed.name === 'lesson') {
-      if (progress && !isPlayable(progress, parsed.lessonId)) route = { name: 'home' };
+      if (progress && !isAvailable(progress, parsed.lessonId)) route = { name: 'home' };
     } else if (parsed.name === 'review') {
       if (progress && !reviewAvailable(progress)) route = { name: 'home' };
     } else if (parsed.name === 'checkpoint') {

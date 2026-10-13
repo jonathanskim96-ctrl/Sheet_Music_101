@@ -59,12 +59,6 @@
   width: 100%;
 }
 
-.more {
-  margin: 32px 0 0;
-  color: var(--text-muted);
-  font-weight: 700;
-}
-
 .srOnly {
   position: absolute;
   width: 1px;

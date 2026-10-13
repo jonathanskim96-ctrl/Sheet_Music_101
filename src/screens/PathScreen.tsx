@@ -8,14 +8,12 @@ import { backupReminderDue, installCardSnoozed } from '../domain/nudges';
 import { planFlag } from '../domain/planners';
 import { lessonsDoneToday } from '../domain/progress';
 import {
-  MAX_UNIT_M4,
-  currentPlayableLesson,
+  currentLesson,
   checkpointReached,
   isCompleted,
   isLevelAvailable,
-  isPlayable,
+  isAvailable,
   keyboardUnlocked,
-  levelsPlayable,
   nextLevelLesson,
   reviewAvailable,
   unitLevel,
@@ -88,11 +86,11 @@ function PathCard() {
   return null;
 }
 
-/** "New: piano keyboard!" once the keyboard unlocks (only when levels 2–3 are playable, M6). */
+/** "New: piano keyboard!", shown once when the keyboard unlocks. */
 function KeyboardUnlockedSheet() {
   const progress = useLoadedProgress();
   const commit = useCommit();
-  const open = levelsPlayable() && keyboardUnlocked(progress) && !progress.flags.keyboardUnlockSeen;
+  const open = keyboardUnlocked(progress) && !progress.flags.keyboardUnlockSeen;
   const dismiss = () => {
     void commit((p) => planFlag(p, 'keyboardUnlockSeen', true));
   };
@@ -111,13 +109,13 @@ const ZIGZAG = [0, 48, 72, 48, 0, -48, -72, -48];
 // The wave carries on from one unit to the next, so each lesson's place in the whole path decides its shift.
 const PATH_INDEX = new Map(pathLessons().map((l, i) => [l.id, i]));
 
-/** Home: the lesson path (units 1–4 for now), with XP, days practised and the daily goal on top. */
+/** Home: the lesson path, with XP, days practised and the daily goal on top. */
 export function PathScreen() {
   const progress = useLoadedProgress();
   const now = useNow();
   const toast = useToast();
   const currentRef = useRef<HTMLButtonElement>(null);
-  const current = currentPlayableLesson(progress);
+  const current = currentLesson(progress);
   const today = dayKeyOf(now());
 
   useEffect(() => {
@@ -187,7 +185,7 @@ export function PathScreen() {
             </Button>
           </div>
         )}
-        {UNITS.filter((u) => u.n <= MAX_UNIT_M4).map((unit) => (
+        {UNITS.map((unit) => (
           <Fragment key={unit.n}>
             <section className={styles['unit']} aria-label={`Unit ${String(unit.n)}`}>
               <UnitHeader
@@ -230,7 +228,7 @@ export function PathScreen() {
                     offset={offset}
                     bubbleRef={isCurrent ? currentRef : undefined}
                     onPress={() => {
-                      if (isPlayable(progress, lesson.id)) {
+                      if (isAvailable(progress, lesson.id)) {
                         navigate({ name: 'lesson', lessonId: lesson.id });
                       } else {
                         toast(TOASTS.lockedLesson);
@@ -253,7 +251,6 @@ export function PathScreen() {
             ))}
           </Fragment>
         ))}
-        <p className={styles['more']}>More units are coming soon.</p>
       </main>
       <KeyboardUnlockedSheet />
     </div>

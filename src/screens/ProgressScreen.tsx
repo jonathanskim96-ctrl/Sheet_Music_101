@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { navigate } from '../app/router';
 import { CHECKPOINTS, UNITS } from '../domain/curriculum';
-import { MAX_UNIT_M4, unitLevel, unitLevelCount } from '../domain/unlocks';
+import { unitLevel, unitLevelCount } from '../domain/unlocks';
 import { useLoadedProgress } from '../data/ProgressContext';
 import { Staff } from '../notation/Staff';
 import { CalendarDays, Circle, CircleCheck, Sprout, Star, Trophy, TrendingUp } from '../ui/icons';
@@ -106,7 +106,7 @@ export function ProgressScreen() {
         <section aria-labelledby="units-title" className={styles['section']}>
           <h2 id="units-title">Units</h2>
           <ul className={styles['units']}>
-            {UNITS.filter((u) => u.n <= MAX_UNIT_M4).map((u) => (
+            {UNITS.map((u) => (
               <li key={u.n} className={styles['unit']}>
                 <span className={styles['unitDot']} style={{ background: `var(${u.color})` }}>
                   {u.n}
