@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import fixtureText from '../../tests/fixtures/progress-v1.json?raw';
 import { emptyProgress, type Progress } from '../domain/progress';
 import { planSettings } from '../domain/planners';
-import { openDb, readRecord, readRaw } from './db';
+import { openDb, readRecord, readRaw, transactCommit, writeFresh, type Db } from './db';
 import { ProgressStore, type StoreState } from './store';
 
 const NOW = new Date(2026, 9, 14, 10, 0);
@@ -70,6 +70,40 @@ describe('load', () => {
     await store.commit(addXp(15));
     const after = store.getState();
     expect(after.status === 'unavailable' && after.progress.xp).toBe(15);
+  });
+
+  it('shows `broken` (not `unavailable`) when the database opens but the record cannot be read', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const name = freshName();
+    const record = { rev: 3, savedAt: 'x', doc: emptyProgress('2026-10-01') };
+    await seed(name, record);
+    const close = vi.fn();
+    const store = new ProgressStore(name, {
+      openDb: () => Promise.resolve({ close } as unknown as Db),
+      readRecord: () => Promise.reject(new Error('read exploded')),
+      writeFresh,
+      transactCommit,
+    });
+    await store.load(NOW);
+    expect(store.getState()).toEqual({ status: 'broken', reason: 'read exploded' });
+    expect(close).toHaveBeenCalledOnce();
+    expect(await stored(name)).toEqual(record);
+    await expect(store.commit(addXp(1))).rejects.toThrow();
+    expect(await stored(name)).toEqual(record);
+  });
+
+  it('shows `broken` when the first record cannot be created', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const close = vi.fn();
+    const store = new ProgressStore(freshName(), {
+      openDb: () => Promise.resolve({ close } as unknown as Db),
+      readRecord: () => Promise.resolve(null),
+      writeFresh: () => Promise.reject(new Error('disk full')),
+      transactCommit,
+    });
+    await store.load(NOW);
+    expect(store.getState()).toEqual({ status: 'broken', reason: 'disk full' });
+    expect(close).toHaveBeenCalledOnce();
   });
 
   it.each([

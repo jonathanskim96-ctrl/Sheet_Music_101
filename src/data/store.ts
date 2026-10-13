@@ -123,21 +123,31 @@ export class ProgressStore {
 
   private async doLoad(now: Date): Promise<void> {
     const today = dayKeyOf(now);
-    let record: db.StoredRecord | null;
+    let handle: db.Db;
     try {
-      this.handle = await this.deps.openDb(this.dbName);
-      record = await this.deps.readRecord(this.handle);
-      if (record === null) {
-        const fresh = emptyProgress(today);
-        const written = await this.deps.writeFresh(this.handle, fresh, now.toISOString());
-        record = written.record;
-      }
+      handle = await this.deps.openDb(this.dbName);
     } catch (e) {
+      // Only "the database can't be opened at all" means in-memory progress.
       console.warn('Saved progress is not available in this browser', e);
-      this.handle = null;
       this.set({ status: 'unavailable', progress: emptyProgress(today) });
       return;
     }
+    let record: db.StoredRecord | null;
+    try {
+      record = await this.deps.readRecord(handle);
+      if (record === null) {
+        const fresh = emptyProgress(today);
+        const written = await this.deps.writeFresh(handle, fresh, now.toISOString());
+        record = written.record;
+      }
+    } catch (e) {
+      // The database opened but its contents can't be read: never pretend there is no progress.
+      console.warn('Saved progress could not be read', e);
+      handle.close();
+      this.set({ status: 'broken', reason: messageOf(e) });
+      return;
+    }
+    this.handle = handle;
     const result = interpret(record.doc);
     if (!result.ok) {
       this.set({ status: 'broken', reason: result.reason });
