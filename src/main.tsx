@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client';
 import '@fontsource/nunito/latin-400.css';
 import '@fontsource/nunito/latin-700.css';
 import '@fontsource/nunito/latin-800.css';
+import './styles/tokens.css';
+import './styles/base.css';
 import { App } from './app/App';
 import { registerServiceWorker } from './pwa/register';
 
