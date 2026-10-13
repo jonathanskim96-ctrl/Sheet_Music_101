@@ -121,14 +121,14 @@ function greedyOrder(cards: readonly CardId[], rand: () => number): CardId[] {
 
 function noteQuestion(kind: QuestionKind, card: CardId, render: 'single' | 'grand'): Question {
   switch (kind) {
+    case 'name-note':
     case 'find-key-letter':
-      return { kind, card, render };
     case 'find-key-exact':
       return { kind, card, render };
     case 'find-on-staff':
       return { kind, card }; // always a single staff
     default:
-      return { kind: 'name-note', card, render };
+      throw new Error(`${kind} is not a note question`);
   }
 }
 

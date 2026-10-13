@@ -189,7 +189,7 @@ describe('exportedAt', () => {
     expect(at('2026-13-45T99:99:99Z')).toBeNull();
     expect(at(12345)).toBeNull();
     expect(at(null)).toBeNull();
-    expect(at('<script>alert(1)</script>')).toBeNull();
+    expect(at('<script>run()</script>')).toBeNull();
     const r = parseBackup(edit((o) => delete o['exportedAt']));
     expect(r.ok && r.summary.exportedAt).toBeNull();
   });
@@ -208,7 +208,7 @@ describe('never echoes input', () => {
     );
   });
   it('hostile text inside an otherwise valid-looking backup never reaches the messages or summary', () => {
-    const evil = 'EVIL_PAYLOAD_<img src=x onerror=alert(1)>';
+    const evil = 'EVIL_PAYLOAD_<img src=x onerror=run()>';
     const variants = [
       edit((o) => (o['app'] = evil)),
       edit((o) => (o['kind'] = evil)),
