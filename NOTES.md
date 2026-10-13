@@ -229,3 +229,16 @@
 - Gotcha: run `npm run build:e2e` before a narrow `npx playwright test`; it serves the last `dist-e2e` build.
 - Left for the owner/Sonnet: listed in the PR comment (import offers no backup first; broken screen's "Save backup" with a
   failed raw read; mastery chart tap targets; global error toast noise; small cleanups).
+
+## 2026-10-13: M5 review fix session (PR #14 items 1–5)
+- Brought in the reviewer's commit `478a440` (fast-forward from `ccr-07fe752d-7w2hrj`).
+- 1 (owner decision): restore preview has "Save a backup first"; SPEC 7.2 and CURRICULUM §5 updated; e2e test: the
+  download holds the current progress, the preview stays open and nothing is replaced until "Replace my progress".
+- 2: broken-data screen, raw read failed: Start fresh's "Save backup" is disabled and the sheet says why
+  (`StartOverSheets` `saveUnavailable`). e2e test (every `IDBObjectStore.get` throws) fails without the fix (checked).
+- 3 (owner decision): chart tap targets recorded as an accepted exception in HANDOFF.
+- 4: window `error` events without an error object (ResizeObserver, "Script error.") are logged with `console.warn`, no
+  toast; e2e test for both cases.
+- 5: one `somethingWentWrong(e)` / `errorMessageOf(e)` in `content.ts` ("Unknown error" everywhere); `readImportFile`
+  removed. `useStatusWarning()` not done (one shared condition, two lines; not worth a hook).
+
