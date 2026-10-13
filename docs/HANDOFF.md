@@ -3,7 +3,7 @@
 _Read this first in every new session. Keep it short and current._
 
 ## Where we are
-- **Phase:** M1 (scaffold, guardrails, CI, deploy) **merged and live**; M1 review fixes merged (PR #3). **M2 (domain core: pure logic + tests) merged** (PR #4, 2026-10-13, after the Opus review and its fixes). No screen changed in M2, so the live app looks the same. **M3 (look, sound, notation, Gallery) built, PR #6 open. Owner approved the look (2026-10-13).** Next after merge: **M4**.
+- **Phase:** M1 (scaffold, guardrails, CI, deploy) **merged and live**; M1 review fixes merged (PR #3). **M2 (domain core: pure logic + tests) merged** (PR #4, 2026-10-13, after the Opus review and its fixes). No screen changed in M2, so the live app looks the same. **M3 (look, sound, notation, Gallery) merged** (PR #6, 2026-10-13; owner approved the look). The Opus review fixes and the taller keyboard came after that merge and go in through their own PR (branch `claude/tender-bohr-dsybzk`). Next: **M4**.
 - Repo: `jonathanskim96-ctrl/Sheet_Music_101`. App name: **Sheet Music 101**.
 - Live URL (live; deployed from `main` by CI): https://jonathanskim96-ctrl.github.io/Sheet_Music_101/
 - How the build works: `docs/build/README.md` (milestones, session prompts, owner steps).
@@ -61,7 +61,7 @@ keeps the recommended option until the owner says otherwise.
 - [ ] Add the app to the home screen on each phone (SETUP sections 6–7) and confirm the icon.
 
 ## Next step
-1. Owner approved the M3 look ("the design is fine"). Opus review of PR #6 done (2026-10-13): small fixes pushed (see NOTES); one larger item listed on the PR for a Sonnet fix session (stacked Sheets, must be fixed before M5). Keyboard height: owner chose taller keys (done). Then merge. Note: the Gallery is dev/e2e only, so the live phone app still shows "Coming soon" until M4 adds the real screens.
+1. Owner approved the M3 look ("the design is fine"). Opus review of PR #6 done (2026-10-13): small fixes made (see NOTES) and the taller keyboard (owner's choice), in the follow-up PR from `claude/tender-bohr-dsybzk`; merge it before starting M4. Still open: stacked Sheets (review item 1 on PR #6), to fix at the start of M4, before M5 builds the two-step "Start over" flow. Note: the Gallery is dev/e2e only, so the live phone app still shows "Coming soon" until M4 adds the real screens.
 2. M4 with the execution prompt in `docs/build/README.md`.
 
 ### M3 choices the spec left open (owner may veto)
