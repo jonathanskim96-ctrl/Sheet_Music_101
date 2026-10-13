@@ -87,6 +87,13 @@ keeps the recommended option until the owner says otherwise.
 - The Gallery also has small extra sections (tappable staff, no-clef staff, highlighted lines, progress bar, goal ring, Sheet demo) so every M3 building block can be checked.
 - Gallery code is lazy-loaded and absent from production builds (checked: `dist/` has no Gallery chunk).
 
+### For the next Opus planning session: iPhone Safari sound bug (owner report, 2026-10-13)
+Owner reports: on iPhone (Safari) the notes make no sound when tapping **Play** (concept cards; `ConceptCard.tsx` calls `synth.playNote` in the tap handler). Earlier finding: Silent mode mutes Web Audio on iPhone (owner confirmed that was the cause once), and the app now obeys it and shows the hint in lessons. Plan whether that fully explains this report, or whether there is a second cause, and decide the fix. Things to check, in order:
+1. Is the phone's Silent switch on? (Hint only shows in lessons so far; Settings hint comes with M5.)
+2. Does the first tap create/resume the `AudioContext` inside the same tap (SPEC 7.7)? Safari can leave it `suspended` or `interrupted` after a tab switch or call; `resume()` must be awaited before scheduling notes.
+3. Product choice for the owner: keep obeying Silent mode (current decision), or play through an HTMLAudioElement trick so sound ignores Silent (reverses the 2026-10-13 decision; needs the owner's yes).
+4. Needs a real iPhone to verify; the cloud sandbox cannot test it.
+
 ## How to run checks
 `npm ci`, then `npm run verify` (check-safety, typecheck, lint, format, unit tests, build,
 check-dist, e2e). Adding a package: `npx -y npm@11.6.2 install -E <pkg>@<version>` (SPEC §2).
