@@ -487,3 +487,15 @@ export const START_OVER = {
     cancel: 'Cancel',
   },
 } as const;
+
+/** The message of anything thrown (an Error, a string, or something else). */
+export function errorMessageOf(e: unknown): string {
+  if (e instanceof Error && e.message !== '') return e.message;
+  if (typeof e === 'string' && e !== '') return e;
+  return 'Unknown error';
+}
+
+/** "Something went wrong: {message}" for toasts and alerts (SPEC 7.10). */
+export function somethingWentWrong(e: unknown): string {
+  return `Something went wrong: ${errorMessageOf(e)}`;
+}

@@ -178,3 +178,13 @@ describe('promptFor', () => {
     expect(promptFor(q)).toBe(text);
   });
 });
+
+describe('error texts', () => {
+  it('uses the message of an Error or a string, else "Unknown error"', () => {
+    expect(content.errorMessageOf(new Error('boom'))).toBe('boom');
+    expect(content.errorMessageOf('bad')).toBe('bad');
+    expect(content.errorMessageOf(new Error(''))).toBe('Unknown error');
+    expect(content.errorMessageOf({ message: 'x' })).toBe('Unknown error');
+    expect(content.somethingWentWrong(new Error('boom'))).toBe('Something went wrong: boom');
+  });
+});

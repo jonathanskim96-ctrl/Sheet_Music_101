@@ -8,12 +8,14 @@ import {
   SILENT_HINT,
   importSavedOn,
   importSummaryLine,
+  somethingWentWrong,
 } from '../domain/content';
 import { dayKeyOf } from '../domain/days';
 import { lastBackupText } from '../domain/nudges';
 import { planReset, planSettings } from '../domain/planners';
 import type { Progress } from '../domain/progress';
-import { readImportFile, useExportBackup, useReplaceProgress } from '../data/backupHooks';
+import { useExportBackup, useReplaceProgress } from '../data/backupHooks';
+import { readBackupFile } from '../data/files';
 import { isPersisted } from '../data/persist';
 import { useCommit, useLoadedProgress, useNow } from '../data/ProgressContext';
 import { promptInstall, useInstallInfo } from '../pwa/install';
@@ -33,10 +35,6 @@ function formatDate(iso: string): string {
     month: 'long',
     day: 'numeric',
   });
-}
-
-function errorText(e: unknown): string {
-  return `Something went wrong: ${e instanceof Error ? e.message : 'unknown error'}`;
 }
 
 /** Sound, daily goal, install help, backups, storage status, start over, about (SPEC 7.2). */
@@ -68,13 +66,13 @@ export function SettingsScreen() {
 
   const onFileChosen = (file: File | undefined) => {
     if (!file) return;
-    readImportFile(file).then(
+    readBackupFile(file).then(
       (result) => {
         if (result.ok) setIncoming({ progress: result.progress, summary: result.summary });
         else toast(result.message, 'error');
       },
       (e: unknown) => {
-        toast(errorText(e), 'error');
+        toast(somethingWentWrong(e), 'error');
       },
     );
   };
@@ -153,7 +151,7 @@ export function SettingsScreen() {
               <Button
                 onClick={() => {
                   promptInstall().catch((e: unknown) => {
-                    toast(errorText(e), 'error');
+                    toast(somethingWentWrong(e), 'error');
                   });
                 }}
               >

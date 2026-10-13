@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useToast } from '../app/toasts';
 import { navigate } from '../app/router';
-import { KEYBOARD_UNLOCKED, TOASTS } from '../domain/content';
+import { KEYBOARD_UNLOCKED, TOASTS, somethingWentWrong } from '../domain/content';
 import { dayKeyOf } from '../domain/days';
 import { UNITS, pathLessons } from '../domain/curriculum';
 import { backupReminderDue, installCardSnoozed } from '../domain/nudges';
@@ -59,10 +59,7 @@ function PathCard() {
         canPrompt={install.canPrompt}
         onInstall={() => {
           promptInstall().catch((e: unknown) => {
-            toast(
-              `Something went wrong: ${e instanceof Error ? e.message : 'unknown error'}`,
-              'error',
-            );
+            toast(somethingWentWrong(e), 'error');
           });
         }}
         onDismiss={() => {

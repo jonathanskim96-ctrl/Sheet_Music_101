@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { setAudioErrorHandler } from '../audio/synth';
+import { somethingWentWrong } from '../domain/content';
 import { findLesson } from '../domain/curriculum';
 import { isPlayable } from '../domain/unlocks';
 import { ProgressProvider, createProgressStore, useProgress } from '../data/ProgressContext';
@@ -37,12 +38,6 @@ export function App() {
   );
 }
 
-function errorMessage(value: unknown): string {
-  if (value instanceof Error && value.message !== '') return value.message;
-  if (typeof value === 'string' && value !== '') return value;
-  return 'unknown error';
-}
-
 function Shell() {
   const parsed = useRoute();
   const toast = useToast();
@@ -51,10 +46,15 @@ function Shell() {
   // Anything that escapes a handler is shown, never swallowed (SPEC 7.10).
   useEffect(() => {
     const onError = (e: ErrorEvent) => {
-      toast(`Something went wrong: ${errorMessage(e.error ?? e.message)}`, 'error');
+      // Browser noise (ResizeObserver loops, "Script error." from extensions) has no error object.
+      if (e.error === null || e.error === undefined) {
+        console.warn('Ignored a window error without an error object:', e.message);
+        return;
+      }
+      toast(somethingWentWrong(e.error), 'error');
     };
     const onRejection = (e: PromiseRejectionEvent) => {
-      toast(`Something went wrong: ${errorMessage(e.reason)}`, 'error');
+      toast(somethingWentWrong(e.reason), 'error');
     };
     window.addEventListener('error', onError);
     window.addEventListener('unhandledrejection', onRejection);

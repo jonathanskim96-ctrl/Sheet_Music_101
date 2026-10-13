@@ -106,3 +106,26 @@ test('broken saved data that cannot even be read: "Save backup" in the Start fre
   await expect(sheet.getByRole('button', { name: 'Save backup' })).toBeDisabled();
   await sheet.getByRole('button', { name: 'Cancel' }).click();
 });
+
+test('a thrown error shows a toast; browser noise without an error object does not', async ({
+  page,
+  consoleErrors,
+}) => {
+  await startFresh(page);
+  await page.evaluate(() => {
+    window.dispatchEvent(
+      new ErrorEvent('error', {
+        message: 'ResizeObserver loop completed with undelivered notifications.',
+      }),
+    );
+  });
+  await page.evaluate(() => {
+    setTimeout(() => {
+      throw new Error('Thrown later');
+    }, 0);
+  });
+  await expect(page.getByTestId('toast')).toHaveText('Something went wrong: Thrown later');
+  await expect(page.getByTestId('toast')).toHaveCount(1);
+  expect(consoleErrors.every((e) => e.includes('Thrown later'))).toBe(true);
+  consoleErrors.length = 0;
+});

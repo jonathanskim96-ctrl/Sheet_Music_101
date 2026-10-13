@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { useToast } from '../app/toasts';
 import { synth } from '../audio/synth';
+import { errorMessageOf, somethingWentWrong } from '../domain/content';
 import type { Progress } from '../domain/progress';
 import { ProgressStore, type Planner, type StoreState } from './store';
 
@@ -42,7 +43,7 @@ export function ProgressProvider({
 
   useEffect(() => {
     store.load(new Date()).catch((e: unknown) => {
-      toast(`Something went wrong: ${e instanceof Error ? e.message : 'unknown error'}`, 'error');
+      toast(somethingWentWrong(e), 'error');
     });
   }, [store, toast]);
 
@@ -99,8 +100,8 @@ export function useCommit(): (
         await store.commit(planner);
         return { ok: true };
       } catch (e) {
-        const message = e instanceof Error ? e.message : 'unknown error';
-        if (options?.toast !== false) toast(`Something went wrong: ${message}`, 'error');
+        const message = errorMessageOf(e);
+        if (options?.toast !== false) toast(somethingWentWrong(e), 'error');
         return { ok: false, message };
       }
     },
@@ -114,7 +115,7 @@ export function useRetrySave(): () => void {
   const toast = useToast();
   return useCallback(() => {
     store.retrySave().catch((e: unknown) => {
-      toast(`Something went wrong: ${e instanceof Error ? e.message : 'unknown error'}`, 'error');
+      toast(somethingWentWrong(e), 'error');
     });
   }, [store, toast]);
 }

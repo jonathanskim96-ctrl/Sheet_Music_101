@@ -1,4 +1,5 @@
 import { Component, useState, type ErrorInfo, type ReactNode } from 'react';
+import { somethingWentWrong } from '../domain/content';
 import type { Progress } from '../domain/progress';
 import { exportBackup } from '../data/files';
 import { Button } from '../ui/Button';
@@ -61,9 +62,7 @@ function ErrorScreen({ message, progress }: { message: string; progress: Progres
                   if (outcome !== 'cancelled') setSaveNote('Backup saved.');
                 },
                 (e: unknown) => {
-                  setSaveNote(
-                    `Something went wrong: ${e instanceof Error ? e.message : 'unknown error'}`,
-                  );
+                  setSaveNote(somethingWentWrong(e));
                 },
               );
             }}

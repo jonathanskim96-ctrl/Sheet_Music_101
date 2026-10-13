@@ -1,17 +1,12 @@
 // The backup actions screens use: export, import, and the broken-data rescue.
 import { useCallback, useRef } from 'react';
 import { useToast } from '../app/toasts';
-import type { ParseBackupResult } from '../domain/backup';
-import { TOASTS } from '../domain/content';
+import { TOASTS, errorMessageOf, somethingWentWrong } from '../domain/content';
 import { dayKeyOf } from '../domain/days';
 import { planMarkExported, planReplaceAll } from '../domain/planners';
 import type { Progress } from '../domain/progress';
-import { exportBackup, exportRawData, readBackupFile } from './files';
+import { exportBackup, exportRawData } from './files';
 import { useCommit, useNow, useProgress, useStore } from './ProgressContext';
-
-function messageOf(e: unknown): string {
-  return e instanceof Error && e.message !== '' ? e.message : 'unknown error';
-}
 
 /**
  * "Save a backup": share or download the progress, then remember the day. Resolves true when
@@ -34,7 +29,7 @@ export function useExportBackup(): () => Promise<boolean> {
       const outcome = await exportBackup(progress, at);
       if (outcome === 'cancelled') return false;
     } catch (e) {
-      toast(`Something went wrong: ${messageOf(e)}`, 'error');
+      toast(somethingWentWrong(e), 'error');
       return false;
     } finally {
       busy.current = false;
@@ -44,11 +39,6 @@ export function useExportBackup(): () => Promise<boolean> {
     await commit((p) => planMarkExported(p, dayKeyOf(at)));
     return true;
   }, [progress, now, toast, commit]);
-}
-
-/** Reads a chosen backup file (never throws; errors are fixed messages). */
-export function readImportFile(file: File): Promise<ParseBackupResult> {
-  return readBackupFile(file);
 }
 
 /** "Replace my progress": the whole document is replaced by the (validated) backup. */
@@ -80,7 +70,7 @@ export function useExportRaw(): (raw: unknown) => Promise<boolean> {
       try {
         return (await exportRawData(raw, now())) !== 'cancelled';
       } catch (e) {
-        toast(`Something went wrong: ${messageOf(e)}`, 'error');
+        toast(somethingWentWrong(e), 'error');
         return false;
       }
     },
@@ -97,7 +87,7 @@ export function useStartFresh(): () => Promise<{ ok: true } | { ok: false; messa
       await store.startFresh(now());
       return { ok: true };
     } catch (e) {
-      return { ok: false, message: messageOf(e) };
+      return { ok: false, message: errorMessageOf(e) };
     }
   }, [store, now]);
 }

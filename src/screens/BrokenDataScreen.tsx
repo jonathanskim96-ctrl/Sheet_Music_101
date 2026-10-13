@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { errorMessageOf } from '../domain/content';
 import { useExportRaw, useReadRawSaved, useStartFresh } from '../data/backupHooks';
 import { Button } from '../ui/Button';
 import { Mascot } from '../ui/Mascot';
@@ -30,8 +31,7 @@ export function BrokenDataScreen({ reason }: { reason: string }) {
         if (live) setRaw({ status: 'read', value });
       },
       (e: unknown) => {
-        if (live)
-          setRaw({ status: 'failed', message: e instanceof Error ? e.message : 'Unknown error' });
+        if (live) setRaw({ status: 'failed', message: errorMessageOf(e) });
       },
     );
     return () => {
