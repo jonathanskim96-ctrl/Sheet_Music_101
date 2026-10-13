@@ -3,9 +3,9 @@
 _Read this first in every new session. Keep it short and current._
 
 ## Where we are
-- **Phase:** M1 (scaffold, guardrails, CI, deploy) built, **pending review and merge**. Next after merge: **M2** (`docs/build/M2.md`).
+- **Phase:** M1 (scaffold, guardrails, CI, deploy) **merged and live** (PR #1, 2026-10-13). Next: **M2** (`docs/build/M2.md`). The Opus review of M1 (README review prompt: `/code-review high` + `/security-review`) has not been run yet.
 - Repo: `jonathanskim96-ctrl/Sheet_Music_101`. App name: **Sheet Music 101**.
-- Live URL (live once M1 is merged and Pages is on, see `docs/SETUP.md`): https://jonathanskim96-ctrl.github.io/Sheet_Music_101/
+- Live URL (live; deployed from `main` by CI): https://jonathanskim96-ctrl.github.io/Sheet_Music_101/
 - How the build works: `docs/build/README.md` (milestones, session prompts, owner steps).
 
 ## Decisions made
@@ -31,14 +31,14 @@ _Read this first in every new session. Keep it short and current._
 ## Waiting on the owner
 - [x] Make the repository public (done).
 - [x] Set `main` as the default branch (done).
-- [ ] Follow `docs/SETUP.md` section 2 (Pages source = GitHub Actions) before merging the M1 PR.
-- [ ] After the M1 PR is merged: SETUP section 3 (protect `main`), then open the live URL and
-      confirm "Sheet Music 101 · Coming soon" and the version line.
+- [x] GitHub Pages source = GitHub Actions (done); M1 PR merged; CI `verify` and `deploy` both green on `main`.
+- [x] Owner opened the live URL and saw the page.
+- [ ] Protect `main` (`docs/SETUP.md` section 3).
+- [ ] Add the app to the home screen on each phone (SETUP sections 6–7) and confirm the icon.
 
 ## Next step
-1. Review (Opus 5.5) of the M1 PR, then the owner merges it.
-2. M1 step 8: confirm in the Actions tab that `verify` and `deploy` both succeeded.
-3. Then M2 with the execution prompt in `docs/build/README.md`.
+1. Optional but planned: Opus 5.5 review of M1 (code review + security review).
+2. Then M2 with the execution prompt in `docs/build/README.md`.
 
 ## How to run checks
 `npm ci`, then `npm run verify` (check-safety, typecheck, lint, format, unit tests, build,

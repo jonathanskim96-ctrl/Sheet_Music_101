@@ -46,3 +46,8 @@
   4. Build, then remove the CSP meta from `dist/index.html` → check-dist fails ("CSP meta missing").
 - Not yet verified (needs the owner / GitHub): CI run on the PR, branch protection, the Pages
   deploy and the live page.
+
+## 2026-10-13: M1 merged and deployed
+- PR #1 merged to `main`; CI run on `main`: `verify` and `deploy` both succeeded (checked via
+  the GitHub tools). Owner confirmed the live page loads.
+- Still open: protect `main` (SETUP §3), home-screen install check on phones, Opus review of M1.
