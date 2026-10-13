@@ -72,3 +72,8 @@
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
+
+.choicesGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}

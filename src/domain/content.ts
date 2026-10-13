@@ -1,7 +1,7 @@
 // Learner-facing text, transcribed exactly from docs/build/CURRICULUM.md §3–§5.
 import { parseCardId, type CardId } from './cards';
-import { letterOf, type Clef, type Letter, type Note } from './notes';
-import type { Answer, Question } from './questions';
+import { letterOf, staffPosition, type Clef, type Letter, type Note } from './notes';
+import { stepSkipValue, type Answer, type Question } from './questions';
 
 // ---------------------------------------------------------------- concept cards
 
@@ -325,6 +325,17 @@ function assertNever(x: never): never {
 /** Extra feedback line for "Tap this note on the piano": any key with the letter counts (M6 step 1). */
 export function anyKeyWorks(letter: Letter): string {
   return `Any ${letter} key works.`;
+}
+
+/**
+ * Names a step-skip move and why, e.g. "It's a skip up: line to line." A step goes line to space
+ * (or back); a skip goes line to line or space to space (CURRICULUM concept cards).
+ */
+export function stepSkipExplanation(q: Extract<Question, { kind: 'step-skip' }>): string {
+  const [size, direction] = stepSkipValue(q.first, q.second).split('-');
+  const where = (n: Note): string =>
+    Math.abs(staffPosition(q.clef, n) % 2) === 0 ? 'line' : 'space';
+  return `It's a ${size ?? ''} ${direction ?? ''}: ${where(q.first)} to ${where(q.second)}.`;
 }
 
 /** Letter of a card id such as 'treble-G4' (only used for the prompt text). */

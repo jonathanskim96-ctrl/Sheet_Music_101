@@ -6,6 +6,7 @@ import {
   CORRECT_PHRASES,
   WRONG_PHRASES,
   anyKeyWorks,
+  stepSkipExplanation,
   cardName,
   fillWrongPhrase,
 } from '../../domain/content';
@@ -91,6 +92,9 @@ export function FeedbackBar({ question, result, progress, combo, onContinue }: F
               )}
               {card !== null && <HintLine card={card} progress={progress} />}
             </>
+          )}
+          {question.kind === 'step-skip' && (
+            <p className={styles['feedbackLine']}>{stepSkipExplanation(question)}</p>
           )}
           {question.kind === 'find-key-letter' && parts && (
             <p className={styles['feedbackLine']}>{anyKeyWorks(letterOf(parts.note))}</p>

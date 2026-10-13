@@ -9,10 +9,14 @@ export interface ChoiceButtonsProps {
   states?: Partial<Record<ChoiceValue, ResultState>>;
 }
 
-/** Two (or four) big answer buttons with words on them. */
+/** Two (or four, in a 2 × 2 grid) big answer buttons with words on them. */
 export function ChoiceButtons({ choices, onPick, states = {} }: ChoiceButtonsProps) {
   return (
-    <div className={styles['choices']} role="group" aria-label="Choose an answer">
+    <div
+      className={`${styles['choices'] ?? ''} ${choices.length > 2 ? (styles['choicesGrid'] ?? '') : ''}`}
+      role="group"
+      aria-label="Choose an answer"
+    >
       {choices.map((c) => {
         const state = states[c.value];
         return (
