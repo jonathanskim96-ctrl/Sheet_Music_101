@@ -41,6 +41,7 @@ export class PlannerError extends Error {
 
 const MSG_NEWER = 'This progress was saved by a newer version of the app.';
 const MSG_UNREADABLE = "The saved data can't be read.";
+const MSG_READABLE_AGAIN = 'The saved progress can be read again. Reload the app to see it.';
 
 type Interpreted =
   { ok: true; progress: Progress; issues: string[] } | { ok: false; reason: string };
@@ -197,7 +198,7 @@ export class ProgressStore {
     if (s.status !== 'ready' || handle === null || base === null) return;
     const attempt = [...this.pending, ...added];
     if (attempt.length === 0 && s.saveError === null) return;
-    const out: { written: Progress | null } = { written: null };
+    const out: { start: Progress; written: Progress | null } = { start: base, written: null };
     try {
       const record = await this.deps.transactCommit(
         handle,
@@ -209,6 +210,7 @@ export class ProgressStore {
             if (!theirs.ok) throw new Error(theirs.reason);
             start = theirs.progress;
           }
+          out.start = start;
           const next = applyAll(start, attempt);
           out.written = next;
           return next;
@@ -229,11 +231,12 @@ export class ProgressStore {
       });
     } catch (e) {
       if (e instanceof PlannerError) throw e;
-      // The write itself failed: keep the change in memory so the lesson isn't lost.
+      // The write itself failed: keep the change in memory so the lesson isn't lost. Build on
+      // what the transaction read (another tab's newer save, if any), not on our older copy.
       this.pending = attempt;
       this.set({
         status: 'ready',
-        progress: applyAll(base, attempt),
+        progress: applyAll(out.start, attempt),
         rev: this.rev,
         saveError: messageOf(e),
         repaired: s.repaired,
@@ -249,7 +252,16 @@ export class ProgressStore {
         throw new Error('Start fresh is only possible when the saved data is unreadable.');
       }
       const fresh = emptyProgress(dayKeyOf(now));
-      const record = await this.deps.transactCommit(handle, () => fresh, now.toISOString());
+      const record = await this.deps.transactCommit(
+        handle,
+        (current) => {
+          // Another tab (or a newer app version) may have saved readable progress since this
+          // tab gave up on it: that progress must never be replaced.
+          if (current !== null && interpret(current.doc).ok) throw new Error(MSG_READABLE_AGAIN);
+          return fresh;
+        },
+        now.toISOString(),
+      );
       this.saved = fresh;
       this.rev = record.rev;
       this.pending = [];

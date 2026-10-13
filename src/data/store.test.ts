@@ -231,6 +231,21 @@ describe('commit', () => {
     expect(raw.doc.xp).toBe(20);
     expect(raw.rev).toBe(2);
   });
+  it("a failed write after another tab saved keeps that tab's progress in memory too", async () => {
+    const name = freshName();
+    const a = new ProgressStore(name);
+    const b = new ProgressStore(name);
+    await a.load(NOW);
+    await b.load(NOW);
+    await a.commit(addXp(10));
+    vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(() => {
+      throw new Error('disk full');
+    });
+    await b.commit(addXp(1));
+    const s = readyOf(b);
+    expect(s.saveError).toBe('disk full');
+    expect(s.progress.xp).toBe(11);
+  });
 });
 
 describe('startFresh', () => {
@@ -243,5 +258,18 @@ describe('startFresh', () => {
     expect(readyOf(store).progress).toEqual(emptyProgress('2026-10-14'));
     expect(((await stored(name)) as { rev: number }).rev).toBe(4);
     await expect(store.startFresh(NOW)).rejects.toThrow();
+  });
+
+  it('never replaces progress that became readable since (another tab saved it)', async () => {
+    const name = freshName();
+    await seed(name, { rev: 3, savedAt: 'x', doc: 'garbage' });
+    const store = new ProgressStore(name);
+    await store.load(NOW);
+    expect(store.getState().status).toBe('broken');
+    const good = { rev: 4, savedAt: 'y', doc: { ...emptyProgress('2026-10-01'), xp: 120 } };
+    await seed(name, good);
+    await expect(store.startFresh(NOW)).rejects.toThrow(/can be read again/);
+    expect(await stored(name)).toEqual(good);
+    expect(store.getState().status).toBe('broken');
   });
 });

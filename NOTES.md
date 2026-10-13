@@ -156,3 +156,16 @@
   - react-hooks v7 rejects `setState` in an effect and reassigning a variable during render (use a ref / a precomputed map).
   - `LETTERS` is C–B; the answer pad needs its own A–G order.
 - Not verified: sound on a real phone; install-to-home-screen and reopen on a real phone; CI on the pull request; Opus review.
+
+## 2026-10-13: M4 Opus review (after merge)
+- `/code-review high` and `/security-review` on PR #9. Security: no findings (hash ids are allow-listed and only rebuilt into
+  `#/…` fragments; every stored document goes through upgrade + repair; planner results are strict-checked; `data-answer`
+  and the Gallery are absent from production).
+- Fixed here: `startFresh` refuses to replace a record that has become readable again (another tab or a newer version saved
+  it), with a test; after a failed write the in-memory progress is built on what the transaction read (another tab's newer
+  save) instead of this tab's older copy, with a test; the e2e `seedRecord` helper waits for the Loading screen to go
+  (it is a `<main>` too, so the helper could open the database before the app created its store); the lesson sound toggle
+  no longer has `aria-pressed` (its label already says what a tap does; "Mute sound, pressed" read as muted); concept
+  picture labels stay with their marked notes; unused `replaceRoute` removed.
+- Mutation-checked both new store tests (each fails with its fix removed).
+
