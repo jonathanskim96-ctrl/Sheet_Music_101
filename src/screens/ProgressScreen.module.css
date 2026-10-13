@@ -1,0 +1,125 @@
+.page {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 var(--gutter) calc(32px + env(safe-area-inset-bottom));
+}
+
+.section {
+  margin-top: 20px;
+}
+
+.section h2 {
+  margin: 0 0 10px;
+  font-size: 20px;
+}
+
+.tooltip {
+  min-height: 1.5em;
+  margin: 10px 0;
+  font-weight: 700;
+  text-align: center;
+}
+
+.legend {
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  justify-content: center;
+  gap: 8px 32px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.new {
+  color: var(--locked-text);
+}
+
+.learning {
+  color: var(--wrong-ink);
+}
+
+.almost {
+  color: var(--xp);
+}
+
+.known {
+  color: var(--correct-ink);
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 8px;
+  border-radius: var(--radius);
+  border: 2px solid var(--border);
+  background: var(--card);
+  text-align: center;
+}
+
+.xpIcon {
+  color: var(--xp);
+  fill: currentcolor;
+}
+
+.tileValue {
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.tileLabel {
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.units {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.unit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 2px solid var(--border);
+  background: var(--card);
+}
+
+.unitDot {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--on-primary);
+  font-weight: 800;
+}
+
+.unitTitle {
+  flex: 1;
+  font-weight: 700;
+}

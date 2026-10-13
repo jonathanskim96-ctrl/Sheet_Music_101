@@ -196,3 +196,49 @@
   checking sound only at mount, or not dismissing on answer each fail one test.
 - `e2e/screens.spec.ts` now also screenshots the lesson with the hint (iPhone user agent).
 - iPhone sound bug planned (HANDOFF): harden synth start-up; owner chose to keep obeying Silent.
+
+## 2026-10-13: M5 executed (progress, settings, backups, safety nets)
+- Owner answered four open questions first (HANDOFF decisions): backup "Later" for this app run only, InstallCard only
+  when it can offer something, 17 shared chart columns, iPhone sound fix in its own session.
+- Data: `persist.ts` (persist once per run after the first completed session; `persisted()` for Settings), `files.ts`
+  (share sheet where files can be shared, else a Blob download; 1 MB cap before reading; raw-data export),
+  `backupHooks.ts`. Store: `readRawRecord` (own connection, never writes), `startFresh` opens the database itself after
+  a failed read, `lastGoodProgress` for the error screen.
+- UI: Path cards in priority order (StatusBanner, InstallCard, BackupReminderCard), unit level stars, gated Practise
+  button and keyboard sheet; Progress (mastery chart with tappable columns, legend, tiles, units); Settings; Start over
+  (two Sheets, shared with the broken screen); UpdateBanner; ErrorBoundary; global error toasts; broken-data screen.
+- e2e: `settings.spec.ts`, `backup.spec.ts`, `safety.spec.ts` (all M5 items incl. XSS import, 2 MB file, newer
+  version, broken data download + unchanged record, Cancel at either Sheet, update banner via the e2e-only hook).
+  `check-dist` bans `__e2e`.
+- Gotchas:
+  - `check-safety` matched the words "install prompt (" in a comment (looks like a `prompt(` call). Reworded.
+  - `getByRole('button', { name: 'Back' })` also matches "Save a backup": use `exact: true`.
+  - Clicking an SVG `rect` with `tabIndex` shows Chromium's default focus ring; hidden unless `:focus-visible`.
+  - Path scroll: `scrollIntoView({ block: 'center' })` pushed the InstallCard off a fresh Path; now `'nearest'`.
+  - The schema-1 fixture's last backup is 2026-10-05, so the backup reminder only shows from 2026-11-04.
+- Not verified: sharing to Files on a real iPhone (`navigator.share` with files) and the real Android install prompt
+  (both simulated or absent in Chromium tests); a real service-worker update (simulated with the e2e hook).
+
+
+## 2026-10-13: M5 Opus review (PR #14)
+- `/code-review high` and `/security-review`: no security findings (import path, preview text, Blob URLs, e2e hook all safe).
+- Fixed in review: the Settings sound switch flipped the value captured at render, so a double tap wrote the same value
+  twice (new e2e test fails on the old code); "Save a backup" now ignores a second tap while the share sheet is open;
+  the XSS e2e test records dialogs and asserts none opened (a throw inside `page.on('dialog')` doesn't fail the test);
+  unused `.reload`/`.text` CSS removed from `App.module.css`.
+- Gotcha: run `npm run build:e2e` before a narrow `npx playwright test`; it serves the last `dist-e2e` build.
+- Left for the owner/Sonnet: listed in the PR comment (import offers no backup first; broken screen's "Save backup" with a
+  failed raw read; mastery chart tap targets; global error toast noise; small cleanups).
+
+## 2026-10-13: M5 review fix session (PR #14 items 1–5)
+- Brought in the reviewer's commit `478a440` (fast-forward from `ccr-07fe752d-7w2hrj`).
+- 1 (owner decision): restore preview has "Save a backup first"; SPEC 7.2 and CURRICULUM §5 updated; e2e test: the
+  download holds the current progress, the preview stays open and nothing is replaced until "Replace my progress".
+- 2: broken-data screen, raw read failed: Start fresh's "Save backup" is disabled and the sheet says why
+  (`StartOverSheets` `saveUnavailable`). e2e test (every `IDBObjectStore.get` throws) fails without the fix (checked).
+- 3 (owner decision): chart tap targets recorded as an accepted exception in HANDOFF.
+- 4: window `error` events without an error object (ResizeObserver, "Script error.") are logged with `console.warn`, no
+  toast; e2e test for both cases.
+- 5: one `somethingWentWrong(e)` / `errorMessageOf(e)` in `content.ts` ("Unknown error" everywhere); `readImportFile`
+  removed. `useStatusWarning()` not done (one shared condition, two lines; not worth a hook).
+

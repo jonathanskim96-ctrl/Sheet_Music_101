@@ -7,6 +7,7 @@ import { lessonsDoneToday, type Progress } from '../../domain/progress';
 import type { SessionResult } from '../../domain/session';
 import { useToast } from '../../app/toasts';
 import { synth } from '../../audio/synth';
+import { requestPersistenceOnce } from '../../data/persist';
 import { useCommit, useNow, useProgress } from '../../data/ProgressContext';
 import { Button } from '../../ui/Button';
 import { Confetti } from '../../ui/Confetti';
@@ -72,7 +73,11 @@ export function LessonComplete({ result, before }: LessonCompleteProps) {
     // A failure is shown once: below on this screen, or as a toast if the learner already left.
     void commit((p) => planCompleteSession(p, result, at), { toast: false }).then((r) => {
       setSaving(false);
-      if (r.ok) return;
+      if (r.ok) {
+        // Ask the browser to keep the data once the learner has something to keep (SPEC 5.3).
+        requestPersistenceOnce();
+        return;
+      }
       if (mounted.current) setError(r.message);
       else toast(`Something went wrong: ${r.message}`, 'error');
     });

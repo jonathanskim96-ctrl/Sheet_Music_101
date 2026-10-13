@@ -10,9 +10,12 @@ import {
   isCompleted,
   isLevelAvailable,
   isPlayable,
+  isReviewPlayable,
   keyboardUnlocked,
+  levelsPlayable,
   reviewAvailable,
   unitLevel,
+  unitLevelCount,
 } from './unlocks';
 
 const rec = (): LessonRecord => ({
@@ -261,5 +264,29 @@ describe('M4 gate (TODO M6: remove with MAX_UNIT_M4)', () => {
     const p = upTo('u4-l5');
     expect(isAvailable(p, 'u2-lv2-a')).toBe(true);
     expect(isPlayable(p, 'u2-lv2-a')).toBe(false);
+  });
+
+  it('keeps practice and levels 2–3 hidden even when the domain would allow them', () => {
+    const p = upTo('u4-l5');
+    for (const id of ['treble-C4', 'treble-G4', 'treble-C5']) {
+      p.cards[id as 'treble-C4'] = {
+        box: 1,
+        lastSeenDay: '2026-10-01',
+        lastPromotedDay: null,
+        seen: 1,
+        correct: 1,
+        avgMs: 1000,
+      };
+    }
+    expect(reviewAvailable(p)).toBe(true);
+    expect(isReviewPlayable(p)).toBe(false);
+    expect(keyboardUnlocked(p)).toBe(true);
+    expect(levelsPlayable()).toBe(false);
+  });
+});
+
+describe('unitLevelCount', () => {
+  it('is 1 for units 1 and 11 and 3 for the others', () => {
+    expect(UNITS.map((u) => unitLevelCount(u.n))).toEqual([1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1]);
   });
 });

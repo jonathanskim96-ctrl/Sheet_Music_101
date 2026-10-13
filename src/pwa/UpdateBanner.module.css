@@ -1,0 +1,14 @@
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 480px;
+  margin: 8px auto 0;
+  padding: 8px var(--gutter);
+  border-radius: var(--radius);
+  background: var(--correct-bg);
+  border: 2px solid var(--correct-ink);
+  color: var(--correct-text);
+  font-weight: 700;
+}

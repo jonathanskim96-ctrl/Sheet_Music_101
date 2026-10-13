@@ -83,6 +83,7 @@ describe('load', () => {
       readRecord: () => Promise.reject(new Error('read exploded')),
       writeFresh,
       transactCommit,
+      readRaw,
     });
     await store.load(NOW);
     expect(store.getState()).toEqual({ status: 'broken', reason: 'read exploded' });
@@ -90,8 +91,9 @@ describe('load', () => {
     expect(await stored(name)).toEqual(record);
     await expect(store.commit(addXp(1))).rejects.toThrow();
     await store.retrySave();
-    // No handle is kept, so even the confirmed "start fresh" can't replace this record.
+    // "Start fresh" opens the database again; here that connection can't be used, so it fails.
     await expect(store.startFresh(NOW)).rejects.toThrow();
+    expect(close).toHaveBeenCalledTimes(2);
     expect(store.getState().status).toBe('broken');
     expect(await stored(name)).toEqual(record);
   });
@@ -104,6 +106,7 @@ describe('load', () => {
       readRecord: () => Promise.resolve(null),
       writeFresh: () => Promise.reject(new Error('disk full')),
       transactCommit,
+      readRaw,
     });
     await store.load(NOW);
     expect(store.getState()).toEqual({
@@ -312,5 +315,75 @@ describe('startFresh', () => {
     await expect(store.startFresh(NOW)).rejects.toThrow(/can be read again/);
     expect(await stored(name)).toEqual(good);
     expect(store.getState().status).toBe('broken');
+  });
+});
+
+describe('after a failed read', () => {
+  const failingRead = (): ConstructorParameters<typeof ProgressStore>[1] => ({
+    openDb,
+    readRecord: () => Promise.reject(new Error('read exploded')),
+    writeFresh,
+    transactCommit,
+    readRaw,
+  });
+
+  it('start fresh opens the database itself and replaces data that is really unreadable', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const name = freshName();
+    await seed(name, { rev: 3, savedAt: 'x', doc: 'garbage' });
+    const store = new ProgressStore(name, failingRead());
+    await store.load(NOW);
+    expect(store.getState().status).toBe('broken');
+    await store.startFresh(NOW);
+    expect(readyOf(store).progress).toEqual(emptyProgress('2026-10-14'));
+    expect(((await stored(name)) as { rev: number }).rev).toBe(4);
+    // and later changes save normally through the new connection
+    await store.commit(addXp(5));
+    expect(((await stored(name)) as { doc: Progress }).doc.xp).toBe(5);
+  });
+
+  it('start fresh refuses when the data turns out to be readable', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const name = freshName();
+    const good = { rev: 3, savedAt: 'x', doc: { ...emptyProgress('2026-10-01'), xp: 40 } };
+    await seed(name, good);
+    const store = new ProgressStore(name, failingRead());
+    await store.load(NOW);
+    await expect(store.startFresh(NOW)).rejects.toThrow(/can be read again/);
+    expect(await stored(name)).toEqual(good);
+    expect(store.getState().status).toBe('broken');
+  });
+});
+
+describe('readRawRecord', () => {
+  it('returns the stored value exactly and writes nothing', async () => {
+    const name = freshName();
+    const record = { rev: 7, savedAt: 'x', doc: 'garbage' };
+    await seed(name, record);
+    const store = new ProgressStore(name);
+    await store.load(NOW);
+    expect(await store.readRawRecord()).toEqual(record);
+    expect(await stored(name)).toEqual(record);
+  });
+
+  it('rejects (for the screen to show) when the database cannot be opened', async () => {
+    const store = new ProgressStore(freshName(), {
+      openDb: () => Promise.reject(new Error('blocked')),
+      readRecord,
+      writeFresh,
+      transactCommit,
+      readRaw,
+    });
+    await expect(store.readRawRecord()).rejects.toThrow('blocked');
+  });
+});
+
+describe('lastGoodProgress', () => {
+  it('is null before loading and the current progress after', async () => {
+    const store = new ProgressStore(freshName());
+    expect(store.lastGoodProgress()).toBeNull();
+    await store.load(NOW);
+    await store.commit(addXp(3));
+    expect(store.lastGoodProgress()?.xp).toBe(3);
   });
 });

@@ -170,3 +170,12 @@ export async function playLesson(page: Page, wrongFirst = 0): Promise<number> {
   }
   throw new Error('The lesson did not finish');
 }
+
+/** Simulates a new service worker taking over (e2e builds expose this hook; SPEC 7.8). */
+export async function fireControllerChange(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const w = window as unknown as { __e2eFireControllerChange?: () => void };
+    if (!w.__e2eFireControllerChange) throw new Error('e2e hook missing');
+    w.__e2eFireControllerChange();
+  });
+}

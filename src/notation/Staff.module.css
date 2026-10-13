@@ -69,6 +69,10 @@
   cursor: pointer;
 }
 
+.band:focus:not(:focus-visible) {
+  outline: none;
+}
+
 .band:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: -3px;
@@ -114,4 +118,10 @@
   font-size: 7px;
   font-weight: 800;
   fill: var(--ink);
+}
+
+.selected {
+  fill: none;
+  stroke: var(--focus);
+  stroke-width: 1.5;
 }

@@ -624,8 +624,10 @@ button "Let's start" → `planFlag(welcomeSeen)` → Path.
 - Top bar (sticky): XP (star icon, `--xp`) · days practised (calendar icon) · DailyGoalRing
   (n/goal lessons today; ring fills; full = green with check) · Progress (chart icon) · Settings (gear).
 - Cards above the path when relevant (max one at a time, in this priority): storage warning
-  (`unavailable`), save error, InstallCard (not standalone and not dismissed in last 7 days),
-  BackupReminderCard (≥ 5 lessons done and no export in 30 days; dismiss = mark today).
+  (`unavailable`), save error, InstallCard (not standalone, not dismissed in last 7 days, and only
+  when it has something to offer: an install prompt or the iPhone steps; owner decision 2026-10-13),
+  BackupReminderCard (≥ 5 lessons done (`totals.lessonsDone`) and no export in 30 days; "Later"
+  hides it until the app is opened again, nothing is saved; owner decision 2026-10-13).
 - "Practise" button (secondary, music icon) when review is available.
 - For each unit: UnitHeader (unit colour background, white text: "Unit n", title, subtitle,
   level stars 0–3, and buttons "Level 2"/"Level 3" when available). Then its lesson bubbles
@@ -673,16 +675,20 @@ button "Let's start" → `planFlag(welcomeSeen)` → Path.
 
 **Progress:**
 - Mastery chart: a grand staff C2–C6 with every one of the 34 cards drawn as a coloured note
-  head at its position (treble cards on the treble staff, bass cards on the bass staff, spread
-  horizontally in pitch order): new = `--locked`, learning = `--wrong-ink`, almost = `--xp`,
+  head at its position (treble cards on the treble staff, bass cards on the bass staff, each staff
+  spreading its 17 cards left to right in pitch order, the two staves sharing the 17 columns;
+  owner decision 2026-10-13): new = `--locked`, learning = `--wrong-ink`, almost = `--xp`,
   known = `--correct-ink`. Legend underneath with text labels (colour is not the only signal:
   legend uses icon + text, and tapping a note shows a tooltip "Treble G · Known · 12/13 correct").
 - Stat tiles: total XP, days practised, lessons completed, first-try accuracy overall.
 - Unit list with level stars.
 
 **Settings:** Sound (toggle) · Daily goal (1/2/3 segmented) · Install the app (instructions
-per platform) · Backup: "Save a backup" (export), "Last backup: never / today / n days ago",
-"Restore from backup" (import → preview Sheet with summary → "Replace my progress"
+per platform) (installed: "The app is installed."; iPhone: the Share steps; install prompt available:
+"Install" button; otherwise "Use your browser's menu to add this app to your home screen."; owner
+decision 2026-10-13) · Backup: "Save a backup" (export), "Last backup: never / today / n days ago",
+"Restore from backup" (import → preview Sheet with summary → "Save a backup first" (exports the
+current progress, the Sheet stays open; owner decision 2026-10-13) / "Replace my progress"
 (danger) / "Cancel") · Storage status · "Start over" (danger; Sheet 1: "Save a backup first?"
 [Save backup] [Continue without backup]; Sheet 2: "Erase all progress? This can't be undone."
 [Erase everything] (danger) [Cancel]) · About: version and build id, Bravura credit

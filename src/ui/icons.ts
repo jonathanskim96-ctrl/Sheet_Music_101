@@ -1,8 +1,11 @@
 // The only place lucide icons are imported, so the bundle holds just these.
 export {
+  ArrowLeft,
   BarChart3,
   CalendarDays,
   Check,
+  Circle,
+  CircleCheck,
   ChevronDown,
   ChevronUp,
   Download,
@@ -12,7 +15,9 @@ export {
   Play,
   Settings,
   Share,
+  Sprout,
   Star,
+  TrendingUp,
   Trophy,
   Upload,
   Volume2,

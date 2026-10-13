@@ -34,6 +34,8 @@ export interface StaffNote {
   clef: Clef;
   note: Note;
   state?: NoteState;
+  /** Column for the note (default: its index). Notes on different staves may share one. */
+  column?: number;
 }
 
 export interface StaffProps {
@@ -50,6 +52,10 @@ export interface StaffProps {
   ariaLabel?: string;
   /** Plays the 300 ms shake after a wrong answer. */
   shake?: boolean;
+  /** Number of note columns (default: one per note). */
+  columns?: number;
+  /** Makes each note tappable (mastery chart); the labels name each note for screen readers. */
+  noteTaps?: { labels: readonly string[]; onTap: (index: number) => void; selected: number | null };
 }
 
 const STATE_CLASS: Record<NoteState, string> = {
@@ -73,10 +79,12 @@ export function Staff({
   noteLabels,
   ariaLabel = notes.length === 1 ? 'Music staff with one note' : 'Music staff',
   shake = false,
+  columns,
+  noteTaps,
 }: StaffProps) {
-  const layout = layoutStaff(mode, notes.length);
+  const layout = layoutStaff(mode, columns ?? notes.length);
   const { width, height, x0, clefX, staves } = layout;
-  const interactive = onTapPosition !== undefined && mode !== 'grand';
+  const interactive = (onTapPosition !== undefined && mode !== 'grand') || noteTaps !== undefined;
   const firstStave = staves[0];
   const lastStave = staves[staves.length - 1];
 
@@ -162,11 +170,14 @@ export function Staff({
         {notes.map((n, i) => {
           const stave = staveFor(layout, n.clef);
           const p = staffPosition(n.clef, n.note);
-          const x = layout.noteXs[i] ?? 0;
+          const x = layout.noteXs[n.column ?? i] ?? 0;
           const y = yOf(stave.bottomLineY, p);
           const state = n.state ?? 'normal';
           return (
             <g key={`${n.clef}-${n.note}-${String(i)}`} className={STATE_CLASS[state]}>
+              {noteTaps?.selected === i && (
+                <circle className={styles['selected']} cx={x} cy={y} r={S * 1.3} />
+              )}
               {ledgerPositions(p).map((q) => (
                 <line
                   key={q}
@@ -196,7 +207,45 @@ export function Staff({
             </g>
           );
         })}
-        {interactive &&
+        {noteTaps &&
+          notes.map((n, i) => {
+            const stave = staveFor(layout, n.clef);
+            const x = layout.noteXs[n.column ?? i] ?? 0;
+            // Each note's target is its whole column on its own staff (bigger than the note):
+            // on a grand staff the treble half ends midway between the two staves.
+            const mid =
+              firstStave && lastStave && firstStave !== lastStave
+                ? (firstStave.bottomLineY + lastStave.bottomLineY - 4 * S) / 2
+                : height;
+            const top = stave === firstStave ? 0 : mid;
+            const bottom = stave === firstStave ? mid : height;
+            return (
+              <rect
+                key={`tap-${String(i)}`}
+                className={styles['band']}
+                x={x - 1.75 * S}
+                y={top}
+                width={3.5 * S}
+                height={bottom - top}
+                role="button"
+                tabIndex={0}
+                aria-label={noteTaps.labels[i] ?? ''}
+                aria-pressed={noteTaps.selected === i}
+                data-card={`${n.clef}-${n.note}`}
+                onClick={() => {
+                  noteTaps.onTap(i);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    noteTaps.onTap(i);
+                  }
+                }}
+              />
+            );
+          })}
+        {onTapPosition !== undefined &&
+          mode !== 'grand' &&
           firstStave &&
           TAP_POSITIONS.map((p) => (
             <rect

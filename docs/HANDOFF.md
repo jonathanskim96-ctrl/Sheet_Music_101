@@ -3,7 +3,7 @@
 _Read this first in every new session. Keep it short and current._
 
 ## Where we are
-- **Phase:** M1 (scaffold, guardrails, CI, deploy) **merged and live**; M1 review fixes merged (PR #3). **M2 (domain core: pure logic + tests) merged** (PR #4, 2026-10-13, after the Opus review and its fixes). No screen changed in M2, so the live app looks the same. **M3 (look, sound, notation, Gallery) merged** (PR #6, 2026-10-13; owner approved the look). The Opus review fixes and the taller keyboard came after that merge and go in through their own PR (branch `claude/tender-bohr-dsybzk`). **M4 (saving + first playable lessons, units 1–4) merged** (PR #9, 2026-10-13; it also carries the stacked-Sheets fix, so PR #8 is redundant and can be closed). The Opus review of M4 came after the merge: small fixes are in a follow-up PR (branch `claude/review-m4-pull-request-1kg4g2`), and the larger items are listed in that PR for a Sonnet fix session. **Schema version 1 is now frozen**: once M4 is merged real progress exists on the owner's phone, so any change to `Progress` needs a schema bump and an upgrade step (SPEC 4.8).
+- **Phase:** M1 (scaffold, guardrails, CI, deploy) **merged and live**; M1 review fixes merged (PR #3). **M2 (domain core: pure logic + tests) merged** (PR #4, 2026-10-13, after the Opus review and its fixes). No screen changed in M2, so the live app looks the same. **M3 (look, sound, notation, Gallery) merged** (PR #6, 2026-10-13; owner approved the look). The Opus review fixes and the taller keyboard came after that merge and go in through their own PR (branch `claude/tender-bohr-dsybzk`). **M4 (saving + first playable lessons, units 1–4) merged** (PR #9, 2026-10-13; it also carries the stacked-Sheets fix, so PR #8 is redundant and can be closed). The Opus review of M4 came after the merge: small fixes are in a follow-up PR (branch `claude/review-m4-pull-request-1kg4g2`), and the larger items are listed in that PR for a Sonnet fix session. **M5 (progress, settings, backups, safety nets) built** on branch `ccr-22029d60-9gsujq`, PR #14; Opus review done (no security findings), review items 1–5 fixed on the same branch; ready to merge once CI is green. **Schema version 1 is now frozen**: once M4 is merged real progress exists on the owner's phone, so any change to `Progress` needs a schema bump and an upgrade step (SPEC 4.8).
 - Repo: `jonathanskim96-ctrl/Sheet_Music_101`. App name: **Sheet Music 101**.
 - Live URL (live; deployed from `main` by CI): https://jonathanskim96-ctrl.github.io/Sheet_Music_101/
 - How the build works: `docs/build/README.md` (milestones, session prompts, owner steps).
@@ -33,6 +33,12 @@ _Read this first in every new session. Keep it short and current._
 | 2026-10-13 | No sound on iPhone was Silent mode (confirmed by the owner). The app **obeys Silent** and shows the hint "No sound? Check that your iPhone isn't on Silent." (iPhone/iPad only; in lessons and Settings; SPEC 7.7). |
 | 2026-10-13 | PR #12 review: on the very first run, if the browser opens storage but refuses the first save (nothing saved yet), the app plays in memory with the "won't save" warning (`unavailable`), not the "couldn't read" screen. A failed read of existing data stays `broken`. |
 | 2026-10-13 | iPhone sound bug (Play makes no sound): keep obeying Silent; a Sonnet session hardens the sound start-up (start on the first tap, restart a stuck engine; SPEC 7.7), then the owner does the 1-minute phone check below. Not chosen: ignoring Silent (pauses the learner's music) or a Settings switch for it (needs a schema change). |
+| 2026-10-13 | M5: the backup reminder's "Later" hides the card until the app is opened again (nothing saved; Settings' "Last backup" stays truthful). |
+| 2026-10-13 | M5: the Path's InstallCard shows only when it can offer something (an Install button or the iPhone Share steps). Settings says "The app is installed." when installed, else "Use your browser's menu to add this app to your home screen." when neither is possible. |
+| 2026-10-13 | M5: the Progress mastery chart uses 17 shared columns (each staff spreads its 17 notes in pitch order). |
+| 2026-10-13 | M5: the iPhone sound hardening stays a separate Sonnet session (not in the M5 PR). |
+| 2026-10-13 | M5 review: the restore preview offers "Save a backup first" (saves the current progress, the sheet stays open) before "Replace my progress" (CLAUDE.md: anything that replaces progress offers an export first). |
+| 2026-10-13 | M5 review: the Progress chart's tap targets (~19 px wide on a phone, one per column) are an accepted exception to the 44 px rule (STANDARDS §2); the tooltip names the tapped note, so a wrong tap is obvious. |
 | 2026-10-12 | Tech: versions in `docs/build/SPEC.md` §2 were verified to install, build and test together (with npm 11 for installs; npm 10 has a resolver bug). |
 
 ### Gaps the spec left open in M2, with the Opus review verdict (2026-10-13)
@@ -65,10 +71,18 @@ keeps the recommended option until the owner says otherwise.
 - [ ] Add the app to the home screen on each phone (SETUP sections 6–7) and confirm the icon.
 
 ## Next step
-1. M4 review follow-up merged (PR #10). Owner: close PR #8 (already in `main`).
-2. PR #12 (M4 review fix-up) reviewed by Opus on 2026-10-13. Small fixes pushed to it (see the PR comment). Ready to merge once CI is green.
-3. Sonnet session: iPhone sound hardening (the numbered list under "iPhone Safari sound bug" below). It can go before M5 or as M5's first commit.
-4. M5 with the execution prompt in `docs/build/README.md`. Note for M5: after a failed *read* the store is `broken` but keeps no database handle, so the broken screen's "Download the saved data" and "Start fresh" must open the database themselves when tapped. `startFresh` still refuses inside its transaction if the record is readable, so this stays safe. If that open or read fails too, show the error. Never write.
+1. M5 PR (#14) reviewed by Opus on 2026-10-13 (code review + security review: no security findings). Small fixes pushed (sound switch double tap, export double tap, XSS test dialog check, dead CSS). Open: **owner question** on the import preview (CLAUDE.md says import must offer a backup first; SPEC/CURRICULUM only list Replace/Cancel), then a Sonnet fix session for the numbered list in the PR comment.
+2. Sonnet session: iPhone sound hardening (the numbered list under "iPhone Safari sound bug" below), as its own PR.
+3. Owner: close PR #8 if still open (already in `main`).
+
+### M5 choices the spec left open (owner may veto)
+- Gated until M6 with the `MAX_UNIT_M4` flag (code is there, hidden): the "Practise" button (`isReviewPlayable`), the "New: piano keyboard!" sheet (`levelsPlayable`, it points to Level 2, which is M6). Not built yet: the "Level 2/3" buttons on unit headers and the checkpoint nodes (both open M6 screens).
+- Small texts the spec doesn't give: section headings in Settings ("Sound", "Daily goal", "Install the app", "Backup", "Storage", "Start over", "About"), the About line "Sheet Music 101 version 0.1.0 (build …)", Progress headings ("Notes you know", "Units"), stat labels ("Total XP", "Days practised", "Lessons completed", "First-try accuracy"), mastery words ("New", "Learning", "Almost", "Known"), the chart hint "Tap a note to see how well you know it.", chart names for cards without a nickname ("Treble E", "Bass A"), "Last backup: 1 day ago", "A new version is ready." [Reload] (spec), and a back arrow ("Back") on Progress and Settings.
+- "Lessons completed" (Progress) counts lesson records, not checkpoints (same as the backup preview); first-try accuracy shows "–" before any answer.
+- Start over, first sheet: "Save backup" moves on to the second sheet only if a file was actually saved (a closed share sheet stays on the first).
+- Broken-data screen: the raw record is read when the screen opens (so the download can open the share sheet straight from the tap); its "Start fresh" first sheet's "Save backup" downloads that raw data. File name `sheet-music-101-saved-data-YYYY-MM-DD.json`.
+- Error screen (ErrorBoundary) shows "Backup saved." under its buttons after a successful save (toasts are not available there).
+- The store's `startFresh` now opens the database itself after a failed read (the HANDOFF note for M5); it still refuses inside its transaction if the record has become readable.
 
 ### M4 choices the spec left open (owner may veto)
 - Path shows only units 1–4 (the playable ones) and a line "More units are coming soon." under them. A temporary `MAX_UNIT_M4 = 4` gate lives in `domain/unlocks.ts` as `isPlayable` / `currentPlayableLesson` (the domain's own `isAvailable` is unchanged, so the M2 tests still describe the whole course). M6 removes it (TODO comment in the code).

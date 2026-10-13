@@ -11,16 +11,22 @@
   text-align: center;
 }
 
-.reload {
-  min-height: 52px;
-  padding: 10px 24px;
+.message {
+  max-width: 100%;
+  margin: 8px 0;
+  padding: 12px;
   border-radius: var(--radius);
-  border: 2px solid var(--primary-edge);
-  border-bottom-width: 4px;
-  background: var(--primary);
-  color: var(--on-primary);
-  font-family: inherit;
-  font-size: 18px;
-  font-weight: 800;
-  cursor: pointer;
+  background: var(--bg-soft);
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin-top: 8px;
 }
