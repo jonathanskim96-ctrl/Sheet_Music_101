@@ -72,7 +72,7 @@ keeps the recommended option until the owner says otherwise.
 
 ## Next step
 1. M5 PR (#14) reviewed by Opus on 2026-10-13 (code review + security review: no security findings). Small fixes pushed (sound switch double tap, export double tap, XSS test dialog check, dead CSS). Open: **owner question** on the import preview (CLAUDE.md says import must offer a backup first; SPEC/CURRICULUM only list Replace/Cancel), then a Sonnet fix session for the numbered list in the PR comment.
-2. iPhone sound hardening is **built** (its own PR, branch `claude/adoring-mccarthy-mk8l41`): items 1–3 and the SPEC update are done. Opus review done 2026-10-13 (small fixes pushed to the same branch). Next: owner merges, then the 1-minute phone check below. Then M6.
+2. iPhone sound hardening is **built** (its own PR, branch `claude/adoring-mccarthy-mk8l41`): items 1–3 and the SPEC update are done. Opus review done 2026-10-13 (small fixes pushed to the same branch). Next: a Sonnet session fixes item 1 of the review comment on PR #15 (the 300 ms rebuild must happen at most once each time the page is shown), then the owner merges and does the 1-minute phone check below. Then M6.
 3. Owner: close PR #8 if still open (already in `main`).
 
 ### M5 choices the spec left open (owner may veto)
