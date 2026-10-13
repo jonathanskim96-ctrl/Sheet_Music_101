@@ -1,7 +1,7 @@
-import { useReducer, useState } from 'react';
+import { useEffect, useReducer, useState } from 'react';
 import { navigate } from '../app/router';
 import { parseCardId } from '../domain/cards';
-import { LEAVE_LESSON } from '../domain/content';
+import { LEAVE_LESSON, SILENT_HINT } from '../domain/content';
 import type { LessonDef } from '../domain/curriculum';
 import { dayKeyOf } from '../domain/days';
 import { buildLesson } from '../domain/lessonBuilder';
@@ -10,6 +10,7 @@ import { cardOf, checkAnswer, type Answer } from '../domain/questions';
 import { hashString } from '../domain/rng';
 import { currentQuestion, reduce, resultOf, startSession } from '../domain/session';
 import { synth } from '../audio/synth';
+import { isIosDevice } from '../pwa/platform';
 import { useCommit, useLoadedProgress, useNow } from '../data/ProgressContext';
 import { Button } from '../ui/Button';
 import { Flame, Volume2, VolumeX, X } from '../ui/icons';
@@ -21,6 +22,9 @@ import { LessonComplete } from './lesson/LessonComplete';
 import { MeetCard } from './lesson/MeetCard';
 import { QuestionView } from './lesson/QuestionView';
 import styles from './lesson/lesson.module.css';
+
+// The Silent-mode hint shows at most once per app run (SPEC 7.7).
+let silentHintSpent = false;
 
 /** Plays one lesson: concept cards, Meet cards, questions, then the result screen. */
 export function LessonScreen({ def }: { def: LessonDef }) {
@@ -35,14 +39,22 @@ export function LessonScreen({ def }: { def: LessonDef }) {
     return startSession(plan, performance.now());
   });
   const [leaving, setLeaving] = useState(false);
+  const soundOn = progress.settings.soundOn;
+  // Only on iPhone/iPad, on the first screen, while sound is on; gone after the first "Got it" or
+  // answer. It counts as used only once it has actually been shown.
+  const [hintOpen, setHintOpen] = useState(() => !silentHintSpent && isIosDevice());
+  const showHint = hintOpen && soundOn && session.phase !== 'complete';
+  useEffect(() => {
+    if (showHint) silentHintSpent = true;
+  }, [showHint]);
 
   const current = currentQuestion(session);
   const total = session.queue.length;
   const done = session.phase === 'feedback' ? session.index + 1 : session.index;
-  const soundOn = progress.settings.soundOn;
 
   const answer = (a: Answer) => {
     if (session.phase !== 'question' || !current) return;
+    setHintOpen(false);
     const correct = checkAnswer(current.q, a);
     if (correct) synth.playCorrect();
     else synth.playWrong();
@@ -102,6 +114,7 @@ export function LessonScreen({ def }: { def: LessonDef }) {
         key={conceptId}
         id={conceptId}
         onGotIt={() => {
+          setHintOpen(false);
           dispatch({ type: 'next-card', at: performance.now() });
         }}
       />
@@ -112,6 +125,7 @@ export function LessonScreen({ def }: { def: LessonDef }) {
         key={meetCard}
         card={meetCard}
         onGotIt={() => {
+          setHintOpen(false);
           dispatch({ type: 'next-card', at: performance.now() });
         }}
       />
@@ -145,6 +159,11 @@ export function LessonScreen({ def }: { def: LessonDef }) {
   return (
     <div className={styles['page']}>
       {session.phase !== 'complete' && header}
+      {showHint && (
+        <p className={styles['silentHint']} data-testid="silent-hint">
+          {SILENT_HINT}
+        </p>
+      )}
       <main className={styles['main']}>{body}</main>
       <Sheet
         open={leaving}

@@ -76,18 +76,24 @@ export function useLoadedProgress(): Progress {
 
 export type CommitResult = { ok: true } | { ok: false; message: string };
 
-/** `commit(planner)`: saves a change. Never rejects; a failure is shown in a toast and returned. */
-export function useCommit(): (planner: Planner) => Promise<CommitResult> {
+/**
+ * `commit(planner)`: saves a change. Never rejects; a failure is shown in a toast and returned.
+ * A caller that shows the failure itself passes `{ toast: false }` so it appears only once.
+ */
+export function useCommit(): (
+  planner: Planner,
+  options?: { toast?: boolean },
+) => Promise<CommitResult> {
   const store = useStore();
   const toast = useToast();
   return useCallback(
-    async (planner) => {
+    async (planner, options) => {
       try {
         await store.commit(planner);
         return { ok: true };
       } catch (e) {
         const message = e instanceof Error ? e.message : 'unknown error';
-        toast(`Something went wrong: ${message}`, 'error');
+        if (options?.toast !== false) toast(`Something went wrong: ${message}`, 'error');
         return { ok: false, message };
       }
     },

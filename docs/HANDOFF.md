@@ -31,6 +31,8 @@ _Read this first in every new session. Keep it short and current._
 | 2026-10-13 | M2 gaps: concept cards show again on lesson replays; reviews and checkpoints count towards the daily goal (and earn +10 XP even when a checkpoint is failed). |
 | 2026-10-13 | M4 review item 1: if saved progress exists but can't be read, show the "We couldn't read your saved progress" screen (store `broken`, with the reason), not an empty in-memory app. `unavailable` stays only for "IndexedDB can't be opened at all". Built in the M4 fix session or M5. |
 | 2026-10-13 | No sound on iPhone was Silent mode (confirmed by the owner). The app **obeys Silent** and shows the hint "No sound? Check that your iPhone isn't on Silent." (iPhone/iPad only; in lessons and Settings; SPEC 7.7). |
+| 2026-10-13 | PR #12 review: on the very first run, if the browser opens storage but refuses the first save (nothing saved yet), the app plays in memory with the "won't save" warning (`unavailable`), not the "couldn't read" screen. A failed read of existing data stays `broken`. |
+| 2026-10-13 | iPhone sound bug (Play makes no sound): keep obeying Silent; a Sonnet session hardens the sound start-up (start on the first tap, restart a stuck engine; SPEC 7.7), then the owner does the 1-minute phone check below. Not chosen: ignoring Silent (pauses the learner's music) or a Settings switch for it (needs a schema change). |
 | 2026-10-12 | Tech: versions in `docs/build/SPEC.md` §2 were verified to install, build and test together (with npm 11 for installs; npm 10 has a resolver bug). |
 
 ### Gaps the spec left open in M2, with the Opus review verdict (2026-10-13)
@@ -64,9 +66,9 @@ keeps the recommended option until the owner says otherwise.
 
 ## Next step
 1. M4 review follow-up merged (PR #10). Owner: close PR #8 (already in `main`).
-2. Sonnet fix session (prompt given to the owner on 2026-10-13): PR #10 items 1–2 (item 1 approved by the owner) and the iPhone Silent-mode lesson hint (SPEC 7.7). The Settings part of the hint comes with M5.
-3. Opus review of that fix PR, then M5.
-3. M5 with the execution prompt in `docs/build/README.md`.
+2. PR #12 (M4 review fix-up) reviewed by Opus on 2026-10-13. Small fixes pushed to it (see the PR comment). Ready to merge once CI is green.
+3. Sonnet session: iPhone sound hardening (the numbered list under "iPhone Safari sound bug" below). It can go before M5 or as M5's first commit.
+4. M5 with the execution prompt in `docs/build/README.md`. Note for M5: after a failed *read* the store is `broken` but keeps no database handle, so the broken screen's "Download the saved data" and "Start fresh" must open the database themselves when tapped. `startFresh` still refuses inside its transaction if the record is readable, so this stays safe. If that open or read fails too, show the error. Never write.
 
 ### M4 choices the spec left open (owner may veto)
 - Path shows only units 1–4 (the playable ones) and a line "More units are coming soon." under them. A temporary `MAX_UNIT_M4 = 4` gate lives in `domain/unlocks.ts` as `isPlayable` / `currentPlayableLesson` (the domain's own `isAvailable` is unchanged, so the M2 tests still describe the whole course). M6 removes it (TODO comment in the code).
@@ -86,6 +88,25 @@ keeps the recommended option until the owner says otherwise.
 - The danger button is a light-orange fill with orange edge and dark-orange text (white on the bright orange token fails contrast).
 - The Gallery also has small extra sections (tappable staff, no-clef staff, highlighted lines, progress bar, goal ring, Sheet demo) so every M3 building block can be checked.
 - Gallery code is lazy-loaded and absent from production builds (checked: `dist/` has no Gallery chunk).
+
+### iPhone Safari sound bug (owner report, 2026-10-13): plan, decided 2026-10-13
+**Report:** on iPhone (Safari), the notes make no sound when tapping **Play** on a concept card.
+
+**Diagnosis (Opus):** Silent mode is the most likely cause. Web Audio on iPhone obeys the Silent switch and plays at *media* volume, not ringer volume. It can't be the only explanation, though, and the cloud can't test a real iPhone. `audio/synth.ts` has two weak spots that match known Safari behaviour:
+- The engine is created on the first sound call. That can be a Meet card's auto-play, which runs after the tap and not inside it. Safari then leaves the engine `suspended`.
+- After a call, a lock or an app switch, Safari puts the engine in `interrupted`. Sometimes it reports `running` but stays silent until the engine is rebuilt. Today the code only calls `resume()` without waiting, and never rebuilds.
+
+**Sonnet session (one commit per item, unit tests with the fake context in `synth.test.ts`):**
+1. **Start on the first tap.** On the first `pointerup`/`touchend`/`click`/`keydown` anywhere (capture phase), create the engine inside that tap, call `resume()`, and play a one-sample silent buffer. Keep listening until the engine is `running`, and listen again after the page has been hidden.
+2. **Restart a stuck engine.** If the engine is `closed`, or still not `running` about 300 ms after a `resume()` that was triggered by a tap, close it and build a new one (master gain → compressor → destination). Never more than once per tap. Errors keep going to the one-time "Sound isn't available right now." toast.
+3. **Schedule a little ahead.** Start sounds at `currentTime + 0.02` s so the start of a note isn't cut off while the engine wakes up.
+4. Update SPEC 7.7 with items 1–3, and NOTES.
+
+**Owner's 1-minute phone check (after that session is merged; in Safari or the home-screen app):**
+1. Turn Silent off: flip the switch on the left side so no orange shows. On iPhone 15 Pro or later, open Control Center and tap the bell so it has no line through it.
+2. Open the app, start **Lines and spaces** (Unit 1), and press the volume-up button a few times while the lesson is showing.
+3. On the third card ("Higher on the staff, higher sound") tap **Play**. Then answer a question and listen for the "ding".
+4. Tell the next session: Play sound yes/no; ding yes/no; and whether sound stops after locking the phone or switching apps and coming back.
 
 ## How to run checks
 `npm ci`, then `npm run verify` (check-safety, typecheck, lint, format, unit tests, build,

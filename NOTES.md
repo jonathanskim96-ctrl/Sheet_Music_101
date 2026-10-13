@@ -169,3 +169,30 @@
   picture labels stay with their marked notes; unused `replaceRoute` removed.
 - Mutation-checked both new store tests (each fails with its fix removed).
 
+
+## 2026-10-13: M4 review fix session (PR #10 items 1–2, Silent-mode hint)
+- Store: once the database has opened, a failing read (or failing first write) is `broken` with the error text as the
+  reason and the handle is closed; `unavailable` is now only "IndexedDB can't be opened". Two new store tests; both fail
+  with the fix removed (checked). The stored record is unchanged. With no handle kept, `startFresh` cannot run after a
+  read failure (deliberate: that data was never shown to be unreadable, only unreadable right now).
+- Lesson complete: `useCommit(planner, { toast: false })` so a failed result save shows only the inline alert.
+  Not tested end to end: planners cap their numbers, so the UI cannot produce an invalid result, and there is no DOM
+  unit-test setup. The change is two lines; `tsc`/lint cover it.
+- Silent-mode hint (SPEC 7.7, lessons only): `pwa/platform.ts` `isIosDevice` (reusable by M5 `install.ts`), text in
+  `content.ts` `SILENT_HINT`, a module flag keeps it to once per app run. e2e: iPhone UA shows then hides it; default UA
+  never shows it. Settings part comes with M5.
+
+## 2026-10-13: Opus review of PR #12 (M4 fix-up)
+- Clean-room run (`rm -rf node_modules dist dist-e2e && npm ci && npm run verify`) on the PR head: green
+  (858 unit, 72 e2e passed, 10 skipped). Screenshots reviewed, including the new hint in light/dark at 390 and 320 px.
+- Store: owner decided a failed *first* save (nothing stored yet) is `unavailable`, not `broken`; a failed read stays
+  `broken`. The broken-read test now also checks `retrySave` and `startFresh` leave the record alone. An empty error
+  message becomes "Unknown error" (no lone "." on the broken screen).
+- Lesson complete: if the learner taps Continue before a failing result save settles, the error now shows as a toast
+  instead of nowhere. No component test (only a planner bug reaches this path; no DOM test setup); accepted in review.
+- Silent hint: sound on/off is now checked at render, so turning sound on during the first screen shows the hint, and
+  the hint only counts as "used" once it was actually shown. e2e added for once-per-run (and back after a reload),
+  dismissal by an answer (u2-l3 starts with a question), and sound off. Mutation-checked: removing the "used" flag,
+  checking sound only at mount, or not dismissing on answer each fail one test.
+- `e2e/screens.spec.ts` now also screenshots the lesson with the hint (iPhone user agent).
+- iPhone sound bug planned (HANDOFF): harden synth start-up; owner chose to keep obeying Silent.

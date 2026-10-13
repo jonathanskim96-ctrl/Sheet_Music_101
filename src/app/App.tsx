@@ -85,7 +85,10 @@ function Shell() {
       <main className={styles['center']}>
         <Mascot mood="encouraging" size={96} />
         <h1>We couldn't read your saved progress.</h1>
-        <p>{state.reason} Nothing has been changed or deleted.</p>
+        <p>
+          {/[.!?]$/.test(state.reason) ? state.reason : `${state.reason}.`} Nothing has been changed
+          or deleted.
+        </p>
         <button
           type="button"
           className={styles['reload']}

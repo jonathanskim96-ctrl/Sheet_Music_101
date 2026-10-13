@@ -5,6 +5,7 @@ import { dayKeyOf } from '../../domain/days';
 import { planCompleteSession } from '../../domain/planners';
 import { lessonsDoneToday, type Progress } from '../../domain/progress';
 import type { SessionResult } from '../../domain/session';
+import { useToast } from '../../app/toasts';
 import { synth } from '../../audio/synth';
 import { useCommit, useNow, useProgress } from '../../data/ProgressContext';
 import { Button } from '../../ui/Button';
@@ -39,11 +40,13 @@ export interface LessonCompleteProps {
 /** The end of a lesson. The result is saved as soon as this screen appears. */
 export function LessonComplete({ result, before }: LessonCompleteProps) {
   const commit = useCommit();
+  const toast = useToast();
   const now = useNow();
   const state = useProgress();
   const [saving, setSaving] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const started = useRef(false);
+  const mounted = useRef(false);
   const [mascotLine] = useState(() => pick(LESSON_COMPLETE.mascotLines));
   const [at] = useState(() => now());
 
@@ -55,15 +58,25 @@ export function LessonComplete({ result, before }: LessonCompleteProps) {
     lessonsDoneToday(before, today) < goal && lessonsDoneToday(after, today) >= goal;
 
   useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
     // Strict mode runs effects twice in development; the result must only be saved once.
     if (started.current) return;
     started.current = true;
     synth.playFanfare();
-    void commit((p) => planCompleteSession(p, result, at)).then((r) => {
+    // A failure is shown once: below on this screen, or as a toast if the learner already left.
+    void commit((p) => planCompleteSession(p, result, at), { toast: false }).then((r) => {
       setSaving(false);
-      if (!r.ok) setError(r.message);
+      if (r.ok) return;
+      if (mounted.current) setError(r.message);
+      else toast(`Something went wrong: ${r.message}`, 'error');
     });
-  }, [commit, result, at]);
+  }, [commit, toast, result, at]);
 
   const checkpointFailed = result.context.kind === 'checkpoint' && result.passed !== true;
   const line = checkpointFailed
