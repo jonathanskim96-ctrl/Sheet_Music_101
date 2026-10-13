@@ -3,7 +3,7 @@
 _Read this first in every new session. Keep it short and current._
 
 ## Where we are
-- **Phase:** M1 (scaffold, guardrails, CI, deploy) **merged and live**; M1 review fixes merged (PR #3). **M2 (domain core: pure logic + tests) merged** (PR #4, 2026-10-13, after the Opus review and its fixes). No screen changed in M2, so the live app looks the same. **M3 (look, sound, notation, Gallery) built, PR open, waiting for the owner to approve the look** (step 12). Next after merge: **M4**.
+- **Phase:** M1 (scaffold, guardrails, CI, deploy) **merged and live**; M1 review fixes merged (PR #3). **M2 (domain core: pure logic + tests) merged** (PR #4, 2026-10-13, after the Opus review and its fixes). No screen changed in M2, so the live app looks the same. **M3 (look, sound, notation, Gallery) built, PR #6 open. Owner approved the look (2026-10-13).** Next after merge: **M4**.
 - Repo: `jonathanskim96-ctrl/Sheet_Music_101`. App name: **Sheet Music 101**.
 - Live URL (live; deployed from `main` by CI): https://jonathanskim96-ctrl.github.io/Sheet_Music_101/
 - How the build works: `docs/build/README.md` (milestones, session prompts, owner steps).
@@ -57,7 +57,7 @@ keeps the recommended option until the owner says otherwise.
 - [ ] Add the app to the home screen on each phone (SETUP sections 6–7) and confirm the icon.
 
 ## Next step
-1. Owner: look at the M3 screenshots (sent in the session; also produced by `npx playwright test e2e/screens.spec.ts` into `test-results/screens/`) and answer "Does this look and feel right?". Record the answer here. Then review + merge the M3 PR.
+1. Owner approved the M3 look ("the design is fine"). Next: Opus review of PR #6, then merge. Note: the Gallery is dev/e2e only, so the live phone app still shows "Coming soon" until M4 adds the real screens.
 2. M4 with the execution prompt in `docs/build/README.md`.
 
 ### M3 choices the spec left open (owner may veto)
