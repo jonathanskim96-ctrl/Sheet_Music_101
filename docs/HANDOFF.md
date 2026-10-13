@@ -3,7 +3,7 @@
 _Read this first in every new session. Keep it short and current._
 
 ## Where we are
-- **Phase:** M1 (scaffold, guardrails, CI, deploy) **merged and live**; M1 review fixes merged (PR #3). **M2 (domain core: pure logic + tests) is built and in a pull request; Opus review done (2026-10-13), small fixes pushed, ready to merge once CI is green.** No screen changed in M2, so the live app looks the same. Next: Opus review of M2, then **M3** (`docs/build/M3.md`).
+- **Phase:** M1 (scaffold, guardrails, CI, deploy) **merged and live**; M1 review fixes merged (PR #3). **M2 (domain core: pure logic + tests) merged** (PR #4, 2026-10-13, after the Opus review and its fixes). No screen changed in M2, so the live app looks the same. Next: **M3** (`docs/build/M3.md`).
 - Repo: `jonathanskim96-ctrl/Sheet_Music_101`. App name: **Sheet Music 101**.
 - Live URL (live; deployed from `main` by CI): https://jonathanskim96-ctrl.github.io/Sheet_Music_101/
 - How the build works: `docs/build/README.md` (milestones, session prompts, owner steps).
@@ -27,6 +27,7 @@ _Read this first in every new session. Keep it short and current._
 | 2026-10-12 | Planner decisions (owner may veto): whole notes only, naturals only, range C2–C6; landmark teaching method; Leitner spaced repetition; leaving a lesson saves nothing; checkpoints let you jump ahead; no octave numbers shown to learners. |
 | 2026-10-12 | Hosting: GitHub Pages; the repository will be made public (code only, no data). |
 | 2026-10-13 | M1 review: the service worker never reloads the page by itself (SPEC §7.8 enforced in code); offline update-check failures are only logged. |
+| 2026-10-13 | M2 gaps: concept cards show again on lesson replays; reviews and checkpoints count towards the daily goal (and earn +10 XP even when a checkpoint is failed). |
 | 2026-10-12 | Tech: versions in `docs/build/SPEC.md` §2 were verified to install, build and test together (with npm 11 for installs; npm 10 has a resolver bug). |
 
 ### Gaps the spec left open in M2, with the Opus review verdict (2026-10-13)
@@ -37,8 +38,8 @@ keeps the recommended option until the owner says otherwise.
 | `Progress.cards` type | `Partial<Record<CardId, CardState>>`: only cards the learner has met are stored. | **Confirmed.** Technical; the SPEC's `Record` would force all 34 keys. |
 | Lesson builder cap | On top of SPEC 4.12's per-card cap, no card fills more than half the slots, and if the spec's swap-repair leaves a repeat, the order is rebuilt. Kinds are chosen after ordering. | **Confirmed.** SPEC 4.12 contradicts itself here: its cap (7 of 10 for a two-card pool such as u2-l1) makes "no two in a row" impossible, which STANDARDS §3 requires. Half the slots is the smallest change that keeps both. |
 | Review with few cards | Fewer than 5 due: each due card twice, then non-due lowest box first; if still under 10, cards repeat in a cycle, shuffled with no equal neighbours. Fewer than 3 cards: `buildReview` throws (the Review button is hidden then). | **Confirmed.** Literal reading of SPEC 4.12; the cycle only covers a gap the spec didn't mention. |
-| Concept cards on replay | Always shown again. | **Owner.** Recommended: keep showing them (they are 1–3 short cards and act as a refresher; SPEC only says Meet cards are skipped). Alternative: skip them on replays. |
-| XP and daily goal | +10 for every finished session (including a failed checkpoint and a review), +5 perfect, +20 checkpoint passed. Reviews and checkpoints also count towards the daily goal and `totals.lessonsDone`. | **Confirmed** as the literal SPEC 4.14 rule (the +10 and the daily-goal count are unconditional there). Owner may veto: alternative is "reviews and checkpoints don't count towards the daily goal". |
+| Concept cards on replay | Always shown again. | **Owner decided (2026-10-13): keep showing them on replays.** |
+| XP and daily goal | +10 for every finished session (including a failed checkpoint and a review), +5 perfect, +20 checkpoint passed. Reviews and checkpoints also count towards the daily goal and `totals.lessonsDone`. | **Confirmed** as the literal SPEC 4.14 rule (the +10 and the daily-goal count are unconditional there). **Owner decided (2026-10-13): reviews and checkpoints count towards the daily goal.** |
 | Wrong-answer wording | Choice answers read "a line", "a space", "the first note", "the second note", "the treble clef", "the bass clef", "step up", … | **Confirmed.** Follows the CURRICULUM §5 pattern ("a line", "the second note", "step up"). |
 | Concept card pictures | `content.ts` describes each picture as plain data; M3 draws them. | **Confirmed.** |
 | `validate` | Lesson ids may be `constructor` (the SPEC was wrong that the pattern excludes it); harmless because every lookup uses `Object.hasOwn`, and tested. Repair with an unreadable `createdDay` and no other date in the document → `null` ("broken data" screen) rather than an invented date. | **Confirmed.** Review fix: strict mode now keeps checking after a bad `createdDay`, so every issue is listed (SPEC 4.7). |
@@ -56,8 +57,7 @@ keeps the recommended option until the owner says otherwise.
 - [ ] Add the app to the home screen on each phone (SETUP sections 6–7) and confirm the icon.
 
 ## Next step
-1. Owner: answer the two "Owner" rows in the table above (or accept the recommendations).
-2. Merge the M2 pull request once CI is green (`docs/SETUP.md` §4), then M3 with the execution prompt.
+1. M3 with the execution prompt in `docs/build/README.md`.
 
 ## How to run checks
 `npm ci`, then `npm run verify` (check-safety, typecheck, lint, format, unit tests, build,
