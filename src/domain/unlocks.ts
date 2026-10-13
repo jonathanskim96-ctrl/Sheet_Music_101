@@ -58,6 +58,15 @@ export function isLevelAvailable(p: Progress, unit: number, level: 2 | 3): boole
   return first !== undefined && isAvailable(p, first.id);
 }
 
+/**
+ * The lesson a "Level 2"/"Level 3" button opens: the first lesson of that level not completed
+ * yet, or lesson a when both are done. Null when the unit has no such level.
+ */
+export function nextLevelLesson(p: Progress, unit: number, level: 2 | 3): LessonDef | null {
+  const lessons = levelLessons(unit, level);
+  return lessons.find((l) => !isCompleted(p, l.id)) ?? lessons[0] ?? null;
+}
+
 /** Review needs at least three cards the learner has met. */
 export function reviewAvailable(p: Progress): boolean {
   return Object.keys(p.cards).length >= 3;

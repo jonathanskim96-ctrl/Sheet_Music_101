@@ -13,6 +13,7 @@ import {
   isReviewPlayable,
   keyboardUnlocked,
   levelsPlayable,
+  nextLevelLesson,
   reviewAvailable,
   unitLevel,
   unitLevelCount,
@@ -282,6 +283,25 @@ describe('M4 gate (TODO M6: remove with MAX_UNIT_M4)', () => {
     expect(isReviewPlayable(p)).toBe(false);
     expect(keyboardUnlocked(p)).toBe(true);
     expect(levelsPlayable()).toBe(false);
+  });
+});
+
+describe('nextLevelLesson', () => {
+  it('opens lesson a first, then b, then a again when both are done', () => {
+    const base = upTo('u4-l5');
+    expect(nextLevelLesson(done(...base), 2, 2)?.id).toBe('u2-lv2-a');
+    expect(nextLevelLesson(done(...base, 'u2-lv2-a'), 2, 2)?.id).toBe('u2-lv2-b');
+    expect(nextLevelLesson(done(...base, 'u2-lv2-b'), 2, 2)?.id).toBe('u2-lv2-a');
+    expect(nextLevelLesson(done(...base, 'u2-lv2-a', 'u2-lv2-b'), 2, 2)?.id).toBe('u2-lv2-a');
+  });
+  it('works the same for level 3', () => {
+    const base = [...upTo('u4-l5'), 'u2-lv2-a', 'u2-lv2-b'];
+    expect(nextLevelLesson(done(...base), 2, 3)?.id).toBe('u2-lv3-a');
+    expect(nextLevelLesson(done(...base, 'u2-lv3-a'), 2, 3)?.id).toBe('u2-lv3-b');
+  });
+  it('is null for units without levels 2 and 3', () => {
+    expect(nextLevelLesson(done(), 1, 2)).toBeNull();
+    expect(nextLevelLesson(done(), 11, 3)).toBeNull();
   });
 });
 

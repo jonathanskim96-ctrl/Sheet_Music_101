@@ -11,10 +11,12 @@ import {
   MAX_UNIT_M4,
   currentPlayableLesson,
   isCompleted,
+  isLevelAvailable,
   isPlayable,
   isReviewPlayable,
   keyboardUnlocked,
   levelsPlayable,
+  nextLevelLesson,
   unitLevel,
   unitLevelCount,
 } from '../domain/unlocks';
@@ -191,6 +193,21 @@ export function PathScreen() {
               subtitle={unit.subtitle}
               color={unit.color}
               stars={{ level: unitLevel(progress, unit.n), max: unitLevelCount(unit.n) }}
+              levels={([2, 3] as const).flatMap((level) => {
+                const target = isLevelAvailable(progress, unit.n, level)
+                  ? nextLevelLesson(progress, unit.n, level)
+                  : null;
+                return target === null
+                  ? []
+                  : [
+                      {
+                        level,
+                        onPress: () => {
+                          navigate({ name: 'lesson', lessonId: target.id });
+                        },
+                      },
+                    ];
+              })}
             />
             {unit.lessons.map((lesson) => {
               const offset = ZIGZAG[(PATH_INDEX.get(lesson.id) ?? 0) % ZIGZAG.length] ?? 0;
