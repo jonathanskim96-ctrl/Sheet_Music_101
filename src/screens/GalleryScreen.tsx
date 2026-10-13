@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { ALL_CARDS, parseCardId } from '../domain/cards';
-import { letterOf, type Note } from '../domain/notes';
+import { letterOf, noteAtPosition, type Note } from '../domain/notes';
 import { synth } from '../audio/synth';
 import { Keyboard } from '../notation/Keyboard';
 import { Staff, type NoteState, type StaffNote } from '../notation/Staff';
@@ -59,6 +59,7 @@ const one = (clef: 'treble' | 'bass', note: Note, state?: NoteState): StaffNote 
 export function GalleryScreen() {
   const [lastKey, setLastKey] = useState('none');
   const [lastPosition, setLastPosition] = useState<number | null>(null);
+  const ghost = lastPosition === null ? null : noteAtPosition('treble', lastPosition);
   const [confettiRun, setConfettiRun] = useState(0);
   const [sheet, setSheet] = useState(false);
 
@@ -128,7 +129,7 @@ export function GalleryScreen() {
         <h3>Tappable staff</h3>
         <Staff
           mode="treble"
-          notes={lastPosition === null ? [] : [{ clef: 'treble', note: 'E4', state: 'ghost' }]}
+          notes={ghost === null ? [] : [{ clef: 'treble', note: ghost, state: 'ghost' }]}
           onTapPosition={setLastPosition}
           ariaLabel="Tappable staff"
         />

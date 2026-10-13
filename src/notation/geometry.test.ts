@@ -16,28 +16,47 @@ import {
   yOf,
 } from './geometry';
 
-/** Independent table: the y of each treble/bass line and space, counted by hand from the bottom line at y = 70. */
+/**
+ * Independent table: the y of every card, counted by hand from the bottom line at y = 70
+ * (one line or space = 5 units; treble bottom line E4, bass bottom line G2).
+ */
 const TREBLE_Y: Record<string, number> = {
-  E4: 70,
+  A3: 90, // 2nd ledger line below
+  B3: 85,
+  C4: 80, // 1st ledger line below (Middle C)
+  D4: 75,
+  E4: 70, // line 1
   F4: 65,
-  G4: 60,
+  G4: 60, // line 2
   A4: 55,
-  B4: 50,
+  B4: 50, // line 3
   C5: 45,
-  D5: 40,
+  D5: 40, // line 4
   E5: 35,
-  F5: 30,
+  F5: 30, // line 5
+  G5: 25,
+  A5: 20, // 1st ledger line above
+  B5: 15,
+  C6: 10, // 2nd ledger line above
 };
 const BASS_Y: Record<string, number> = {
-  G2: 70,
+  C2: 90, // 2nd ledger line below
+  D2: 85,
+  E2: 80, // 1st ledger line below
+  F2: 75,
+  G2: 70, // line 1
   A2: 65,
-  B2: 60,
+  B2: 60, // line 2
   C3: 55,
-  D3: 50,
+  D3: 50, // line 3
   E3: 45,
-  F3: 40,
+  F3: 40, // line 4
   G3: 35,
-  A3: 30,
+  A3: 30, // line 5
+  B3: 25,
+  C4: 20, // 1st ledger line above (Middle C)
+  D4: 15,
+  E4: 10, // 2nd ledger line above
 };
 
 describe('yOf', () => {
@@ -45,27 +64,19 @@ describe('yOf', () => {
     expect([0, 2, 4, 6, 8].map((p) => yOf(70, p))).toEqual([70, 60, 50, 40, 30]);
   });
 
-  it('matches hand-counted positions for the notes on and between the lines', () => {
-    for (const [n, y] of Object.entries(TREBLE_Y)) {
-      const card = parseCardId(`treble-${n}`);
-      expect(card, n).not.toBeNull();
-      if (card) expect(yOf(70, staffPosition('treble', card.note)), `treble ${n}`).toBe(y);
-    }
-    for (const [n, y] of Object.entries(BASS_Y)) {
-      const card = parseCardId(`bass-${n}`);
-      expect(card, n).not.toBeNull();
-      if (card) expect(yOf(70, staffPosition('bass', card.note)), `bass ${n}`).toBe(y);
-    }
-  });
-
-  it('is exact for all 34 cards (higher pitch is always higher on the page)', () => {
+  it('matches the hand-counted y of every one of the 34 cards', () => {
+    expect(Object.keys(TREBLE_Y).length + Object.keys(BASS_Y).length).toBe(ALL_CARDS.length);
     for (const id of ALL_CARDS) {
       const c = parseCardId(id);
       if (!c) throw new Error(id);
-      const p = staffPosition(c.clef, c.note);
-      expect(yOf(70, p)).toBe(70 - p * 5);
-      expect(yOf(70, p + 1)).toBeLessThan(yOf(70, p));
+      const expected = (c.clef === 'treble' ? TREBLE_Y : BASS_Y)[c.note];
+      expect(expected, id).toBeDefined();
+      expect(yOf(70, staffPosition(c.clef, c.note)), id).toBe(expected);
     }
+  });
+
+  it('puts every higher position higher on the page', () => {
+    for (let p = -6; p < 14; p++) expect(yOf(70, p + 1)).toBeLessThan(yOf(70, p));
   });
 });
 
@@ -186,8 +197,7 @@ describe('layoutStaff', () => {
     const bass = staveFor(g, 'bass');
     expect(bass.bottomLineY - treble.bottomLineY).toBe(10 * S);
     // gap between the treble bottom line and the bass top line is 6 S
-    // gap between the treble bottom line and the bass top line is 6 S
-    expect(treble.bottomLineY - yOf(bass.bottomLineY, 8)).toBe(-6 * S);
+    expect(yOf(bass.bottomLineY, 8) - treble.bottomLineY).toBe(6 * S);
   });
 
   it('draws the G clef on the G line and the F clef on the F line', () => {
@@ -201,6 +211,13 @@ describe('layoutStaff', () => {
     for (let i = 1; i < 5; i++)
       expect((l.noteXs[i] ?? 0) - (l.noteXs[i - 1] ?? 0)).toBeCloseTo(35, 9);
     expect(l.width).toBeGreaterThan((l.noteXs[4] ?? 0) + NOTE_WIDTH / 2);
+  });
+
+  it('refuses to draw a note on a staff of the other clef (it would show the wrong note)', () => {
+    expect(() => staveFor(layoutStaff('treble', 1), 'bass')).toThrow();
+    expect(() => staveFor(layoutStaff('bass', 1), 'treble')).toThrow();
+    expect(staveFor(layoutStaff('none', 1), 'bass').bottomLineY).toBe(70);
+    expect(staveFor(layoutStaff('none', 1), 'treble').bottomLineY).toBe(70);
   });
 
   it('has no clef on the unit-1 staff and ledger lines slightly wider than the note', () => {

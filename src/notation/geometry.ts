@@ -84,12 +84,15 @@ export function layoutStaff(mode: StaffMode, noteCount: number): StaffLayout {
   return { width, height: grand ? GRAND_HEIGHT : SINGLE_HEIGHT, x0, clefX, staves, noteXs };
 }
 
-/** The stave that draws notes of `clef` in this layout. */
+/**
+ * The stave that draws notes of `clef` in this layout. The clefless unit-1 staff takes any
+ * clef; a note of the other clef on a treble or bass staff throws, because drawing it would
+ * put it on the wrong line (and teach the wrong note).
+ */
 export function staveFor(layout: StaffLayout, clef: Clef): StaveLayout {
-  return (
-    layout.staves.find((s) => s.clef === clef) ??
-    layout.staves[0] ?? { clef, bottomLineY: SINGLE_BOTTOM }
-  );
+  const match = layout.staves.find((s) => s.clef === clef || s.clef === null);
+  if (!match) throw new Error(`A ${clef}-clef note can't be drawn on this staff`);
+  return match;
 }
 
 /** Y of the clef glyph origin: the G line (p = 2) or the F line (p = 6). */

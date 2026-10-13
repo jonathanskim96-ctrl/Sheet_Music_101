@@ -58,6 +58,9 @@ test('tapping the staff reports the position, from the band or the keyboard', as
     page.getByRole('button', { name: `Position ${String(n)}`, exact: true });
   await band(5).click();
   await expect(page.getByTestId('last-position')).toHaveText('Last position: 5');
+  // the ghost note lands on the tapped position (p = 5 → y = 70 - 5 × 5)
+  const ghost = page.getByRole('group', { name: 'Tappable staff' }).locator('path').last();
+  await expect(ghost).toHaveAttribute('transform', /^translate\([-\d.]+ 45\)/);
   await band(-4).focus();
   await page.keyboard.press('Space');
   await expect(page.getByTestId('last-position')).toHaveText('Last position: -4');
@@ -84,7 +87,10 @@ test('confetti appears and goes away by itself', async ({ page }) => {
   await expect(page.getByTestId('confetti')).toBeHidden({ timeout: 5000 });
 });
 
-test('the gallery is not part of unknown routes', async ({ page }) => {
-  await page.goto('./#/nothing-here');
-  await expect(page.getByRole('heading', { name: 'Sheet Music 101' })).toBeVisible();
+test('unknown routes show home and redirect to #/', async ({ page }) => {
+  for (const bad of ['#/nothing-here', '#/lesson/a/b', '#/gallery/extra']) {
+    await page.goto(`./${bad}`);
+    await expect(page.getByRole('heading', { name: 'Sheet Music 101' })).toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.location.hash), bad).toBe('#/');
+  }
 });

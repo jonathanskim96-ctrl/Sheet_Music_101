@@ -60,7 +60,7 @@ keeps the recommended option until the owner says otherwise.
 - [ ] Add the app to the home screen on each phone (SETUP sections 6–7) and confirm the icon.
 
 ## Next step
-1. Owner approved the M3 look ("the design is fine"). Next: Opus review of PR #6, then merge. Note: the Gallery is dev/e2e only, so the live phone app still shows "Coming soon" until M4 adds the real screens.
+1. Owner approved the M3 look ("the design is fine"). Opus review of PR #6 done (2026-10-13): small fixes pushed (see NOTES); two larger items listed on the PR for a Sonnet fix session (stacked Sheets; keyboard height vs SPEC 7.4, which needs an owner/planner decision). Then merge. Note: the Gallery is dev/e2e only, so the live phone app still shows "Coming soon" until M4 adds the real screens.
 2. M4 with the execution prompt in `docs/build/README.md`.
 
 ### M3 choices the spec left open (owner may veto)

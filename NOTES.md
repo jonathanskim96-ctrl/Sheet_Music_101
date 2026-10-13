@@ -125,3 +125,16 @@
   - `react-hooks` v7 forbids writing `ref.current` during render; update refs in an effect.
   - `typescript-eslint` `unbound-method`: declare object-of-functions interfaces with property signatures, not method signatures.
 - Not verified: sound on a real phone (tests use a fake AudioContext); owner approval of the look.
+
+## 2026-10-13: M3 Opus review fixes
+- Synth: the first audio error is kept until `setAudioErrorHandler` is called (it used to be used up silently, so the
+  "Sound isn't available" toast could never show); the context is resumed in any state other than `running` (iOS Safari
+  uses `interrupted` after a call). Tests added.
+- Confetti: the 2.5 s timer no longer restarts when the parent passes a new `onDone` each render.
+- `staveFor` throws for a note of the other clef on a treble/bass staff instead of drawing it on the wrong line (test added).
+- Geometry test: the "all 34 cards" check was circular (it re-used the formula); it is now a hand-counted y table for every card.
+- Unknown hashes (and `#/gallery` in production) now redirect to `#/` (SPEC 7.2), e2e-tested.
+- Keyboard: the "C" label and Middle C dot on green/orange keys use `--ink` (white was ~3.4:1). Mascot colours use tokens
+  (only the cheek pink has no token). Button press no longer adds a 2px margin that jolted the buttons below.
+- Gallery: the tappable staff's ghost note now sits at the tapped position (e2e-checked).
+
