@@ -119,6 +119,8 @@ export interface Synth {
   isRunning: () => boolean;
 }
 
+/** Sounds start a little ahead of `currentTime` so a waking engine doesn't clip the attack. */
+const LEAD = 0.02;
 /** How long after a tap's resume() the engine may stay not-running before it is rebuilt. */
 const STUCK_MS = 300;
 
@@ -233,7 +235,7 @@ export function createSynth(
   const playTones = (plan: TonePlan) => {
     guarded(() => {
       const { ctx: c, out } = ready();
-      const t0 = c.currentTime;
+      const t0 = c.currentTime + LEAD;
       for (const s of plan.steps)
         voice(c, out, plan.wave, frequency(s.note), plan.peak, t0 + s.at, t0 + s.at + s.dur);
     });
@@ -243,7 +245,7 @@ export function createSynth(
     playNote(note, delay = 0, dur = 1.2) {
       guarded(() => {
         const { ctx: c, out } = ready();
-        for (const p of notePlan(note, c.currentTime + delay, dur))
+        for (const p of notePlan(note, c.currentTime + LEAD + delay, dur))
           voice(c, out, 'sine', p.frequency, p.peak, p.start, p.end);
       });
     },

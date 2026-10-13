@@ -155,25 +155,31 @@ describe('createSynth', () => {
     expect(factory).toHaveBeenCalledTimes(1);
   });
 
-  it('schedules four oscillators for a note, offset by the delay', () => {
+  it('schedules four oscillators for a note, 20 ms ahead plus the delay', () => {
     const f = fakeContext();
     const s = createSynth(() => f.ctx);
     s.playNote('G4', 0.25, 1.2);
     expect(f.oscillators).toHaveLength(4);
     expect(f.oscillators.map((o) => o.type)).toEqual(['sine', 'sine', 'sine', 'sine']);
-    expect(f.oscillators[0]?.start).toBeCloseTo(10.25);
+    expect(f.oscillators[0]?.start).toBeCloseTo(10.27);
     expect(f.oscillators[0]?.freq).toBeCloseTo(frequency('G4'));
-    expect(f.oscillators[0]?.stop).toBeCloseTo(10.25 + 1.2 + 0.05);
+    expect(f.oscillators[0]?.stop).toBeCloseTo(10.27 + 1.2 + 0.05);
   });
 
   it('shapes each voice: 0, then the peak after 8 ms, then a decay to 0.0001', () => {
     const f = fakeContext();
     createSynth(() => f.ctx).playCorrect();
     // gains[0] is the master gain; voices follow in the order they were scheduled
-    expect(f.gains[1]?.calls).toEqual([
-      ['set', 0, 10],
-      ['lin', 0.15, 10.008],
-      ['exp', 0.0001, 10.18],
+    const calls = f.gains[1]?.calls ?? [];
+    expect(calls.map((c) => [c[0], c[1]])).toEqual([
+      ['set', 0],
+      ['lin', 0.15],
+      ['exp', 0.0001],
+    ]);
+    expect(calls.map((c) => c[2])).toEqual([
+      expect.closeTo(10.02),
+      expect.closeTo(10.028),
+      expect.closeTo(10.2),
     ]);
   });
 
@@ -193,10 +199,10 @@ describe('createSynth', () => {
       'triangle',
       'triangle',
     ]);
-    expect(f.oscillators[1]?.start).toBeCloseTo(10.09);
-    expect(f.oscillators[3]?.start).toBeCloseTo(10.12);
-    expect(f.oscillators[7]?.start).toBeCloseTo(10.36);
-    expect(f.oscillators[7]?.stop).toBeCloseTo(10.36 + 0.6 + 0.05);
+    expect(f.oscillators[1]?.start).toBeCloseTo(10.11);
+    expect(f.oscillators[3]?.start).toBeCloseTo(10.14);
+    expect(f.oscillators[7]?.start).toBeCloseTo(10.38);
+    expect(f.oscillators[7]?.stop).toBeCloseTo(10.38 + 0.6 + 0.05);
   });
 
   it('is silent when muted, and sound returns when unmuted', () => {
