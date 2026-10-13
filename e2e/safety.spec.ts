@@ -54,6 +54,33 @@ test('broken saved data: "Start fresh" after both sheets replaces it with a new 
   await expect(page.getByTestId('bubble-u1-l1')).toBeVisible();
 });
 
+test('broken saved data that also can\'t be downloaded: "Save backup" says why instead of doing nothing', async ({
+  page,
+}) => {
+  await seedRecord(page, BROKEN);
+  // From the next load on, the second database open (the rescue read) fails.
+  await page.addInitScript(() => {
+    const open = indexedDB.open.bind(indexedDB);
+    let calls = 0;
+    indexedDB.open = (...args: Parameters<IDBFactory['open']>) => {
+      calls += 1;
+      if (calls === 2) throw new DOMException('Test: open refused', 'UnknownError');
+      return open(...args);
+    };
+  });
+  await page.reload();
+  await expect(page.getByRole('heading', { name: HEADING })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Download the saved data' })).toBeDisabled();
+  await page.getByRole('button', { name: 'Start fresh' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Save a backup first?' });
+  await expect(sheet.getByRole('alert')).toHaveText(
+    "The saved data can't be downloaded: Test: open refused",
+  );
+  await expect(sheet.getByRole('button', { name: 'Save backup' })).toBeDisabled();
+  await sheet.getByRole('button', { name: 'Cancel' }).click();
+  expect(await readStored(page)).toEqual(BROKEN);
+});
+
 test('the update banner appears when a new version takes over, and Reload reloads', async ({
   page,
 }) => {

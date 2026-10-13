@@ -9,6 +9,8 @@ export interface StartOverSheetsProps {
   onClose: () => void;
   /** "Save backup" on the first sheet; resolves true when a file was saved. */
   onSaveBackup: () => Promise<boolean>;
+  /** Set while "Save backup" can't work; a non-empty text is shown on the first sheet. */
+  saveUnavailable?: string | null;
   /** "Erase everything" on the second sheet. */
   onErase: () => Promise<void>;
 }
@@ -17,7 +19,13 @@ export interface StartOverSheetsProps {
  * The two-step confirmation before progress is erased (SPEC 6.1): offer a backup first, then
  * ask once more. Cancel at either step erases nothing.
  */
-export function StartOverSheets({ open, onClose, onSaveBackup, onErase }: StartOverSheetsProps) {
+export function StartOverSheets({
+  open,
+  onClose,
+  onSaveBackup,
+  saveUnavailable = null,
+  onErase,
+}: StartOverSheetsProps) {
   const [step, setStep] = useState<1 | 2>(1);
   const [busy, setBusy] = useState(false);
   const close = () => {
@@ -28,10 +36,15 @@ export function StartOverSheets({ open, onClose, onSaveBackup, onErase }: StartO
     <>
       <Sheet open={open && step === 1} title={START_OVER.step1.title} onClose={close}>
         <p>{START_OVER.step1.body}</p>
+        {saveUnavailable !== null && saveUnavailable !== '' && (
+          <p className={styles['problem']} role="alert">
+            {saveUnavailable}
+          </p>
+        )}
         <div className={styles['buttons']}>
           <Button
             fullWidth
-            disabled={busy}
+            disabled={busy || saveUnavailable !== null}
             onClick={() => {
               setBusy(true);
               void onSaveBackup().then((saved) => {

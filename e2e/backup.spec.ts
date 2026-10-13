@@ -88,6 +88,38 @@ test('backup, start over, restore: progress comes back exactly', async ({ page }
   await expect(page.getByTestId('xp-value')).toHaveText(String(p.xp));
 });
 
+test('the import preview offers a backup of the current progress first', async ({ page }) => {
+  const current = fixtureProgress();
+  await seedProgress(page, current);
+  await page.goto('./#/settings');
+  const incoming = { ...fixtureProgress(), xp: current.xp + 500 };
+  await chooseFile(
+    page,
+    'other.json',
+    JSON.stringify({
+      app: 'sheet-music-101',
+      kind: 'backup',
+      schemaVersion: 1,
+      progress: incoming,
+    }),
+  );
+  const preview = page.getByRole('dialog', { name: 'Restore this backup?' });
+  const download = page.waitForEvent('download');
+  await preview.getByRole('button', { name: 'Save a backup first' }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toBe(`sheet-music-101-backup-${DAY}.json`);
+  // The saved file holds the progress on this phone, not the one being restored.
+  const saved = parseBackup(readFileSync(await file.path(), 'utf8'));
+  expect(saved.ok && saved.progress.xp).toBe(current.xp);
+  // Still on the preview; nothing replaced yet.
+  await expect(preview).toBeVisible();
+  await expect.poll(async () => (await storedDoc(page)).flags.lastExportDay).toBe(DAY);
+  expect((await storedDoc(page)).xp).toBe(current.xp);
+  await preview.getByRole('button', { name: 'Replace my progress' }).click();
+  await expect(page.getByTestId('toast').filter({ hasText: 'Progress restored.' })).toBeVisible();
+  expect((await storedDoc(page)).xp).toBe(incoming.xp);
+});
+
 test('Cancel in the import preview changes nothing', async ({ page }) => {
   const p = fixtureProgress();
   await seedProgress(page, p);

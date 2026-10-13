@@ -227,5 +227,7 @@
   the XSS e2e test records dialogs and asserts none opened (a throw inside `page.on('dialog')` doesn't fail the test);
   unused `.reload`/`.text` CSS removed from `App.module.css`.
 - Gotcha: run `npm run build:e2e` before a narrow `npx playwright test`; it serves the last `dist-e2e` build.
-- Left for the owner/Sonnet: listed in the PR comment (import offers no backup first; broken screen's "Save backup" with a
-  failed raw read; mastery chart tap targets; global error toast noise; small cleanups).
+- Owner chose A: the import preview has "Save a backup first" (SPEC 7.2, CURRICULUM, e2e). The broken screen's Start fresh
+  sheet disables "Save backup" and shows why when the raw read failed (e2e makes the second `indexedDB.open` throw).
+  Both new e2e tests fail on the old code.
+- Left optional (PR comment items 3–5): mastery chart tap targets, global error toast noise, small cleanups.

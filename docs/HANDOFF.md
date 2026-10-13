@@ -37,6 +37,7 @@ _Read this first in every new session. Keep it short and current._
 | 2026-10-13 | M5: the Path's InstallCard shows only when it can offer something (an Install button or the iPhone Share steps). Settings says "The app is installed." when installed, else "Use your browser's menu to add this app to your home screen." when neither is possible. |
 | 2026-10-13 | M5: the Progress mastery chart uses 17 shared columns (each staff spreads its 17 notes in pitch order). |
 | 2026-10-13 | M5: the iPhone sound hardening stays a separate Sonnet session (not in the M5 PR). |
+| 2026-10-13 | M5 review: the import preview Sheet offers "Save a backup first" (secondary button above "Replace my progress"; it saves the current progress and stays on the Sheet), as CLAUDE.md requires for anything that replaces progress (option A). |
 | 2026-10-12 | Tech: versions in `docs/build/SPEC.md` §2 were verified to install, build and test together (with npm 11 for installs; npm 10 has a resolver bug). |
 
 ### Gaps the spec left open in M2, with the Opus review verdict (2026-10-13)
@@ -69,7 +70,7 @@ keeps the recommended option until the owner says otherwise.
 - [ ] Add the app to the home screen on each phone (SETUP sections 6–7) and confirm the icon.
 
 ## Next step
-1. M5 PR (#14) reviewed by Opus on 2026-10-13 (code review + security review: no security findings). Small fixes pushed (sound switch double tap, export double tap, XSS test dialog check, dead CSS). Open: **owner question** on the import preview (CLAUDE.md says import must offer a backup first; SPEC/CURRICULUM only list Replace/Cancel), then a Sonnet fix session for the numbered list in the PR comment.
+1. M5 PR (#14) reviewed by Opus on 2026-10-13 (code review + security review: no security findings). Small fixes pushed (sound switch double tap, export double tap, XSS test dialog check, dead CSS). The owner chose option A for the import preview ("Save a backup first"), and the review session built it, plus the broken screen's "Save backup" that now says why it can't save. Remaining PR items 3–5 are optional. Ready to merge once the review fixes are on the PR branch and CI is green.
 2. Sonnet session: iPhone sound hardening (the numbered list under "iPhone Safari sound bug" below), as its own PR.
 3. Owner: close PR #8 if still open (already in `main`).
 

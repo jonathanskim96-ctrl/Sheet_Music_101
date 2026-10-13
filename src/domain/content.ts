@@ -458,6 +458,7 @@ export function saveFailedText(reason: string): string {
 export const IMPORT_PREVIEW = {
   title: 'Restore this backup?',
   warning: 'This replaces your current progress on this phone.',
+  saveFirst: 'Save a backup first',
   replace: 'Replace my progress',
   cancel: 'Cancel',
 } as const;

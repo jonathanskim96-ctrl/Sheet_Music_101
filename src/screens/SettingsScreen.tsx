@@ -269,6 +269,16 @@ export function SettingsScreen() {
             </p>
             <p className={styles['warning']}>{IMPORT_PREVIEW.warning}</p>
             <div className={styles['buttons']}>
+              {/* Replacing progress offers a backup first (CLAUDE.md; owner decision 2026-10-13). */}
+              <Button
+                variant="secondary"
+                fullWidth
+                onClick={() => {
+                  void exportBackup();
+                }}
+              >
+                {IMPORT_PREVIEW.saveFirst}
+              </Button>
               <Button
                 variant="danger"
                 fullWidth
