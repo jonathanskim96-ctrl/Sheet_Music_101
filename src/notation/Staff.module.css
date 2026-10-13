@@ -115,3 +115,9 @@
   font-weight: 800;
   fill: var(--ink);
 }
+
+.selected {
+  fill: none;
+  stroke: var(--focus);
+  stroke-width: 1.5;
+}

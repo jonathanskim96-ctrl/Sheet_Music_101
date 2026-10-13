@@ -1,0 +1,34 @@
+.page {
+  max-width: 480px;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 32px var(--gutter) calc(32px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.text {
+  margin: 0 0 8px;
+}
+
+.error {
+  align-self: stretch;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--wrong-bg);
+  color: var(--wrong-text);
+  font-weight: 700;
+}
+
+.buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin-top: 8px;
+}

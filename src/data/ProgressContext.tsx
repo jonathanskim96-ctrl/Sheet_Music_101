@@ -15,7 +15,14 @@ import { ProgressStore, type Planner, type StoreState } from './store';
 
 const StoreContext = createContext<ProgressStore | null>(null);
 
-function useStore(): ProgressStore {
+/** The one store for the app; App creates it so the error screen can reach it too. */
+export function createProgressStore(): ProgressStore {
+  return new ProgressStore();
+}
+export type { ProgressStore };
+
+/** The store itself, for the data layer's own hooks (screens use the hooks below). */
+export function useStore(): ProgressStore {
   const store = useContext(StoreContext);
   if (!store) throw new Error('Progress hooks need a ProgressProvider');
   return store;

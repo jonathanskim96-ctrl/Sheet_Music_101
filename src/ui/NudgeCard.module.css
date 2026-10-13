@@ -1,0 +1,42 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 14px var(--gutter);
+  border-radius: var(--radius);
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-bottom-width: 4px;
+  color: var(--text);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.icon {
+  flex: none;
+  color: var(--primary);
+}
+
+.title {
+  margin: 0;
+  font-size: 19px;
+}
+
+.body {
+  margin: 0;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.buttons > * {
+  flex: 1 1 auto;
+}

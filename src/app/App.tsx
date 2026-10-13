@@ -1,14 +1,18 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { setAudioErrorHandler } from '../audio/synth';
 import { findLesson } from '../domain/curriculum';
 import { isPlayable } from '../domain/unlocks';
-import { ProgressProvider, useProgress } from '../data/ProgressContext';
+import { ProgressProvider, createProgressStore, useProgress } from '../data/ProgressContext';
+import { UpdateBanner } from '../pwa/UpdateBanner';
+import { BrokenDataScreen } from '../screens/BrokenDataScreen';
 import { LessonScreen } from '../screens/LessonScreen';
 import { PathScreen } from '../screens/PathScreen';
-import { PlaceholderScreen } from '../screens/PlaceholderScreen';
+import { ProgressScreen } from '../screens/ProgressScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
 import { Mascot } from '../ui/Mascot';
 import { StatusBanner } from '../ui/StatusBanner';
+import { ErrorBoundary } from './ErrorBoundary';
 import { routeToHash, useRoute, type Route } from './router';
 import { ToastProvider, useToast } from './toasts';
 import styles from './App.module.css';
@@ -20,19 +24,45 @@ const GalleryScreen = GALLERY_ENABLED
   : null;
 
 export function App() {
+  // Created here so the error screen can still offer a backup of the last good progress.
+  const [store] = useState(createProgressStore);
   return (
-    <ToastProvider>
-      <ProgressProvider>
-        <Shell />
-      </ProgressProvider>
-    </ToastProvider>
+    <ErrorBoundary lastGoodProgress={() => store.lastGoodProgress()}>
+      <ToastProvider>
+        <ProgressProvider store={store}>
+          <Shell />
+        </ProgressProvider>
+      </ToastProvider>
+    </ErrorBoundary>
   );
+}
+
+function errorMessage(value: unknown): string {
+  if (value instanceof Error && value.message !== '') return value.message;
+  if (typeof value === 'string' && value !== '') return value;
+  return 'unknown error';
 }
 
 function Shell() {
   const parsed = useRoute();
   const toast = useToast();
   const state = useProgress();
+
+  // Anything that escapes a handler is shown, never swallowed (SPEC 7.10).
+  useEffect(() => {
+    const onError = (e: ErrorEvent) => {
+      toast(`Something went wrong: ${errorMessage(e.error ?? e.message)}`, 'error');
+    };
+    const onRejection = (e: PromiseRejectionEvent) => {
+      toast(`Something went wrong: ${errorMessage(e.reason)}`, 'error');
+    };
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onRejection);
+    return () => {
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onRejection);
+    };
+  }, [toast]);
 
   // Sound problems never break a lesson; the learner is told once.
   useEffect(() => {
@@ -82,38 +112,32 @@ function Shell() {
   }
   if (state.status === 'broken') {
     return (
-      <main className={styles['center']}>
-        <Mascot mood="encouraging" size={96} />
-        <h1>We couldn't read your saved progress.</h1>
-        <p>
-          {/[.!?]$/.test(state.reason) ? state.reason : `${state.reason}.`} Nothing has been changed
-          or deleted.
-        </p>
-        <button
-          type="button"
-          className={styles['reload']}
-          onClick={() => {
-            window.location.reload();
-          }}
-        >
-          Try again
-        </button>
-      </main>
+      <>
+        <UpdateBanner />
+        <BrokenDataScreen reason={state.reason} />
+      </>
     );
   }
 
   let screen;
+  // The Path shows the storage warning and save error as its own top card (SPEC 7.2).
+  let banner = true;
   if (!progress?.flags.welcomeSeen) screen = <WelcomeScreen />;
   else if (route.name === 'lesson') {
     const def = findLesson(route.lessonId);
     screen = def ? <LessonScreen key={def.id} def={def} /> : <PathScreen />;
-  } else if (route.name === 'progress') screen = <PlaceholderScreen title="Progress" />;
-  else if (route.name === 'settings') screen = <PlaceholderScreen title="Settings" />;
-  else screen = <PathScreen />;
+    banner = def !== undefined;
+  } else if (route.name === 'progress') screen = <ProgressScreen />;
+  else if (route.name === 'settings') screen = <SettingsScreen />;
+  else {
+    screen = <PathScreen />;
+    banner = false;
+  }
 
   return (
     <>
-      <StatusBanner />
+      <UpdateBanner />
+      {banner && <StatusBanner />}
       {screen}
     </>
   );

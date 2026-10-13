@@ -1,4 +1,11 @@
-import { CHECKPOINTS, findLesson, levelLessons, pathLessons, type LessonDef } from './curriculum';
+import {
+  CHECKPOINTS,
+  UNITS,
+  findLesson,
+  levelLessons,
+  pathLessons,
+  type LessonDef,
+} from './curriculum';
 import type { Progress } from './progress';
 
 /** True when the lesson (or checkpoint) has a record. Own keys only: 'constructor' is not "done". */
@@ -78,4 +85,25 @@ export function isPlayable(p: Progress, id: string): boolean {
 /** TODO(M6): remove with the gate. The next playable level-1 lesson, or null. */
 export function currentPlayableLesson(p: Progress): LessonDef | null {
   return PATH.find((l) => !isCompleted(p, l.id) && isPlayable(p, l.id)) ?? null;
+}
+
+/** How many levels a unit has: 3 for units with level-2/3 lessons, else 1 (units 1 and 11). */
+export function unitLevelCount(unit: number): 1 | 3 {
+  return levelLessons(unit, 2).length > 0 ? 3 : 1;
+}
+
+/**
+ * TODO(M6): remove with the gate. Practice (review) is part of M6, so the "Practise" button and
+ * `#/review` stay hidden until every unit is playable.
+ */
+export function isReviewPlayable(p: Progress): boolean {
+  return MAX_UNIT_M4 >= UNITS.length && reviewAvailable(p);
+}
+
+/**
+ * TODO(M6): remove with the gate. Levels 2–3 (and so the keyboard-unlocked message that points
+ * to them) are playable only from M6.
+ */
+export function levelsPlayable(): boolean {
+  return MAX_UNIT_M4 >= UNITS.length;
 }

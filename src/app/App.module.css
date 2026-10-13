@@ -24,3 +24,27 @@
   font-weight: 800;
   cursor: pointer;
 }
+
+.message {
+  max-width: 100%;
+  margin: 8px 0;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.text {
+  margin: 0;
+}

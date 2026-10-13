@@ -40,6 +40,7 @@ for (const file of files) {
   // XML namespace identifiers (React, SVG) are names, not requests; any other http:// is.
   const insecure = text.match(/http:\/\/(?!www\.w3\.org\/)[^\s"'`)<>]*/);
   if (insecure) problems.push(`${file}: insecure URL ${insecure[0]}`);
+  if (text.includes('__e2e')) problems.push(`${file}: e2e test helper leaked into production`);
   if (text.includes('data-answer'))
     problems.push(`${file}: e2e answer hook leaked into production`);
   if (/<script(?![^>]*\bsrc=)[^>]*>\s*\S/.test(text) && file.endsWith('.html'))

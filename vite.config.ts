@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vitest/config';
 import type { Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -35,10 +36,17 @@ function cspPlugin(): Plugin {
 
 const sha = (process.env.GITHUB_SHA ?? 'dev').slice(0, 7);
 const BUILD_ID = `${sha}-${new Date().toISOString().slice(0, 16)}Z`;
+const pkg: unknown = JSON.parse(readFileSync('package.json', 'utf8'));
+const version: unknown =
+  typeof pkg === 'object' && pkg !== null ? Reflect.get(pkg, 'version') : undefined;
+const APP_VERSION = typeof version === 'string' ? version : '0.0.0';
 
 export default defineConfig({
   base: '/Sheet_Music_101/',
-  define: { __BUILD_ID__: JSON.stringify(BUILD_ID) },
+  define: {
+    __BUILD_ID__: JSON.stringify(BUILD_ID),
+    __APP_VERSION__: JSON.stringify(APP_VERSION),
+  },
   build: { sourcemap: false },
   plugins: [
     react(),
