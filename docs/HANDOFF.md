@@ -29,6 +29,8 @@ _Read this first in every new session. Keep it short and current._
 | 2026-10-13 | M1 review: the service worker never reloads the page by itself (SPEC §7.8 enforced in code); offline update-check failures are only logged. |
 | 2026-10-13 | Keyboard keys taller than real proportions (white 1 × 5.8, black 0.6 × 3.6) so a two-octave keyboard is ≈ 150px tall on a phone and easier to tap (SPEC 7.4 updated; M3 review option b). |
 | 2026-10-13 | M2 gaps: concept cards show again on lesson replays; reviews and checkpoints count towards the daily goal (and earn +10 XP even when a checkpoint is failed). |
+| 2026-10-13 | M4 review item 1: if saved progress exists but can't be read, show the "We couldn't read your saved progress" screen (store `broken`, with the reason), not an empty in-memory app. `unavailable` stays only for "IndexedDB can't be opened at all". Built in the M4 fix session or M5. |
+| 2026-10-13 | No sound on iPhone was Silent mode (confirmed by the owner). The app **obeys Silent** and shows the hint "No sound? Check that your iPhone isn't on Silent." (iPhone/iPad only; in lessons and Settings; SPEC 7.7). |
 | 2026-10-12 | Tech: versions in `docs/build/SPEC.md` §2 were verified to install, build and test together (with npm 11 for installs; npm 10 has a resolver bug). |
 
 ### Gaps the spec left open in M2, with the Opus review verdict (2026-10-13)
@@ -61,8 +63,9 @@ keeps the recommended option until the owner says otherwise.
 - [ ] Add the app to the home screen on each phone (SETUP sections 6–7) and confirm the icon.
 
 ## Next step
-1. Owner: merge the M4 review follow-up PR (branch `claude/review-m4-pull-request-1kg4g2`) once CI is green; close PR #8 (already in `main`). Open the live app on the phone, play a few lessons, close it and reopen it (progress should be kept).
-2. Sonnet fix session for the numbered items in that PR (or fold them into M5, which builds the broken-data screen anyway).
+1. M4 review follow-up merged (PR #10). Owner: close PR #8 (already in `main`).
+2. Sonnet fix session (prompt given to the owner on 2026-10-13): PR #10 items 1–2 (item 1 approved by the owner) and the iPhone Silent-mode lesson hint (SPEC 7.7). The Settings part of the hint comes with M5.
+3. Opus review of that fix PR, then M5.
 3. M5 with the execution prompt in `docs/build/README.md`.
 
 ### M4 choices the spec left open (owner may veto)
