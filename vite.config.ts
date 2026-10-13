@@ -84,5 +84,7 @@ export default defineConfig({
   test: {
     include: ['src/**/*.test.ts'],
     environment: 'node',
+    // Vitest blanks CSS modules by default; tokens.test.ts needs the real text of tokens.css.
+    css: { include: [/tokens\.css/] },
   },
 });

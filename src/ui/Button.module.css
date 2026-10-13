@@ -1,0 +1,69 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 52px;
+  min-width: 52px;
+  padding: 10px 20px;
+  border: 2px solid transparent;
+  border-bottom-width: 4px;
+  border-radius: var(--radius);
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.2;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 80ms;
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+  margin-bottom: 2px;
+}
+
+.full {
+  width: 100%;
+}
+
+.primary {
+  background: var(--primary);
+  border-color: var(--primary-edge);
+  color: var(--on-primary);
+}
+
+.secondary {
+  background: var(--card);
+  border-color: var(--border);
+  border-bottom-color: var(--text-muted);
+  color: var(--text);
+}
+
+.ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-muted);
+}
+
+.danger {
+  background: var(--wrong-bg);
+  border-color: var(--wrong-ink);
+  color: var(--wrong-text);
+}
+
+.choice {
+  background: var(--card);
+  border-color: var(--border);
+  border-bottom-color: var(--text-muted);
+  color: var(--text);
+}
+
+.button:disabled {
+  background: var(--locked);
+  border-color: var(--locked);
+  color: var(--locked-text);
+  cursor: not-allowed;
+}

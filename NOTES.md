@@ -113,3 +113,15 @@
 - Left as is (reviewed, not worth the code): small repeated helpers (`isRecord`/`own` in backup, `MAX_INT` in planners);
   per-attempt object copies in `planCompleteSession` (at most ~60 small copies per lesson); clock-going-backwards day
   roll-over (see HANDOFF).
+
+## 2026-10-13: M3 executed (look, sound, notation, Gallery)
+- Added tokens/base CSS (+ contrast test), router, notation geometry/Staff/Keyboard, UI kit (Button, ProgressBar, Sheet,
+  Mascot, Confetti, DailyGoalRing, icons), synth with injectable fake AudioContext, GalleryScreen, e2e gallery + screenshot specs.
+- Visual QA: opened light/dark screenshots of every Gallery section; every note sits on the right line/space (also asserted in
+  e2e from the rendered notehead y against an independent table); ledger lines correct for A3, C6, C2, E4; no overflow at 390/320px.
+- Gotchas:
+  - Vitest blanks CSS files even with `?raw`; `test.css.include: [/tokens\.css/]` in `vite.config.ts` fixes it.
+  - `-2 % 2` is `-0` and `toBe(0)` fails on it (Object.is).
+  - `react-hooks` v7 forbids writing `ref.current` during render; update refs in an effect.
+  - `typescript-eslint` `unbound-method`: declare object-of-functions interfaces with property signatures, not method signatures.
+- Not verified: sound on a real phone (tests use a fake AudioContext); owner approval of the look.

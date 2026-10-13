@@ -3,7 +3,7 @@
 _Read this first in every new session. Keep it short and current._
 
 ## Where we are
-- **Phase:** M1 (scaffold, guardrails, CI, deploy) **merged and live**; M1 review fixes merged (PR #3). **M2 (domain core: pure logic + tests) merged** (PR #4, 2026-10-13, after the Opus review and its fixes). No screen changed in M2, so the live app looks the same. Next: **M3** (`docs/build/M3.md`).
+- **Phase:** M1 (scaffold, guardrails, CI, deploy) **merged and live**; M1 review fixes merged (PR #3). **M2 (domain core: pure logic + tests) merged** (PR #4, 2026-10-13, after the Opus review and its fixes). No screen changed in M2, so the live app looks the same. **M3 (look, sound, notation, Gallery) built, PR #6 open. Owner approved the look (2026-10-13).** Next after merge: **M4**.
 - Repo: `jonathanskim96-ctrl/Sheet_Music_101`. App name: **Sheet Music 101**.
 - Live URL (live; deployed from `main` by CI): https://jonathanskim96-ctrl.github.io/Sheet_Music_101/
 - How the build works: `docs/build/README.md` (milestones, session prompts, owner steps).
@@ -48,6 +48,9 @@ keeps the recommended option until the owner says otherwise.
 | Fixture | `progress-v1.json` is synthetic: 12 cards, 9 days, 135 XP as M2 asked (12 cards can't be reached exactly on the real path, and the XP is lower than its lesson records imply). | **Confirmed.** Validation doesn't check consistency between fields, and the fixture's job is to prove old saves keep loading. |
 | Day roll-over | (Found in review.) If the device clock goes backwards past midnight, the next finished lesson starts the daily count again for the earlier date. | **Confirmed, no change.** Rare, harmless (only the daily goal ring), and SPEC 4.14 says "roll over" without a direction. |
 
+## Owner preferences
+- Whenever a review, fix or execution session is next, give the owner the full prompt as a ready-to-copy block with the milestone number filled in (from `docs/build/README.md`).
+
 ## Waiting on the owner
 - [x] Make the repository public (done).
 - [x] Set `main` as the default branch (done).
@@ -57,7 +60,15 @@ keeps the recommended option until the owner says otherwise.
 - [ ] Add the app to the home screen on each phone (SETUP sections 6–7) and confirm the icon.
 
 ## Next step
-1. M3 with the execution prompt in `docs/build/README.md`.
+1. Owner approved the M3 look ("the design is fine"). Next: Opus review of PR #6, then merge. Note: the Gallery is dev/e2e only, so the live phone app still shows "Coming soon" until M4 adds the real screens.
+2. M4 with the execution prompt in `docs/build/README.md`.
+
+### M3 choices the spec left open (owner may veto)
+- Staffs with 3+ notes (not in the spec; only used by the Gallery and later the Progress chart) space notes 3.5 staff spaces apart and widen the viewBox to fit.
+- Fanfare note lengths 200 ms (last 600 ms) and peak 0.15 were not specified; the correct/wrong sounds follow SPEC 7.7 exactly.
+- The danger button is a light-orange fill with orange edge and dark-orange text (white on the bright orange token fails contrast).
+- The Gallery also has small extra sections (tappable staff, no-clef staff, highlighted lines, progress bar, goal ring, Sheet demo) so every M3 building block can be checked.
+- Gallery code is lazy-loaded and absent from production builds (checked: `dist/` has no Gallery chunk).
 
 ## How to run checks
 `npm ci`, then `npm run verify` (check-safety, typecheck, lint, format, unit tests, build,
