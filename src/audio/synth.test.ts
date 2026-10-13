@@ -15,14 +15,22 @@ import {
 type Call = [name: string, value: number, time: number];
 
 /** A fake AudioContext that records what was scheduled; never makes sound. */
-function fakeContext(state = 'running') {
+function fakeContext(initial = 'running') {
+  const control = { state: initial };
   const oscillators: { type: OscillatorType; freq: number; start: number; stop: number }[] = [];
   const gains: { calls: Call[] }[] = [];
-  const created = { resumed: 0, silences: 0 };
+  const created = { resumed: 0, silences: 0, closed: 0 };
   const ctx: AudioContextLike = {
     currentTime: 10,
-    state,
+    get state() {
+      return control.state;
+    },
     destination: {},
+    close: () => {
+      created.closed++;
+      control.state = 'closed';
+      return Promise.resolve();
+    },
     resume: () => {
       created.resumed++;
       return Promise.resolve();
@@ -85,7 +93,7 @@ function fakeContext(state = 'running') {
       },
     }),
   };
-  return { ctx, oscillators, gains, created };
+  return { ctx, oscillators, gains, created, control };
 }
 
 describe('notePlan', () => {
@@ -310,6 +318,115 @@ describe('unlock (first tap)', () => {
     const s2 = createSynth(() => running.ctx);
     s2.unlock();
     expect(s2.isRunning()).toBe(true);
+  });
+});
+
+/** A factory that hands out the given fake engines one by one. */
+function inOrder(engines: { ctx: AudioContextLike }[]) {
+  let next = 0;
+  return vi.fn(() => {
+    const e = engines[next++];
+    if (!e) throw new Error('more engines asked for than the test made');
+    return e.ctx;
+  });
+}
+
+describe('restarting a stuck engine', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('rebuilds an engine that is still not running 300 ms after the tap, once', () => {
+    vi.useFakeTimers();
+    const engines = [fakeContext('suspended'), fakeContext('suspended')];
+    const factory = inOrder(engines);
+    const s = createSynth(factory);
+    s.unlock();
+    vi.advanceTimersByTime(299);
+    expect(factory).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(1);
+    expect(factory).toHaveBeenCalledTimes(2);
+    expect(engines[0]?.created.closed).toBe(1);
+    expect(engines[1]?.created.resumed).toBe(1);
+    expect(engines[1]?.created.silences).toBe(1);
+    vi.advanceTimersByTime(5000);
+    expect(factory).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the engine when it is running by then', () => {
+    vi.useFakeTimers();
+    const f = fakeContext('suspended');
+    const factory = vi.fn(() => f.ctx);
+    createSynth(factory).unlock();
+    f.control.state = 'running';
+    vi.advanceTimersByTime(300);
+    expect(factory).toHaveBeenCalledTimes(1);
+    expect(f.created.closed).toBe(0);
+  });
+
+  it('also rebuilds an interrupted engine', () => {
+    vi.useFakeTimers();
+    const engines = [fakeContext('interrupted'), fakeContext('running')];
+    const factory = inOrder(engines);
+    const s = createSynth(factory);
+    s.unlock();
+    vi.advanceTimersByTime(300);
+    expect(factory).toHaveBeenCalledTimes(2);
+    expect(s.isRunning()).toBe(true);
+  });
+
+  it('plays on the new engine after a rebuild', () => {
+    vi.useFakeTimers();
+    const engines = [fakeContext('suspended'), fakeContext('running')];
+    const factory = inOrder(engines);
+    const s = createSynth(factory);
+    s.unlock();
+    vi.advanceTimersByTime(300);
+    s.playNote('C4');
+    expect(engines[0]?.oscillators).toHaveLength(0);
+    expect(engines[1]?.oscillators).toHaveLength(4);
+  });
+
+  it('does not rebuild an engine that a newer rebuild already replaced', () => {
+    vi.useFakeTimers();
+    const engines = [fakeContext('suspended'), fakeContext('suspended'), fakeContext('running')];
+    const factory = inOrder(engines);
+    const s = createSynth(factory);
+    s.unlock();
+    vi.advanceTimersByTime(100);
+    s.unlock(); // a second tap before the first check
+    vi.advanceTimersByTime(200); // first check: rebuilds (engine 2)
+    expect(factory).toHaveBeenCalledTimes(2);
+    vi.advanceTimersByTime(100); // second check was for engine 1, which is gone
+    expect(factory).toHaveBeenCalledTimes(2);
+  });
+
+  it('replaces a closed engine on the next play call, without any timer', () => {
+    const engines = [fakeContext('running'), fakeContext('running')];
+    const factory = inOrder(engines);
+    const s = createSynth(factory);
+    s.playCorrect();
+    engines[0]?.ctx.close().catch(() => undefined);
+    s.playCorrect();
+    expect(factory).toHaveBeenCalledTimes(2);
+    expect(engines[1]?.oscillators).toHaveLength(2);
+  });
+
+  it('reports a failing close or rebuild once and does not throw', async () => {
+    vi.useFakeTimers();
+    const onError = vi.fn();
+    const f = fakeContext('suspended');
+    f.ctx.close = () => Promise.reject(new Error('cannot close'));
+    let calls = 0;
+    const s = createSynth(() => {
+      calls++;
+      if (calls > 1) throw new Error('no second engine');
+      return f.ctx;
+    }, onError);
+    s.unlock();
+    expect(() => vi.advanceTimersByTime(300)).not.toThrow();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(onError).toHaveBeenCalledTimes(1);
   });
 });
 

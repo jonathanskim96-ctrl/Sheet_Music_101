@@ -29,6 +29,7 @@ export interface AudioContextLike {
   readonly state: string;
   readonly destination: unknown;
   resume(): Promise<void>;
+  close(): Promise<void>;
   createGain(): GainLike;
   createOscillator(): OscillatorLike;
   createDynamicsCompressor(): NodeLike;
@@ -46,6 +47,8 @@ export const PARTIALS: readonly { multiple: number; amp: number }[] = [
 ];
 const ATTACK = 0.008;
 const SILENCE = 0.0001;
+/** How long a tapped-on engine gets to report `running` before it is rebuilt. */
+const WAKE_MS = 300;
 
 export interface PartialPlan {
   frequency: number;
@@ -126,8 +129,7 @@ export function createSynth(
   factory: AudioContextFactory,
   onError?: (error: unknown) => void,
 ): Synth {
-  let ctx: AudioContextLike | null = null;
-  let master: GainLike | null = null;
+  let engine: { ctx: AudioContextLike; out: GainLike } | null = null;
   let muted = false;
   let reported = false;
   const listeners = new Set<() => void>();
@@ -138,18 +140,23 @@ export function createSynth(
     onError?.(e);
   };
 
+  const build = () => {
+    const c = factory();
+    const out = c.createGain();
+    out.gain.value = 0.6;
+    const compressor = c.createDynamicsCompressor();
+    out.connect(compressor as never);
+    compressor.connect(c.destination as never);
+    engine = { ctx: c, out };
+    return engine;
+  };
+
   const ready = (): { ctx: AudioContextLike; out: GainLike } => {
-    if (!ctx || !master) {
-      ctx = factory();
-      master = ctx.createGain();
-      master.gain.value = 0.6;
-      const compressor = ctx.createDynamicsCompressor();
-      master.connect(compressor as never);
-      compressor.connect(ctx.destination as never);
-    }
+    // A closed engine can never play again, so replace it.
+    const e = engine && engine.ctx.state !== 'closed' ? engine : build();
     // iOS Safari uses a non-standard 'interrupted' state after a call or app switch.
-    if (ctx.state !== 'running') ctx.resume().catch(report);
-    return { ctx, out: master };
+    if (e.ctx.state !== 'running') e.ctx.resume().catch(report);
+    return e;
   };
 
   // iOS Safari only starts audio after a sound has been played inside a tap; a silent
@@ -206,11 +213,23 @@ export function createSynth(
       try {
         const { ctx: c } = ready();
         playSilence(c);
+        // Safari sometimes stays stuck (or says `running` but is silent) until the engine is
+        // rebuilt, so give it a moment and then rebuild it, once for this tap.
+        setTimeout(() => {
+          if (engine?.ctx !== c || c.state === 'running') return;
+          try {
+            c.close().catch(report);
+            engine = null;
+            playSilence(ready().ctx);
+          } catch (e) {
+            report(e);
+          }
+        }, WAKE_MS);
       } catch (e) {
         report(e);
       }
     },
-    isRunning: () => ctx?.state === 'running',
+    isRunning: () => engine?.ctx.state === 'running',
     playNote(note, delay = 0, dur = 1.2) {
       guarded(() => {
         const { ctx: c, out } = ready();
