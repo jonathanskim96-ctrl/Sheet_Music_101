@@ -20,11 +20,17 @@ interface OscillatorLike extends NodeLike {
   start(time: number): void;
   stop(time: number): void;
 }
+interface BufferSourceLike extends NodeLike {
+  buffer: unknown;
+  start(time?: number): void;
+}
 export interface AudioContextLike {
   readonly currentTime: number;
   readonly state: string;
   readonly destination: unknown;
   resume(): Promise<void>;
+  createBuffer(channels: number, length: number, sampleRate: number): unknown;
+  createBufferSource(): BufferSourceLike;
   createGain(): GainLike;
   createOscillator(): OscillatorLike;
   createDynamicsCompressor(): NodeLike;
@@ -106,11 +112,15 @@ export interface Synth {
   setMuted: (muted: boolean) => void;
   isMuted: () => boolean;
   subscribe: (listener: () => void) => () => void;
+  /** Called from a tap: starts the engine inside the gesture and restarts a stuck one. */
+  unlock: () => void;
+  /** True when the engine exists and reports `running`. */
+  isRunning: () => boolean;
 }
 
 /**
- * The sound engine. The AudioContext is created on the first play call (always inside a
- * tap handler, as iOS requires). Errors never break a lesson: they go to `onError`, once.
+ * The sound engine. The AudioContext is created on the first tap (`unlock`) or, failing
+ * that, on the first play call. Errors never break a lesson: they go to `onError`, once.
  */
 export function createSynth(
   factory: AudioContextFactory,
@@ -128,18 +138,32 @@ export function createSynth(
     onError?.(e);
   };
 
+  const build = (): AudioContextLike => {
+    const c = factory();
+    const m = c.createGain();
+    m.gain.value = 0.6;
+    const compressor = c.createDynamicsCompressor();
+    m.connect(compressor as never);
+    compressor.connect(c.destination as never);
+    ctx = c;
+    master = m;
+    return c;
+  };
+
+  // iOS only lets a sound start inside a tap; a one-sample silent buffer counts as "playing".
+  const primeWithSilence = (c: AudioContextLike) => {
+    const source = c.createBufferSource();
+    source.buffer = c.createBuffer(1, 1, 22050);
+    source.connect(c.destination as never);
+    source.start(0);
+  };
+
   const ready = (): { ctx: AudioContextLike; out: GainLike } => {
-    if (!ctx || !master) {
-      ctx = factory();
-      master = ctx.createGain();
-      master.gain.value = 0.6;
-      const compressor = ctx.createDynamicsCompressor();
-      master.connect(compressor as never);
-      compressor.connect(ctx.destination as never);
-    }
+    const c = ctx ?? build();
     // iOS Safari uses a non-standard 'interrupted' state after a call or app switch.
-    if (ctx.state !== 'running') ctx.resume().catch(report);
-    return { ctx, out: master };
+    if (c.state !== 'running') c.resume().catch(report);
+    if (!master) throw new Error('Audio engine has no output');
+    return { ctx: c, out: master };
   };
 
   const voice = (
@@ -162,6 +186,15 @@ export function createSynth(
     gain.connect(out as never);
     osc.start(start);
     osc.stop(end + 0.05);
+  };
+
+  const unlock = () => {
+    try {
+      const { ctx: c } = ready();
+      primeWithSilence(c);
+    } catch (e) {
+      report(e);
+    }
   };
 
   const guarded = (fn: () => void) => {
@@ -205,6 +238,8 @@ export function createSynth(
       for (const l of listeners) l();
     },
     isMuted: () => muted,
+    unlock,
+    isRunning: () => ctx?.state === 'running',
     subscribe(listener) {
       listeners.add(listener);
       return () => {
@@ -241,4 +276,45 @@ export const synth: Synth = createSynth(
 export function useSound(): Synth & { muted: boolean } {
   const muted = useSyncExternalStore(synth.subscribe, synth.isMuted);
   return { ...synth, muted };
+}
+
+/** The few parts of `document` that `installUnlock` needs (a fake in tests). */
+export interface UnlockTarget {
+  readonly visibilityState: string;
+  addEventListener(type: string, listener: () => void, capture?: boolean): void;
+  removeEventListener(type: string, listener: () => void, capture?: boolean): void;
+}
+const UNLOCK_EVENTS = ['pointerup', 'touchend', 'click', 'keydown'] as const;
+
+/**
+ * Starts the sound engine on the first tap anywhere (capture phase, so it runs inside the
+ * gesture before any button handler). Keeps listening until the engine is `running`, and
+ * listens again after the page has been hidden (iOS may interrupt the engine then).
+ * Returns a function that removes everything.
+ */
+export function installUnlock(s: Synth, doc: UnlockTarget): () => void {
+  let attached = false;
+  const onTap = () => {
+    if (s.isRunning()) detach();
+    else s.unlock();
+  };
+  const attach = () => {
+    if (attached) return;
+    attached = true;
+    for (const t of UNLOCK_EVENTS) doc.addEventListener(t, onTap, true);
+  };
+  const detach = () => {
+    if (!attached) return;
+    attached = false;
+    for (const t of UNLOCK_EVENTS) doc.removeEventListener(t, onTap, true);
+  };
+  const onVisibility = () => {
+    if (doc.visibilityState === 'hidden') attach();
+  };
+  attach();
+  doc.addEventListener('visibilitychange', onVisibility);
+  return () => {
+    detach();
+    doc.removeEventListener('visibilitychange', onVisibility);
+  };
 }

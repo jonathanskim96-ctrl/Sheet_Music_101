@@ -6,6 +6,7 @@ import '@fontsource/nunito/latin-800.css';
 import './styles/tokens.css';
 import './styles/base.css';
 import { App } from './app/App';
+import { installUnlock, synth } from './audio/synth';
 import { startInstallCapture } from './pwa/install';
 import { registerServiceWorker } from './pwa/register';
 
@@ -19,6 +20,7 @@ try {
 }
 
 registerServiceWorker();
+installUnlock(synth, document);
 startInstallCapture();
 
 const rootElement = document.getElementById('root');
