@@ -242,3 +242,41 @@
 - 5: one `somethingWentWrong(e)` / `errorMessageOf(e)` in `content.ts` ("Unknown error" everywhere); `readImportFile`
   removed. `useStatusWarning()` not done (one shared condition, two lines; not worth a hook).
 
+
+## 2026-10-13: iPhone sound hardening (Sonnet session)
+- Three commits, one per HANDOFF item: (1) `installUnlock` + `synth.unlock()` start the engine inside the first tap with a
+  silent buffer (wired in `main.tsx`); (2) a `closed` engine is replaced on the next sound and an engine still not
+  `running` 300 ms after a tap is closed and rebuilt; (3) all sounds start 20 ms ahead. SPEC 7.7 updated.
+- Unit tests use the fake context in `synth.test.ts` (it gained `close`, `createBuffer`, `createBufferSource`) and fake timers.
+  Mutation checked: dropping the "same engine" check in the stuck-engine timer fails "two quick taps rebuild only once".
+- Gotcha: Node's `EventTarget` doesn't remove a capture listener given a bare `true`; the test document passes `{ capture }`.
+- Not verified: real iPhone sound (a fake context cannot say whether Safari lets the sound out). The owner's phone check is
+  in HANDOFF. The "running but silent" Safari state can't be detected from the page; only a stuck non-running engine is rebuilt.
+
+## 2026-10-13: Opus review of the iPhone sound hardening (PR #15)
+- `/code-review high` done. Each HANDOFF item is in its own commit and matches SPEC 7.7.
+- Mutation checks (break, run `synth.test.ts`, restore): no tap listener, only `click`, no re-attach after hidden, no
+  silent buffer, 3000 ms instead of 300, no stuck rebuild, no same-engine check, no closed-engine replacement, stuck
+  engine not closed, no 20 ms lead (each of the two sites separately), mute ignored: all fail a test. Two gaps fixed:
+  "never detach" passed every test (new listener-count test), and removing `installUnlock` from `main.tsx` passed
+  everything (new `e2e/sound-unlock.spec.ts`, counts AudioContexts; fails with the line removed).
+- Gotcha (fixed): Chromium rejects a pending `resume()` ("Audio context is going away") when the context is closed, so
+  the stuck-engine rebuild showed "Sound isn't available right now." just as sound recovered. `wake()` now ignores
+  rejections from an engine that was already replaced. WebKit leaves such a promise pending instead (checked in its
+  source), so iPhone was not affected.
+- Fixed: `unlock()` and the stuck-engine rebuild ignored mute, so with Sound off a tap still built an engine (and could
+  show the toast). SPEC 7.7 says muted means every call is a no-op; both now return early (test + mutation checked).
+- Larger items for a Sonnet fix session are listed in the PR #15 review comment (300 ms rebuild can kill a slow engine).
+
+## 2026-10-13: Stuck-engine rebuild limited to once per time shown (PR #15 review item 1, Sonnet session)
+- Why: an engine that was only slow (AirPods/Bluetooth, just after an interruption) could take more than 300 ms, so every
+  tap closed it and built a new one; the note was lost and sound might never play. Owner approved the behaviour change.
+- What: `createSynth` has a private `rebuildUsed` flag. `rebuildIfStuck` returns early when it is set and sets it when it
+  rebuilds. New `Synth.allowRebuild()` clears it; `installUnlock` calls it when the page becomes `hidden`. Later taps still
+  call `unlock()` (resume + silent buffer) but never close the engine. Replacing a `closed` engine in `ready()` is unchanged.
+- Tests: the old "rebuilds at most once per tap, but again for the next tap" now describes the new rule (once per time
+  shown); three new tests (two stuck taps = one rebuild and the new engine is never closed; hidden via `installUnlock`
+  re-allows; `allowRebuild()` re-allows exactly one).
+- Mutation checks (break, run `synth.test.ts`, restore): (a) no `rebuildUsed` check: 3 tests fail; (b) `allowRebuild` does
+  nothing: 2 fail; (c) no `allowRebuild()` call in `installUnlock`: 1 fails. All restored, 38 pass.
+- Not verified: real iPhone/Bluetooth sound (owner's phone check in HANDOFF).

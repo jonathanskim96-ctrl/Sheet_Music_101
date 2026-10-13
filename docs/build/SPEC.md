@@ -749,8 +749,20 @@ rotation, delay 0–300ms, CSS keyframe fall 1.8s; component unmounts itself aft
 `pointer-events: none`. Not rendered under reduced motion.
 
 ### 7.7 Audio (`audio/synth.ts`)
-- One lazily created `AudioContext` on the first play call (always inside a tap handler);
-  `resume()` if suspended. Master `GainNode` 0.6 → `DynamicsCompressorNode` → destination.
+- Master `GainNode` 0.6 → `DynamicsCompressorNode` → destination. `resume()` whenever the engine isn't `running`
+  (`suspended`, or iOS's non-standard `interrupted`).
+- **Start on the first tap.** `installUnlock(synth, document)` (called in `main.tsx`) listens, in the capture phase, for
+  `pointerup`, `touchend`, `click` and `keydown`. On such an event, if the engine isn't `running`, `synth.unlock()` creates
+  the `AudioContext` inside that tap, calls `resume()` and plays a one-sample silent buffer. The listeners stay until a tap
+  finds the engine `running`; after the page has been hidden (`visibilitychange`) they are attached again. If no tap came
+  first, the first play call still creates the engine as before. While muted, `unlock()` does nothing (no engine).
+- **Restart a stuck engine.** An engine whose state is `closed` is replaced on the next sound. 300 ms after an `unlock()`,
+  if that same engine still isn't `running` (and sound isn't muted), it is closed and a new one is built (same graph, `resume()`, silent buffer).
+  This happens at most once each time the page is shown (the count resets when the page is
+  hidden), so a slow engine is never closed again and again. Errors go to the one-time toast below, except a `resume()` rejection from an
+  engine that has already been replaced (Chrome rejects it when the stuck engine is closed; sound still works).
+- **Schedule a little ahead.** Every sound starts at `currentTime + 0.02` s (plus its own delay), so the first milliseconds
+  aren't cut off while the engine wakes up.
 - `playNote(note, delay = 0, dur = 1.2)`: four sine partials (×1 amp 1.0, ×2 0.5, ×3 0.25,
   ×4 0.12), each gain `0 → 0.25*amp` linear in 8ms, then exponential to 0.0001 by
   `dur / sqrt(partial)`; stop at end + 0.05s.

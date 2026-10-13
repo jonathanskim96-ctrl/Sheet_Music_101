@@ -20,11 +20,18 @@ interface OscillatorLike extends NodeLike {
   start(time: number): void;
   stop(time: number): void;
 }
+interface BufferSourceLike extends NodeLike {
+  buffer: unknown;
+  start(time?: number): void;
+}
 export interface AudioContextLike {
   readonly currentTime: number;
   readonly state: string;
   readonly destination: unknown;
   resume(): Promise<void>;
+  close(): Promise<void>;
+  createBuffer(channels: number, length: number, sampleRate: number): unknown;
+  createBufferSource(): BufferSourceLike;
   createGain(): GainLike;
   createOscillator(): OscillatorLike;
   createDynamicsCompressor(): NodeLike;
@@ -106,11 +113,22 @@ export interface Synth {
   setMuted: (muted: boolean) => void;
   isMuted: () => boolean;
   subscribe: (listener: () => void) => () => void;
+  /** Called from a tap: starts the engine inside the gesture and restarts a stuck one. */
+  unlock: () => void;
+  /** Allows one more stuck-engine rebuild; called when the page is hidden. */
+  allowRebuild: () => void;
+  /** True when the engine exists and reports `running`. */
+  isRunning: () => boolean;
 }
 
+/** Sounds start a little ahead of `currentTime` so a waking engine doesn't clip the attack. */
+const LEAD = 0.02;
+/** How long after a tap's resume() the engine may stay not-running before it is rebuilt. */
+const STUCK_MS = 300;
+
 /**
- * The sound engine. The AudioContext is created on the first play call (always inside a
- * tap handler, as iOS requires). Errors never break a lesson: they go to `onError`, once.
+ * The sound engine. The AudioContext is created on the first tap (`unlock`) or, failing
+ * that, on the first play call. Errors never break a lesson: they go to `onError`, once.
  */
 export function createSynth(
   factory: AudioContextFactory,
@@ -120,6 +138,9 @@ export function createSynth(
   let master: GainLike | null = null;
   let muted = false;
   let reported = false;
+  // A slow engine (Bluetooth, just after an interruption) must not be closed again and again, so
+  // the stuck-engine rebuild happens once each time the page is shown.
+  let rebuildUsed = false;
   const listeners = new Set<() => void>();
 
   const report = (e: unknown) => {
@@ -128,18 +149,59 @@ export function createSynth(
     onError?.(e);
   };
 
+  const build = (): AudioContextLike => {
+    const c = factory();
+    const m = c.createGain();
+    m.gain.value = 0.6;
+    const compressor = c.createDynamicsCompressor();
+    m.connect(compressor as never);
+    compressor.connect(c.destination as never);
+    ctx = c;
+    master = m;
+    return c;
+  };
+
+  // iOS Safari uses a non-standard 'interrupted' state after a call or app switch. Chrome rejects
+  // a pending resume() when we close a stuck engine; that engine is already replaced, so it isn't
+  // a sound failure and must not show the toast.
+  const wake = (c: AudioContextLike) => {
+    if (c.state === 'running') return;
+    c.resume().catch((e: unknown) => {
+      if (ctx === c) report(e);
+    });
+  };
+
+  // iOS only lets a sound start inside a tap; a one-sample silent buffer counts as "playing".
+  const primeWithSilence = (c: AudioContextLike) => {
+    const source = c.createBufferSource();
+    source.buffer = c.createBuffer(1, 1, 22050);
+    source.connect(c.destination as never);
+    source.start(0);
+  };
+
   const ready = (): { ctx: AudioContextLike; out: GainLike } => {
-    if (!ctx || !master) {
-      ctx = factory();
-      master = ctx.createGain();
-      master.gain.value = 0.6;
-      const compressor = ctx.createDynamicsCompressor();
-      master.connect(compressor as never);
-      compressor.connect(ctx.destination as never);
+    // A closed engine can never run again; build a new one.
+    if (ctx?.state === 'closed') ctx = null;
+    const c = ctx ?? build();
+    wake(c);
+    if (!master) throw new Error('Audio engine has no output');
+    return { ctx: c, out: master };
+  };
+
+  // After a tap, an engine that still isn't running is stuck: replace it, once until the page has
+  // been hidden. Only the engine the tap started is checked; later taps still call `unlock()`.
+  const rebuildIfStuck = (checked: AudioContextLike) => {
+    try {
+      if (rebuildUsed || muted || ctx !== checked || checked.state === 'running') return;
+      rebuildUsed = true;
+      const closing = checked.state === 'closed' ? null : checked.close();
+      closing?.catch(report);
+      const c = build();
+      wake(c);
+      primeWithSilence(c);
+    } catch (e) {
+      report(e);
     }
-    // iOS Safari uses a non-standard 'interrupted' state after a call or app switch.
-    if (ctx.state !== 'running') ctx.resume().catch(report);
-    return { ctx, out: master };
   };
 
   const voice = (
@@ -164,6 +226,20 @@ export function createSynth(
     osc.stop(end + 0.05);
   };
 
+  const unlock = () => {
+    // Muted means every call is a no-op (SPEC 7.7): no engine, no toast.
+    if (muted) return;
+    try {
+      const { ctx: c } = ready();
+      primeWithSilence(c);
+      setTimeout(() => {
+        rebuildIfStuck(c);
+      }, STUCK_MS);
+    } catch (e) {
+      report(e);
+    }
+  };
+
   const guarded = (fn: () => void) => {
     if (muted) return;
     try {
@@ -176,7 +252,7 @@ export function createSynth(
   const playTones = (plan: TonePlan) => {
     guarded(() => {
       const { ctx: c, out } = ready();
-      const t0 = c.currentTime;
+      const t0 = c.currentTime + LEAD;
       for (const s of plan.steps)
         voice(c, out, plan.wave, frequency(s.note), plan.peak, t0 + s.at, t0 + s.at + s.dur);
     });
@@ -186,7 +262,7 @@ export function createSynth(
     playNote(note, delay = 0, dur = 1.2) {
       guarded(() => {
         const { ctx: c, out } = ready();
-        for (const p of notePlan(note, c.currentTime + delay, dur))
+        for (const p of notePlan(note, c.currentTime + LEAD + delay, dur))
           voice(c, out, 'sine', p.frequency, p.peak, p.start, p.end);
       });
     },
@@ -205,6 +281,11 @@ export function createSynth(
       for (const l of listeners) l();
     },
     isMuted: () => muted,
+    unlock,
+    allowRebuild: () => {
+      rebuildUsed = false;
+    },
+    isRunning: () => ctx?.state === 'running',
     subscribe(listener) {
       listeners.add(listener);
       return () => {
@@ -241,4 +322,47 @@ export const synth: Synth = createSynth(
 export function useSound(): Synth & { muted: boolean } {
   const muted = useSyncExternalStore(synth.subscribe, synth.isMuted);
   return { ...synth, muted };
+}
+
+/** The few parts of `document` that `installUnlock` needs (a fake in tests). */
+export interface UnlockTarget {
+  readonly visibilityState: string;
+  addEventListener(type: string, listener: () => void, capture?: boolean): void;
+  removeEventListener(type: string, listener: () => void, capture?: boolean): void;
+}
+const UNLOCK_EVENTS = ['pointerup', 'touchend', 'click', 'keydown'] as const;
+
+/**
+ * Starts the sound engine on the first tap anywhere (capture phase, so it runs inside the
+ * gesture before any button handler). Keeps listening until the engine is `running`, and
+ * listens again after the page has been hidden (iOS may interrupt the engine then).
+ * Returns a function that removes everything.
+ */
+export function installUnlock(s: Synth, doc: UnlockTarget): () => void {
+  let attached = false;
+  const onTap = () => {
+    if (s.isRunning()) detach();
+    else s.unlock();
+  };
+  const attach = () => {
+    if (attached) return;
+    attached = true;
+    for (const t of UNLOCK_EVENTS) doc.addEventListener(t, onTap, true);
+  };
+  const detach = () => {
+    if (!attached) return;
+    attached = false;
+    for (const t of UNLOCK_EVENTS) doc.removeEventListener(t, onTap, true);
+  };
+  const onVisibility = () => {
+    if (doc.visibilityState !== 'hidden') return;
+    s.allowRebuild();
+    attach();
+  };
+  attach();
+  doc.addEventListener('visibilitychange', onVisibility);
+  return () => {
+    detach();
+    doc.removeEventListener('visibilitychange', onVisibility);
+  };
 }
