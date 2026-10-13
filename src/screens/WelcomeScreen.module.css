@@ -1,0 +1,28 @@
+.page {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  padding: 32px var(--gutter);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.page h1 {
+  font-size: 34px;
+  margin: 16px 0 0;
+}
+
+.body {
+  font-size: 19px;
+  margin: 0 0 16px;
+}
+
+.version {
+  margin: 24px 0 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}

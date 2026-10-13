@@ -66,3 +66,15 @@
   color: var(--locked-text);
   cursor: not-allowed;
 }
+
+.button.correct {
+  background: var(--correct-bg);
+  border-color: var(--correct-ink);
+  color: var(--correct-text);
+}
+
+.button.wrong {
+  background: var(--wrong-bg);
+  border-color: var(--wrong-ink);
+  color: var(--wrong-text);
+}

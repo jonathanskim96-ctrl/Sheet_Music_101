@@ -3,10 +3,13 @@ import { UNITS, allLessonIds, levelLessons, pathLessons } from './curriculum';
 import { emptyProgress, type LessonRecord, type Progress } from './progress';
 import type { CardState } from './srs';
 import {
+  MAX_UNIT_M4,
   currentLesson,
+  currentPlayableLesson,
   isAvailable,
   isCompleted,
   isLevelAvailable,
+  isPlayable,
   keyboardUnlocked,
   reviewAvailable,
   unitLevel,
@@ -218,5 +221,45 @@ describe('coverage of every id', () => {
   });
   it('unit list is intact', () => {
     expect(UNITS).toHaveLength(11);
+  });
+});
+
+describe('M4 gate (TODO M6: remove with MAX_UNIT_M4)', () => {
+  const upTo = (lastId: string): Progress => {
+    const p = emptyProgress('2026-10-01');
+    for (const l of pathLessons()) {
+      p.lessons[l.id] = {
+        timesCompleted: 1,
+        bestAccuracy: 100,
+        firstCompletedDay: '2026-10-01',
+        lastCompletedDay: '2026-10-01',
+      };
+      if (l.id === lastId) break;
+    }
+    return p;
+  };
+
+  it('allows units 1–4 level 1 in order and nothing else', () => {
+    const fresh = emptyProgress('2026-10-01');
+    expect(MAX_UNIT_M4).toBe(4);
+    expect(isPlayable(fresh, 'u1-l1')).toBe(true);
+    expect(isPlayable(fresh, 'u1-l2')).toBe(false);
+    expect(currentPlayableLesson(fresh)?.id).toBe('u1-l1');
+    expect(isPlayable(fresh, 'nope')).toBe(false);
+    expect(isPlayable(fresh, 'cp-a')).toBe(false);
+  });
+
+  it('stops after unit 4 even though unit 5 is available in the domain', () => {
+    const p = upTo('u4-l5');
+    expect(isAvailable(p, 'u5-l1')).toBe(true);
+    expect(isPlayable(p, 'u5-l1')).toBe(false);
+    expect(currentPlayableLesson(p)).toBeNull();
+    expect(isPlayable(p, 'u4-l5')).toBe(true); // replay
+  });
+
+  it('does not offer level 2 or 3 lessons yet', () => {
+    const p = upTo('u4-l5');
+    expect(isAvailable(p, 'u2-lv2-a')).toBe(true);
+    expect(isPlayable(p, 'u2-lv2-a')).toBe(false);
   });
 });

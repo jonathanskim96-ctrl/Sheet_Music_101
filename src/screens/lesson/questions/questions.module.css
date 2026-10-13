@@ -1,0 +1,61 @@
+.pad {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 10px;
+}
+
+.padKey {
+  grid-column: span 2;
+  height: 64px;
+  font-family: inherit;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text);
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-bottom: 4px solid var(--text-muted);
+  border-radius: var(--radius);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* second row: three keys centred under four */
+.padKey:nth-child(5) {
+  grid-column: 2 / span 2;
+}
+
+.padKey:active {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+}
+
+.padKey.correct {
+  background: var(--correct-bg);
+  border-color: var(--correct-ink);
+  color: var(--correct-text);
+}
+
+.padKey.wrong {
+  background: var(--wrong-bg);
+  border-color: var(--wrong-ink);
+  color: var(--wrong-text);
+}
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bigLetter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 120px;
+  border-radius: var(--radius);
+  border: 2px solid var(--border);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 72px;
+  font-weight: 800;
+}

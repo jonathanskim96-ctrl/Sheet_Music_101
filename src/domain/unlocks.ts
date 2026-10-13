@@ -60,3 +60,22 @@ export function reviewAvailable(p: Progress): boolean {
 export function currentLesson(p: Progress): LessonDef | null {
   return PATH.find((l) => !isCompleted(p, l.id) && isAvailable(p, l.id)) ?? null;
 }
+
+/**
+ * TODO(M6): remove this gate. Until the rest of the course is playable (M6), only the level-1
+ * lessons of units 1–4 can be started.
+ */
+export const MAX_UNIT_M4 = 4;
+
+/** Whether the lesson can be started in this build: available, level 1, and in units 1–MAX_UNIT_M4. */
+export function isPlayable(p: Progress, id: string): boolean {
+  const lesson = findLesson(id);
+  return (
+    lesson !== undefined && lesson.level === 1 && lesson.unit <= MAX_UNIT_M4 && isAvailable(p, id)
+  );
+}
+
+/** TODO(M6): remove with the gate. The next playable level-1 lesson, or null. */
+export function currentPlayableLesson(p: Progress): LessonDef | null {
+  return PATH.find((l) => !isCompleted(p, l.id) && isPlayable(p, l.id)) ?? null;
+}

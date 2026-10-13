@@ -85,3 +85,8 @@ export function useRoute(): Route {
 export function navigate(route: Route): void {
   window.location.hash = routeToHash(route);
 }
+
+/** Like navigate, but replaces the current history entry (used for redirects). */
+export function replaceRoute(route: Route): void {
+  window.location.replace(routeToHash(route));
+}

@@ -1,0 +1,26 @@
+.center {
+  max-width: 480px;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 32px var(--gutter);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.reload {
+  min-height: 52px;
+  padding: 10px 24px;
+  border-radius: var(--radius);
+  border: 2px solid var(--primary-edge);
+  border-bottom-width: 4px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+}
