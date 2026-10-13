@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { test, expect } from './fixtures';
 import {
   answerQuestion,
@@ -5,6 +6,7 @@ import {
   playLesson,
   progressAfter,
   seedProgress,
+  seedRecord,
 } from './helpers';
 
 const SECTIONS = [
@@ -159,6 +161,102 @@ test.describe('on an iPhone', () => {
       await page.screenshot({ path: `test-results/screens/app-silent-hint-${scheme}.png` });
       await page.setViewportSize({ width: 320, height: 640 });
       await page.screenshot({ path: `test-results/screens/app-silent-hint-320-${scheme}.png` });
+    });
+  }
+});
+
+// M5 screens: Path cards, Progress, Settings, sheets, broken data, update banner.
+for (const scheme of ['light', 'dark'] as const) {
+  test(`M5 screens, ${scheme} mode`, async ({ page }) => {
+    test.slow();
+    const shot = (name: string, fullPage = false) =>
+      page.screenshot({ path: `test-results/screens/m5-${name}-${scheme}.png`, fullPage });
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
+    // more than 30 days after the fixture's last backup, so the reminder shows
+    await page.clock.setFixedTime(new Date('2026-11-10T10:00:00'));
+
+    await seedProgress(page, fixtureProgress());
+    await expect(page.getByTestId('backup-reminder')).toBeVisible();
+    await page.evaluate(() => {
+      window.scrollTo(0, 0);
+    });
+    await shot('path-backup-reminder');
+
+    await page.goto('./#/progress');
+    await expect(page.getByTestId('total-xp')).toBeVisible();
+    await page.locator('[data-card="treble-G4"]').click();
+    await shot('progress', true);
+    await page.setViewportSize({ width: 320, height: 640 });
+    await shot('progress-320', true);
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    await page.goto('./#/settings');
+    await expect(page.getByTestId('last-backup')).toBeVisible();
+    await shot('settings', true);
+    await page.setViewportSize({ width: 320, height: 640 });
+    await shot('settings-320', true);
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Save a backup' }).click();
+    const text = readFileSync(await (await download).path(), 'utf8');
+    await page.getByTestId('import-input').setInputFiles({
+      name: 'b.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(text),
+    });
+    await expect(page.getByRole('dialog', { name: 'Restore this backup?' })).toBeVisible();
+    await shot('import-preview');
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    await page.getByTestId('import-input').setInputFiles({
+      name: 'x.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from('{}'),
+    });
+    await expect(page.getByText("That file isn't a Sheet Music 101 backup.")).toBeVisible();
+    await shot('import-error-toast');
+
+    await page.getByRole('button', { name: 'Start over' }).click();
+    await shot('start-over-1');
+    await page.getByRole('button', { name: 'Continue without backup' }).click();
+    await shot('start-over-2');
+    await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
+
+    await page.evaluate(() => {
+      const fire: unknown = Reflect.get(window, '__e2eFireControllerChange');
+      if (typeof fire === 'function') fire();
+    });
+    await expect(page.getByTestId('update-banner')).toBeVisible();
+    await shot('update-banner');
+
+    await seedRecord(page, { rev: 7, savedAt: '2026-10-12T10:00:00.000Z', doc: 'garbage' });
+    await expect(page.getByTestId('broken-screen')).toBeVisible();
+    await shot('broken');
+    await page.setViewportSize({ width: 320, height: 640 });
+    await shot('broken-320');
+  });
+}
+
+test.describe('on an iPhone (M5)', () => {
+  test.use({
+    userAgent:
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+  });
+  for (const scheme of ['light', 'dark'] as const) {
+    test(`install card and Settings, ${scheme} mode`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
+      await page.goto('./');
+      await page.getByRole('button', { name: "Let's start" }).click();
+      await expect(page.getByTestId('install-card')).toBeVisible();
+      await page.screenshot({ path: `test-results/screens/m5-path-install-ios-${scheme}.png` });
+      await page.setViewportSize({ width: 320, height: 640 });
+      await page.screenshot({ path: `test-results/screens/m5-path-install-ios-320-${scheme}.png` });
+      await page.goto('./#/settings');
+      await expect(page.getByTestId('settings-silent-hint')).toBeVisible();
+      await page.screenshot({
+        path: `test-results/screens/m5-settings-ios-${scheme}.png`,
+        fullPage: true,
+      });
     });
   }
 });
