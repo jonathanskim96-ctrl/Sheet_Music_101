@@ -3,6 +3,7 @@ import { frequency } from '../domain/notes';
 import {
   CORRECT_PLAN,
   FANFARE_PLAN,
+  LEAD,
   WRONG_PLAN,
   createSynth,
   installAudioUnlock,
@@ -147,6 +148,24 @@ describe('tone plans match SPEC 7.7', () => {
   });
 });
 
+describe('scheduling ahead', () => {
+  it('starts every sound 20 ms after the engine clock, not at it', () => {
+    expect(LEAD).toBe(0.02);
+    const f = fakeContext();
+    const s = createSynth(() => f.ctx);
+    s.playNote('C4');
+    s.playCorrect();
+    s.playWrong();
+    s.playFanfare();
+    const first = f.oscillators.filter((o) => o.start < 10 + LEAD - 1e-9);
+    expect(first).toHaveLength(0);
+    expect(f.oscillators[0]?.start).toBeCloseTo(10.02);
+    expect(f.oscillators[4]?.start).toBeCloseTo(10.02);
+    expect(f.oscillators[6]?.start).toBeCloseTo(10.02);
+    expect(f.oscillators[8]?.start).toBeCloseTo(10.02);
+  });
+});
+
 describe('createSynth', () => {
   it('creates no AudioContext until the first play call', () => {
     const factory = vi.fn(() => fakeContext().ctx);
@@ -164,19 +183,25 @@ describe('createSynth', () => {
     s.playNote('G4', 0.25, 1.2);
     expect(f.oscillators).toHaveLength(4);
     expect(f.oscillators.map((o) => o.type)).toEqual(['sine', 'sine', 'sine', 'sine']);
-    expect(f.oscillators[0]?.start).toBeCloseTo(10.25);
+    expect(f.oscillators[0]?.start).toBeCloseTo(10.27);
     expect(f.oscillators[0]?.freq).toBeCloseTo(frequency('G4'));
-    expect(f.oscillators[0]?.stop).toBeCloseTo(10.25 + 1.2 + 0.05);
+    expect(f.oscillators[0]?.stop).toBeCloseTo(10.27 + 1.2 + 0.05);
   });
 
   it('shapes each voice: 0, then the peak after 8 ms, then a decay to 0.0001', () => {
     const f = fakeContext();
     createSynth(() => f.ctx).playCorrect();
     // gains[0] is the master gain; voices follow in the order they were scheduled
-    expect(f.gains[1]?.calls).toEqual([
-      ['set', 0, 10],
-      ['lin', 0.15, 10.008],
-      ['exp', 0.0001, 10.18],
+    const calls = f.gains[1]?.calls ?? [];
+    expect(calls.map(([name, value]) => [name, value])).toEqual([
+      ['set', 0],
+      ['lin', 0.15],
+      ['exp', 0.0001],
+    ]);
+    expect(calls.map(([, , time]) => time)).toEqual([
+      expect.closeTo(10.02) as unknown,
+      expect.closeTo(10.028) as unknown,
+      expect.closeTo(10.2) as unknown,
     ]);
   });
 
@@ -196,10 +221,10 @@ describe('createSynth', () => {
       'triangle',
       'triangle',
     ]);
-    expect(f.oscillators[1]?.start).toBeCloseTo(10.09);
-    expect(f.oscillators[3]?.start).toBeCloseTo(10.12);
-    expect(f.oscillators[7]?.start).toBeCloseTo(10.36);
-    expect(f.oscillators[7]?.stop).toBeCloseTo(10.36 + 0.6 + 0.05);
+    expect(f.oscillators[1]?.start).toBeCloseTo(10.11);
+    expect(f.oscillators[3]?.start).toBeCloseTo(10.14);
+    expect(f.oscillators[7]?.start).toBeCloseTo(10.38);
+    expect(f.oscillators[7]?.stop).toBeCloseTo(10.38 + 0.6 + 0.05);
   });
 
   it('is silent when muted, and sound returns when unmuted', () => {

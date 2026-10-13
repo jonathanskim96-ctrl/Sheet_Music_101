@@ -49,6 +49,8 @@ const ATTACK = 0.008;
 const SILENCE = 0.0001;
 /** How long a tapped-on engine gets to report `running` before it is rebuilt. */
 const WAKE_MS = 300;
+/** Sounds start this many seconds ahead so the first part isn't cut off while the engine wakes. */
+export const LEAD = 0.02;
 
 export interface PartialPlan {
   frequency: number;
@@ -202,7 +204,7 @@ export function createSynth(
   const playTones = (plan: TonePlan) => {
     guarded(() => {
       const { ctx: c, out } = ready();
-      const t0 = c.currentTime;
+      const t0 = c.currentTime + LEAD;
       for (const s of plan.steps)
         voice(c, out, plan.wave, frequency(s.note), plan.peak, t0 + s.at, t0 + s.at + s.dur);
     });
@@ -233,7 +235,7 @@ export function createSynth(
     playNote(note, delay = 0, dur = 1.2) {
       guarded(() => {
         const { ctx: c, out } = ready();
-        for (const p of notePlan(note, c.currentTime + delay, dur))
+        for (const p of notePlan(note, c.currentTime + LEAD + delay, dur))
           voice(c, out, 'sine', p.frequency, p.peak, p.start, p.end);
       });
     },
