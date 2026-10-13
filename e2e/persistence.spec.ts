@@ -1,5 +1,13 @@
 import { test, expect } from './fixtures';
-import { playLesson, progressAfter, readStored, seedRecord, startFresh } from './helpers';
+import {
+  answerQuestion,
+  playLesson,
+  progressAfter,
+  readStored,
+  seedProgress,
+  seedRecord,
+  startFresh,
+} from './helpers';
 
 test('progress survives a reload', async ({ page }) => {
   await startFresh(page);
@@ -85,4 +93,64 @@ test('a damaged but repairable save is repaired in memory and the learner is tol
   );
   await expect(page.getByTestId('xp-value')).toHaveText('0');
   await expect(page.getByTestId('bubble-u1-l3')).toHaveAttribute('data-state', 'current');
+});
+
+test('reloading in the middle of a lesson saves nothing and restarts the lesson', async ({
+  page,
+}) => {
+  await startFresh(page);
+  await page.getByTestId('bubble-u1-l1').click();
+  await page.getByRole('button', { name: 'Got it' }).click();
+  await answerQuestion(page, true);
+  await page.reload();
+  await expect(page.getByTestId('concept-card')).toBeVisible(); // back at the start of the lesson
+  await page.getByRole('button', { name: 'Close lesson' }).click();
+  await page.getByRole('button', { name: 'Leave' }).click();
+  await expect(page.getByTestId('xp-value')).toHaveText('0');
+});
+
+test('a double tap on an answer counts once', async ({ page }) => {
+  await startFresh(page);
+  await page.getByTestId('bubble-u1-l1').click();
+  await page.getByRole('button', { name: 'Got it' }).click();
+  const q = page.getByTestId('question');
+  const right = JSON.parse((await q.getAttribute('data-answer')) ?? '{}') as { letter: string };
+  await q.getByRole('button', { name: right.letter, exact: true }).dblclick();
+  await expect(page.getByTestId('feedback')).toBeVisible();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByRole('progressbar', { name: 'Lesson progress' })).toHaveAttribute(
+    'aria-valuenow',
+    '1',
+  );
+});
+
+test('the lessons also work offline once loaded', async ({ page, context }) => {
+  await startFresh(page);
+  await context.setOffline(true);
+  await page.getByTestId('bubble-u1-l1').click();
+  await playLesson(page);
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByTestId('xp-value')).toHaveText('15');
+});
+
+test('nothing overflows sideways at 320px (welcome, path, cards, questions, feedback)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  const overflow = () =>
+    page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  await page.goto('./');
+  expect(await overflow()).toBeLessThanOrEqual(0);
+  await page.getByRole('button', { name: "Let's start" }).click();
+  expect(await overflow()).toBeLessThanOrEqual(0);
+  await seedProgress(page, progressAfter(4));
+  await page.getByTestId('bubble-u2-l1').click();
+  for (let i = 0; i < 3; i++) {
+    expect(await overflow()).toBeLessThanOrEqual(0); // concept card, then each Meet card
+    await page.getByRole('button', { name: 'Got it' }).click();
+  }
+  expect(await overflow()).toBeLessThanOrEqual(0);
+  await answerQuestion(page, false);
+  await expect(page.getByTestId('feedback')).toBeVisible();
+  expect(await overflow()).toBeLessThanOrEqual(0);
 });

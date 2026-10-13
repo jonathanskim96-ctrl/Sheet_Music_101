@@ -1,4 +1,5 @@
 import 'fake-indexeddb/auto';
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { emptyProgress, type Progress } from '../domain/progress';
 import { planSettings } from '../domain/planners';
@@ -106,6 +107,20 @@ describe('load', () => {
     const raw = (await stored(name)) as { rev: number; doc: Progress };
     expect(raw.rev).toBe(6);
     expect(raw.doc.xp).toBe(10);
+  });
+});
+
+describe('saved data from earlier versions', () => {
+  it('loads the schema-1 fixture without loss and without repairs', async () => {
+    const name = freshName();
+    const fixture = JSON.parse(readFileSync('tests/fixtures/progress-v1.json', 'utf8')) as Progress;
+    await seed(name, { rev: 9, savedAt: 'x', doc: fixture });
+    const store = new ProgressStore(name);
+    await store.load(NOW);
+    const s = readyOf(store);
+    expect(s.repaired).toEqual([]);
+    expect(s.progress).toEqual(fixture);
+    expect(s.rev).toBe(9);
   });
 });
 
