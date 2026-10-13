@@ -187,6 +187,8 @@ describe('exportedAt', () => {
     expect(at('2026-10-12T20:15:00.5Z')).toBe('2026-10-12T20:15:00.500Z');
     expect(at('yesterday')).toBeNull();
     expect(at('2026-13-45T99:99:99Z')).toBeNull();
+    expect(at('2026-02-30T00:00:00Z')).toBeNull(); // would roll to 2 March
+    expect(at('2026-10-12T24:00:00Z')).toBeNull(); // would roll to the 13th
     expect(at(12345)).toBeNull();
     expect(at(null)).toBeNull();
     expect(at('<script>run()</script>')).toBeNull();

@@ -1,6 +1,6 @@
 // Learner-facing text, transcribed exactly from docs/build/CURRICULUM.md §3–§5.
-import type { CardId } from './cards';
-import type { Clef, Letter, Note } from './notes';
+import { parseCardId, type CardId } from './cards';
+import { letterOf, type Clef, type Letter, type Note } from './notes';
 import type { Answer, Question } from './questions';
 
 // ---------------------------------------------------------------- concept cards
@@ -324,7 +324,9 @@ function assertNever(x: never): never {
 
 /** Letter of a card id such as 'treble-G4' (only used for the prompt text). */
 function letterOfCard(card: CardId): Letter {
-  return card.charAt(card.indexOf('-') + 1) as Letter;
+  const parts = parseCardId(card);
+  if (!parts) throw new Error(`Unknown card: ${card}`);
+  return letterOf(parts.note);
 }
 
 export const CORRECT_PHRASES: readonly string[] = [
@@ -340,7 +342,7 @@ export const CORRECT_PHRASES: readonly string[] = [
   "That's the one!",
 ];
 
-/** `{X}` is replaced by the right answer as text (see `answerText`). */
+/** `{X}` is the right answer as text: `cardName` for notes, `CHOICE_TEXT` for choices. */
 export const WRONG_PHRASES: readonly string[] = [
   "Almost! It's {X}.",
   'Not quite. This one is {X}.',

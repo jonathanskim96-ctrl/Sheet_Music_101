@@ -1,3 +1,4 @@
+import { TOASTS } from './content';
 import { CHECKPOINTS } from './curriculum';
 import { dayKeyOf } from './days';
 import { CURRENT_SCHEMA_VERSION, type Progress } from './progress';
@@ -11,9 +12,9 @@ export const MAX_BACKUP_CHARS = 1_000_000;
 
 /** Fixed messages: file content is never echoed into the UI. */
 export const BACKUP_MESSAGES = {
-  tooBig: 'That file is too big to be a backup.',
-  notBackup: "That file isn't a Sheet Music 101 backup.",
-  damaged: "That backup file is damaged and can't be used.",
+  tooBig: TOASTS.importTooBig,
+  notBackup: TOASTS.importNotBackup,
+  damaged: TOASTS.importDamaged,
   newer: 'This backup is from a newer version of the app. Update the app first, then try again.',
 } as const;
 
@@ -54,7 +55,10 @@ const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
 function cleanExportedAt(v: unknown): string | null {
   if (typeof v !== 'string' || !ISO_RE.test(v)) return null;
   const t = new Date(v);
-  return Number.isNaN(t.getTime()) ? null : t.toISOString();
+  if (Number.isNaN(t.getTime())) return null;
+  // new Date() rolls impossible values forward (Feb 30 → Mar 2); only accept exact round-trips.
+  const iso = t.toISOString();
+  return iso.slice(0, 19) === v.slice(0, 19) ? iso : null;
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {

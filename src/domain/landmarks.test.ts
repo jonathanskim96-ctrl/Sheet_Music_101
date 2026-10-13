@@ -80,10 +80,19 @@ describe('hintFor', () => {
     expect(hintFor('treble-D4', emptyProgress('2026-10-12'))).toBeNull();
     expect(hintFor('treble-D4', learned('bass-C3'))).toBeNull(); // wrong clef only
   });
-  it('is null for a landmark card itself, even if others are learned', () => {
+  it('is null for a learned landmark card itself, even if others are learned', () => {
     expect(hintFor('treble-C4', learned(...all))).toBeNull();
     expect(hintFor('bass-F3', learned(...all))).toBeNull();
     expect(hintFor('bass-C4', learned())).toBeNull();
+  });
+  it('gives a landmark that is not learned yet a hint from a learned one (u2-l2, u10-l2)', () => {
+    expect(hintFor('treble-C5', learned('treble-C4', 'treble-G4'))).toBe(
+      "It's 3 steps above Treble G.",
+    );
+    expect(hintFor('treble-C6', learned('treble-C4', 'treble-G4', 'treble-C5'))).toBe(
+      "It's 7 steps above Treble C.",
+    );
+    expect(hintFor('bass-C3', learned('bass-C4', 'bass-F3'))).toBe("It's 3 steps below Bass F.");
   });
   it('uses singular for one step and plural for more', () => {
     expect(hintFor('treble-A4', learned(...all))).toBe("It's one step above Treble G.");

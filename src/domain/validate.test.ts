@@ -348,6 +348,18 @@ describe('issues', () => {
     expect(r.issues.length).toBeLessThanOrEqual(20);
     expect(JSON.stringify(r.issues)).not.toContain('SECRET');
   });
+  it('strict still lists the other problems when createdDay is bad', () => {
+    const d = doc();
+    d['createdDay'] = 'bad';
+    d['xp'] = -1;
+    (d['settings'] as Doc)['dailyGoal'] = 9;
+    const s = strict(d);
+    expect(s.progress).toBeNull();
+    const text = s.issues.join(' | ');
+    expect(text).toContain('createdDay');
+    expect(text).toContain('xp');
+    expect(text).toContain('settings.dailyGoal');
+  });
   it('strict lists every distinct problem (up to the cap)', () => {
     const d = doc();
     d['xp'] = -1;

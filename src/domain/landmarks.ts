@@ -17,12 +17,12 @@ export const LANDMARKS: Record<Clef, readonly CardId[]> = {
 
 /**
  * Wrong-answer hint: how far the card is from the nearest landmark the learner has already met
- * in the same clef (ties go to the lower one). Null if none is learned or the card is a landmark.
+ * in the same clef (ties go to the lower one). Null if none is learned or the card is itself that
+ * landmark (a landmark not met yet still gets a hint from another one, SPEC 4.16).
  */
 export function hintFor(card: CardId, p: Progress): string | null {
   const here = parseCardId(card);
   if (!here) return null;
-  if (LANDMARKS[here.clef].includes(card)) return null;
   const mine = diatonicIndex(here.note);
   let best: { id: CardId; d: number; below: boolean } | null = null;
   for (const id of LANDMARKS[here.clef]) {
@@ -34,7 +34,7 @@ export function hintFor(card: CardId, p: Progress): string | null {
     // Landmarks are listed low to high, so on a tie the first (lower) one is kept.
     if (best === null || d < best.d) best = { id, d, below: signed < 0 };
   }
-  if (best === null) return null;
+  if (best === null || best.d === 0) return null;
   const where = best.below ? 'below' : 'above';
   const name = cardName(best.id);
   return best.d === 1

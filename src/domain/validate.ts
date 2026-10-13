@@ -15,6 +15,7 @@ const MAX_INT = 1_000_000_000;
 const MAX_ENTRIES = 1000;
 const MAX_DAYS = 50_000;
 const ID_RE = /^[a-z0-9-]{1,32}$/;
+const PLACEHOLDER_DAY: DayKey = '2000-01-01';
 
 interface Ctx {
   /** Number of problems found, including ones past the message cap. */
@@ -224,9 +225,14 @@ export function checkProgress(raw: unknown, mode: CheckMode): CheckResult {
     createdDay = rawCreated;
   } else {
     problem(ctx, 'createdDay: must be a date');
-    const derived = mode === 'repair' ? earliestDay(raw) : null;
-    if (derived === null) return { progress: null, issues: ctx.issues };
-    createdDay = derived;
+    if (mode === 'repair') {
+      const derived = earliestDay(raw);
+      if (derived === null) return { progress: null, issues: ctx.issues };
+      createdDay = derived;
+    } else {
+      // Strict always fails now, but keeps checking so every issue is listed (SPEC 4.7).
+      createdDay = PLACEHOLDER_DAY;
+    }
   }
 
   const defaults = emptyProgress(createdDay);

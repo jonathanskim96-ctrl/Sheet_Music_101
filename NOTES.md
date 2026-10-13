@@ -101,3 +101,15 @@
   - SPEC §4.7 says the lesson id pattern excludes `constructor`; it does not. All lookups use `Object.hasOwn`
     (`isCompleted`, planners, validate) and there is a test with a lesson called `constructor`.
 - Not verified: nothing about the UI (none exists yet); CI on the pull request; the Opus review.
+
+## 2026-10-13: M2 Opus review
+- `/code-review high` plus a step-by-step check against M2.md, SPEC §4, CURRICULUM and STANDARDS. All 18 steps done;
+  every listed test exists. Curriculum data was dumped from code and compared with CURRICULUM.md: identical.
+- Fixed in review: strict `checkProgress` stopped at a bad `createdDay` instead of listing every issue; `hintFor` gave
+  no hint for a landmark the learner hasn't met yet (SPEC 4.16 only excludes the card being the nearest learned
+  landmark); backup `exportedAt` accepted impossible dates (Feb 30 rolled to Mar 2); backup error texts duplicated
+  `content.ts`; `content.ts` re-parsed card ids by hand and referred to a non-existent `answerText`.
+- Mutation check: each of the three new tests fails against the pre-fix code and passes after.
+- Left as is (reviewed, not worth the code): small repeated helpers (`isRecord`/`own` in backup, `MAX_INT` in planners);
+  per-attempt object copies in `planCompleteSession` (at most ~60 small copies per lesson); clock-going-backwards day
+  roll-over (see HANDOFF).
