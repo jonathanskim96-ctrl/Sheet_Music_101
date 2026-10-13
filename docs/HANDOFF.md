@@ -48,6 +48,9 @@ keeps the recommended option until the owner says otherwise.
 | Fixture | `progress-v1.json` is synthetic: 12 cards, 9 days, 135 XP as M2 asked (12 cards can't be reached exactly on the real path, and the XP is lower than its lesson records imply). | **Confirmed.** Validation doesn't check consistency between fields, and the fixture's job is to prove old saves keep loading. |
 | Day roll-over | (Found in review.) If the device clock goes backwards past midnight, the next finished lesson starts the daily count again for the earlier date. | **Confirmed, no change.** Rare, harmless (only the daily goal ring), and SPEC 4.14 says "roll over" without a direction. |
 
+## Owner preferences
+- Whenever a review, fix or execution session is next, give the owner the full prompt as a ready-to-copy block with the milestone number filled in (from `docs/build/README.md`).
+
 ## Waiting on the owner
 - [x] Make the repository public (done).
 - [x] Set `main` as the default branch (done).
