@@ -85,3 +85,24 @@ test('an error that escapes a handler is shown in a toast', async ({ page, conso
   expect(consoleErrors.every((e) => e.includes('Test failure'))).toBe(true);
   consoleErrors.length = 0;
 });
+
+test('broken saved data that cannot even be read: "Save backup" in the Start fresh sheet is disabled and says why', async ({
+  page,
+}) => {
+  // Every read of the object store fails (writes still work, so the record can be seeded).
+  await page.addInitScript(() => {
+    IDBObjectStore.prototype.get = function () {
+      throw new DOMException('Disk read failed', 'UnknownError');
+    };
+  });
+  await seedRecord(page, BROKEN);
+  await expect(page.getByRole('heading', { name: HEADING })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Download the saved data' })).toBeDisabled();
+  await page.getByRole('button', { name: 'Start fresh' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Save a backup first?' });
+  await expect(sheet.getByRole('alert')).toHaveText(
+    "The saved data can't be downloaded: Disk read failed",
+  );
+  await expect(sheet.getByRole('button', { name: 'Save backup' })).toBeDisabled();
+  await sheet.getByRole('button', { name: 'Cancel' }).click();
+});

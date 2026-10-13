@@ -97,6 +97,9 @@ export function BrokenDataScreen({ reason }: { reason: string }) {
           setConfirming(false);
         }}
         onSaveBackup={download}
+        saveUnavailable={
+          raw.status === 'failed' ? `The saved data can't be downloaded: ${raw.message}` : null
+        }
         onErase={async () => {
           const r = await startFresh();
           if (!r.ok) setError(`Something went wrong: ${r.message}`);
