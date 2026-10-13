@@ -242,3 +242,13 @@
 - 5: one `somethingWentWrong(e)` / `errorMessageOf(e)` in `content.ts` ("Unknown error" everywhere); `readImportFile`
   removed. `useStatusWarning()` not done (one shared condition, two lines; not worth a hook).
 
+
+## 2026-10-13: iPhone sound hardening (Sonnet session)
+- Three commits, one per HANDOFF item: (1) `installUnlock` + `synth.unlock()` start the engine inside the first tap with a
+  silent buffer (wired in `main.tsx`); (2) a `closed` engine is replaced on the next sound and an engine still not
+  `running` 300 ms after a tap is closed and rebuilt; (3) all sounds start 20 ms ahead. SPEC 7.7 updated.
+- Unit tests use the fake context in `synth.test.ts` (it gained `close`, `createBuffer`, `createBufferSource`) and fake timers.
+  Mutation checked: dropping the "same engine" check in the stuck-engine timer fails "two quick taps rebuild only once".
+- Gotcha: Node's `EventTarget` doesn't remove a capture listener given a bare `true`; the test document passes `{ capture }`.
+- Not verified: real iPhone sound (a fake context cannot say whether Safari lets the sound out). The owner's phone check is
+  in HANDOFF. The "running but silent" Safari state can't be detected from the page; only a stuck non-running engine is rebuilt.
