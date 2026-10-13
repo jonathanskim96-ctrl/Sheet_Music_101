@@ -96,7 +96,7 @@ keeps the recommended option until the owner says otherwise.
 - The engine is created on the first sound call. That can be a Meet card's auto-play, which runs after the tap and not inside it. Safari then leaves the engine `suspended`.
 - After a call, a lock or an app switch, Safari puts the engine in `interrupted`. Sometimes it reports `running` but stays silent until the engine is rebuilt. Today the code only calls `resume()` without waiting, and never rebuilds.
 
-**Sonnet session (done 2026-10-13: one commit per item, unit tests with the fake context in `synth.test.ts`; not yet tested on a real iPhone):**
+**Sonnet session (done 2026-10-13: one commit per item, unit tests with the fake context in `synth.test.ts`; **owner confirmed on a real iPhone: sound works**; lock/app-switch not separately reported):**
 1. **Start on the first tap.** On the first `pointerup`/`touchend`/`click`/`keydown` anywhere (capture phase), create the engine inside that tap, call `resume()`, and play a one-sample silent buffer. Keep listening until the engine is `running`, and listen again after the page has been hidden.
 2. **Restart a stuck engine.** If the engine is `closed`, or still not `running` about 300 ms after a `resume()` that was triggered by a tap, close it and build a new one (master gain → compressor → destination). Never more than once per tap. Errors keep going to the one-time "Sound isn't available right now." toast.
 3. **Schedule a little ahead.** Start sounds at `currentTime + 0.02` s so the start of a note isn't cut off while the engine wakes up.
