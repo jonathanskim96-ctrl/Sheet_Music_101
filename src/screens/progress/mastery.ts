@@ -1,4 +1,4 @@
-import { ALL_CARDS, parseCardId, type CardId } from '../../domain/cards';
+import { NATURAL_CARDS, parseCardId, type CardId } from '../../domain/cards';
 import type { Clef, Note } from '../../domain/notes';
 import { NICKNAMES } from '../../domain/content';
 import type { Progress } from '../../domain/progress';
@@ -38,7 +38,7 @@ export function chartName(card: CardId): string {
  */
 export function chartNotes(p: Progress): ChartNote[] {
   const perClef = { treble: 0, bass: 0 };
-  return ALL_CARDS.flatMap((card) => {
+  return NATURAL_CARDS.flatMap((card) => {
     const parsed = parseCardId(card);
     if (!parsed) return [];
     const { clef, note } = parsed;

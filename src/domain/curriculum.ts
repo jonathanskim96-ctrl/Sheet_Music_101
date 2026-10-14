@@ -1,5 +1,5 @@
 // The course, transcribed from docs/build/CURRICULUM.md. Ids here are permanent (see ids.lock.json).
-import { ALL_CARDS, cardId, type CardId } from './cards';
+import { NATURAL_CARDS, cardId, type CardId } from './cards';
 import type { ConceptCardId } from './content';
 import type { Clef, Note } from './notes';
 
@@ -17,9 +17,24 @@ export type QuestionKind =
   | 'higher-lower'
   | 'clef-identify';
 
+/** Rhythm and stack set ids used by course part 2 (SPEC 8.8); the sets themselves arrive in M11/M13. */
+export type RhythmSetId = 'RA' | 'RD' | 'RR' | 'RE' | 'RR-Q';
+export type StackSetId = 'ST' | 'SB' | 'SCFG' | 'SH';
+
+/** Extra material a part-2 lesson or checkpoint draws its non-card questions from (SPEC 8.8). */
+export interface LessonMaterial {
+  rhythmPatterns?: RhythmSetId[];
+  rhythmEvents?: RhythmSetId[];
+  melodies?: string[]; // melody ids (sets expanded in curriculum.ts)
+  markStaff?: 0 | 1; // u24-l2: marked notes only in the bass staff
+  intervals?: { clefs: Clef[]; sizes: (2 | 3 | 4 | 5)[]; stacked: 'no' | 'yes' | 'mixed' };
+  stacks?: StackSetId[];
+  showNaturals?: boolean; // unit 15: natural cards are drawn with a printed natural sign
+}
+
 export interface LessonDef {
   id: LessonId;
-  unit: number; // 1..11
+  unit: number; // 1..25
   level: 1 | 2 | 3;
   title: string;
   conceptCards: ConceptCardId[]; // shown before questions, in order
@@ -27,7 +42,8 @@ export interface LessonDef {
   pool: CardId[]; // every card this lesson may ask about (includes newCards)
   mix: Partial<Record<QuestionKind, number>>; // weights; must sum to 100
   questionCount: number; // 8 for unit 1, 10 otherwise, 15 checkpoints
-  render: 'single' | 'grand';
+  render: 'single' | 'grand' | 'rhythm';
+  material?: LessonMaterial;
   stepSkipConfig?: {
     clefs: Clef[];
     intervals: ('step' | 'skip')[];
@@ -44,11 +60,13 @@ export interface UnitDef {
 }
 
 export interface CheckpointDef {
-  id: 'cp-a' | 'cp-b' | 'cp-c';
+  id: 'cp-a' | 'cp-b' | 'cp-c' | 'cp-d' | 'cp-e' | 'cp-f';
   title: string;
   afterUnit: number;
   completesUnits: number[];
   pool: CardId[];
+  mix?: Mix; // part 2 only; the part-1 checkpoints are all name-the-note
+  material?: LessonMaterial;
 }
 
 type Mix = LessonDef['mix'];
@@ -401,7 +419,7 @@ export const CHECKPOINTS: readonly CheckpointDef[] = [
     title: 'Grand checkpoint',
     afterUnit: 10,
     completesUnits: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-    pool: [...ALL_CARDS],
+    pool: [...NATURAL_CARDS],
   },
 ];
 

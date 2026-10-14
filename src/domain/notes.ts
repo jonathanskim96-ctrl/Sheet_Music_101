@@ -59,3 +59,20 @@ export function midiNumber(n: Note): number {
 export function frequency(n: Note): number {
   return 440 * 2 ** ((midiNumber(n) - 69) / 12);
 }
+
+export type Sign = 'sharp' | 'flat' | 'natural';
+/** A sounding or written pitch: the white-key position plus a sign. */
+export type Pitch = { note: Note; sign: Sign };
+
+const SIGN_OFFSET: Record<Sign, number> = { sharp: 1, flat: -1, natural: 0 };
+const SIGN_SYMBOL: Record<Sign, string> = { sharp: '\u266F', flat: '\u266D', natural: '' };
+
+/** MIDI number of a pitch: the note's number moved by one semitone for a sharp or flat. */
+export function pitchMidi(p: Pitch): number {
+  return midiNumber(p.note) + SIGN_OFFSET[p.sign];
+}
+
+/** Letter plus sign symbol, no octave: 'F♯', 'B♭', 'F'. */
+export function pitchName(p: Pitch): string {
+  return `${letterOf(p.note)}${SIGN_SYMBOL[p.sign]}`;
+}

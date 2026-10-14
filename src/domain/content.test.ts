@@ -148,6 +148,8 @@ describe('nicknames and tips', () => {
     expect(cardName('treble-E4')).toBe('E');
     expect(cardName('bass-D2')).toBe('D');
     expect(cardName('treble-B5')).toBe('B');
+    expect(cardName('treble-F#4')).toBe('F\u266F');
+    expect(cardName('bass-Eb3')).toBe('E\u266D');
   });
 });
 

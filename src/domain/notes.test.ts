@@ -10,10 +10,14 @@ import {
   noteFromDiatonic,
   octaveOf,
   parseNote,
+  pitchMidi,
+  pitchName,
   staffPosition,
   type Clef,
   type Note,
+  type Sign,
 } from './notes';
+import { SIGN_CARDS, cardMidi, parseCardId } from './cards';
 
 // [clef, note, diatonic index, staff position, midi, frequency (Hz, 2 decimals)]
 const TABLE: [Clef, Note, number, number, number, number][] = [
@@ -132,5 +136,38 @@ describe('notes properties', () => {
         return da === db || da < db === midiNumber(a) < midiNumber(b);
       }),
     );
+  });
+});
+
+describe('pitches (SPEC 8.1)', () => {
+  it('pitchMidi moves the written note by one semitone for a sharp or flat', () => {
+    expect(pitchMidi({ note: 'F4', sign: 'sharp' })).toBe(66);
+    expect(pitchMidi({ note: 'B4', sign: 'flat' })).toBe(70);
+    expect(pitchMidi({ note: 'F4', sign: 'natural' })).toBe(65);
+    expect(pitchMidi({ note: 'C5', sign: 'sharp' })).toBe(73);
+    expect(pitchMidi({ note: 'A2', sign: 'flat' })).toBe(44);
+  });
+  it('pitchName shows the letter and the symbol, never an octave digit', () => {
+    expect(pitchName({ note: 'F4', sign: 'sharp' })).toBe('F\u266F');
+    expect(pitchName({ note: 'B4', sign: 'flat' })).toBe('B\u266D');
+    expect(pitchName({ note: 'F4', sign: 'natural' })).toBe('F');
+    fc.assert(
+      fc.property(anyNote, fc.constantFrom<Sign>('sharp', 'flat', 'natural'), (note, sign) => {
+        expect(pitchName({ note, sign })).not.toMatch(/\d/);
+        expect(pitchMidi({ note, sign }) - midiNumber(note)).toBe(
+          sign === 'sharp' ? 1 : sign === 'flat' ? -1 : 0,
+        );
+      }),
+    );
+  });
+  it('every one of the 12 sign cards has a sensible pitch name and sound', () => {
+    for (const id of SIGN_CARDS) {
+      const c = parseCardId(id);
+      expect(c).not.toBeNull();
+      if (!c) continue;
+      const name = pitchName({ note: c.note, sign: c.sign });
+      expect(name).toMatch(/^[A-G][\u266F\u266D]$/);
+      expect(cardMidi(id)).toBe(pitchMidi({ note: c.note, sign: c.sign }));
+    }
   });
 });

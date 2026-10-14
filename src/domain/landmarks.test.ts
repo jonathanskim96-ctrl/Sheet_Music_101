@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_CARDS, cardId, parseCardId, type CardId } from './cards';
+import { NATURAL_CARDS, cardId, parseCardId, type CardId } from './cards';
 import { LANDMARKS, describePosition, hintFor } from './landmarks';
 import type { Clef, Note } from './notes';
 import { emptyProgress, type Progress } from './progress';
@@ -58,7 +58,7 @@ const SENTENCES: [Clef, Note, string][] = [
 
 describe('describePosition (all 34 cards)', () => {
   it('has a row for every card', () => {
-    expect(SENTENCES.map(([c, n]) => cardId(c, n))).toEqual([...ALL_CARDS]);
+    expect(SENTENCES.map(([c, n]) => cardId(c, n))).toEqual([...NATURAL_CARDS]);
   });
   it.each(SENTENCES)('%s %s', (clef, note, sentence) => {
     expect(describePosition(clef, note)).toBe(sentence);
@@ -119,7 +119,7 @@ describe('hintFor', () => {
   });
   it('every non-landmark card gets a hint once all landmarks are learned', () => {
     const p = learned(...all);
-    for (const id of ALL_CARDS) {
+    for (const id of NATURAL_CARDS) {
       const h = hintFor(id, p);
       if (all.includes(id)) expect(h).toBeNull();
       else expect(h, id).toMatch(/^It's (one step|\d+ steps) (above|below) .+\.$/);

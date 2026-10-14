@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { ALL_CARDS, parseCardId } from '../domain/cards';
+import { NATURAL_CARDS, parseCardId } from '../domain/cards';
 import { noteAtPosition, staffPosition } from '../domain/notes';
 import {
   K,
@@ -65,8 +65,8 @@ describe('yOf', () => {
   });
 
   it('matches the hand-counted y of every one of the 34 cards', () => {
-    expect(Object.keys(TREBLE_Y).length + Object.keys(BASS_Y).length).toBe(ALL_CARDS.length);
-    for (const id of ALL_CARDS) {
+    expect(Object.keys(TREBLE_Y).length + Object.keys(BASS_Y).length).toBe(NATURAL_CARDS.length);
+    for (const id of NATURAL_CARDS) {
       const c = parseCardId(id);
       if (!c) throw new Error(id);
       const expected = (c.clef === 'treble' ? TREBLE_Y : BASS_Y)[c.note];
@@ -142,7 +142,7 @@ describe('ledgerPositions', () => {
 
 describe('positions', () => {
   it('round-trips with noteAtPosition for every card', () => {
-    for (const id of ALL_CARDS) {
+    for (const id of NATURAL_CARDS) {
       const c = parseCardId(id);
       if (!c) throw new Error(id);
       expect(noteAtPosition(c.clef, staffPosition(c.clef, c.note))).toBe(c.note);

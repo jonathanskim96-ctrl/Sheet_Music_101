@@ -1,6 +1,6 @@
 // Learner-facing text, transcribed exactly from docs/build/CURRICULUM.md §3–§5.
 import { parseCardId, type CardId } from './cards';
-import { letterOf, staffPosition, type Clef, type Letter, type Note } from './notes';
+import { letterOf, pitchName, staffPosition, type Clef, type Letter, type Note } from './notes';
 import { stepSkipValue, type Answer, type Question } from './questions';
 
 // ---------------------------------------------------------------- concept cards
@@ -385,9 +385,13 @@ export const CHOICE_TEXT = {
   'skip-down': 'skip down',
 } as const satisfies Record<Extract<Answer, { kind: 'choice' }>['value'], string>;
 
-/** A card's display name: its nickname if it has one, else its letter. */
+/** A card's display name: its nickname if it has one, else its letter with any sign ('F', 'F♯'). */
 export function cardName(card: CardId): string {
-  return NICKNAMES[card] ?? letterOfCard(card);
+  const nickname = NICKNAMES[card];
+  if (nickname !== undefined) return nickname;
+  const parts = parseCardId(card);
+  if (!parts) throw new Error(`Unknown card: ${card}`);
+  return pitchName({ note: parts.note, sign: parts.sign });
 }
 
 export const COMBO_MILESTONES: readonly { at: number; text: string }[] = [
