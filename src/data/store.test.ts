@@ -275,6 +275,22 @@ describe('commit', () => {
     expect(raw.doc.xp).toBe(20);
     expect(raw.rev).toBe(2);
   });
+  it('a buggy planner whose transaction never started is dropped, so later saves still work', async () => {
+    const name = freshName();
+    const store = new ProgressStore(name);
+    await store.load(NOW);
+    const tx = vi.spyOn(IDBDatabase.prototype, 'transaction').mockImplementation(() => {
+      throw new Error('database closed');
+    });
+    await expect(store.commit((p) => ({ ...p, xp: -1 }))).rejects.toThrow('invalid');
+    tx.mockRestore();
+    await store.commit(addXp(3));
+    const s = readyOf(store);
+    expect(s.saveError).toBeNull();
+    expect(s.progress.xp).toBe(3);
+    expect(((await stored(name)) as { doc: Progress }).doc.xp).toBe(3);
+  });
+
   it("a failed write after another tab saved keeps that tab's progress in memory too", async () => {
     const name = freshName();
     const a = new ProgressStore(name);

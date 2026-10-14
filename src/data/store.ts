@@ -253,10 +253,13 @@ export class ProgressStore {
       if (e instanceof PlannerError) throw e;
       // The write itself failed: keep the change in memory so the lesson isn't lost. Build on
       // what the transaction read (another tab's newer save, if any), not on our older copy.
+      // If the transaction failed before the planners ran, a buggy one throws here; it must not
+      // stay in `pending`, or every later save would fail with it.
+      const progress = applyAll(out.start, attempt);
       this.pending = attempt;
       this.set({
         status: 'ready',
-        progress: applyAll(out.start, attempt),
+        progress,
         rev: this.rev,
         saveError: messageOf(e),
         repaired: s.repaired,
