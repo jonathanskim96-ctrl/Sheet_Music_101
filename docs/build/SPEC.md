@@ -21,9 +21,9 @@ invent product behaviour.
 | Hearts | **None.** Mistakes are explained, repeated later in the lesson, never block. |
 | Answering | A–G letter buttons first; piano keyboard questions unlock after Unit 4. |
 | Sound | On by default, mute toggle in lesson header and in settings. |
-| Notation | Whole notes only (no stems), natural notes only (no sharps/flats), range C2–C6. |
+| Notation | Units 1–11: whole notes only (no stems), natural notes only. Units 12–25 (§8): sharps, flats and naturals; 1-, 2-, 3- and 4-beat notes, half-beat pairs and rests; boxes of 2, 3 or 4 beats; home signs G, F, D, B♭. Range C2–C6 throughout (owner, 2026-10-14). |
 | Leaving a lesson | Nothing from an unfinished lesson is saved (lessons are ~3 minutes). |
-| Note names shown to the learner | Letters only ("G"), plus nicknames for landmarks ("Treble G"). Octave numbers (G4) are internal only and never shown. |
+| Note names shown to the learner | Letters only ("G"), plus nicknames for landmarks ("Treble G"); sign notes as symbols ("F♯", "B♭"). Octave numbers (G4) are internal only and never shown. Plain words, no music jargon (owner, 2026-10-14; CURRICULUM Part 2). |
 | Routing | Hash routes (`#/…`) so GitHub Pages never needs server rewrites. |
 | Clock and randomness | Domain code never calls `Date`, `Date.now()` or `Math.random()`; `now` and a seed are passed in. |
 
@@ -166,7 +166,7 @@ export function frequency(n: Note): number;                     // 440 * 2 ** ((
 A card = one note in one clef, the unit of memory. `CardId = \`${Clef}-${Note}\``, e.g.
 `treble-G4`, `bass-C4`. Treble C4 and bass C4 are **different cards**.
 
-All 34 cards (`ALL_CARDS`, in this order):
+All 34 cards (`ALL_CARDS`, in this order; M8 appends the 12 sign cards of §8.1):
 - treble: A3 B3 C4 D4 E4 F4 G4 A4 B4 C5 D5 E5 F5 G5 A5 B5 C6
 - bass:   C2 D2 E2 F2 G2 A2 B2 C3 D3 E3 F3 G3 A3 B3 C4 D4 E4
 
@@ -219,7 +219,7 @@ export const SLOW_MS = 6000;
 ### 4.6 Progress document (`domain/progress.ts`)
 
 ```ts
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 1; // 2 from M8 (§8.2)
 export interface LessonRecord {
   timesCompleted: number;     // 0 means "completed by passing a checkpoint" (skipped)
   bestAccuracy: number;       // integer 0..100
@@ -294,7 +294,7 @@ The id regex excludes `_`, so `__proto__`/`constructor` can never become keys. B
 ```ts
 export function upgradeToCurrent(raw: unknown): { ok: true; value: unknown } | { ok: false; reason: 'newer' | 'unknown' };
 ```
-v1 has no steps yet. Rule for the future: a change to `Progress` = bump `CURRENT_SCHEMA_VERSION`,
+v1 has no steps yet (M8 adds step 1 → 2, §8.2). Rule for the future: a change to `Progress` = bump `CURRENT_SCHEMA_VERSION`,
 add a step `vN → vN+1` (append only, never edit an old step), add fixture
 `tests/fixtures/progress-vN+1.json`, keep all old fixtures loading. `reason: 'newer'` when
 `schemaVersion > CURRENT_SCHEMA_VERSION`.
@@ -824,3 +824,290 @@ rotation, delay 0–300ms, CSS keyframe fall 1.8s; component unmounts itself aft
   **only when** `import.meta.env.MODE === 'e2e'`. Production builds must not contain the
   string `data-answer` (checked by `check-dist`).
 - `data-testid` attributes are allowed in production (harmless) for stable selectors.
+
+---
+
+## 8. Course part 2: units 12–25 (planned 2026-10-14; milestones M8–M14)
+
+This section **extends and, where it says so, replaces** §1–§7. Learner-facing text and lesson
+data are in `CURRICULUM.md` §6–§12. Owner decisions: `docs/HANDOFF.md` ("Course part 2").
+Where §1 says "whole notes only, naturals only", that now holds for units 1–11 only.
+
+### 8.1 Pitches and the 12 sign cards (`domain/notes.ts`, `domain/cards.ts`) — M8
+
+```ts
+export type Sign = 'sharp' | 'flat' | 'natural';
+export type Pitch = { note: Note; sign: Sign };   // note = the written white-key position
+export function pitchMidi(p: Pitch): number;      // midiNumber(note) + (sharp 1 | flat -1 | natural 0)
+export function pitchName(p: Pitch): string;      // 'F♯', 'B♭', 'F' (letters only, no octave)
+```
+- `Note` stays naturals only. Card ids for the new cards: `${Clef}-${Letter}${'#'|'b'}${Octave}`.
+  `CardId` becomes the union of the 34 natural ids and these 12:
+  treble `F#4 G#4 Ab4 Bb4 C#5 Eb5`, bass `Ab2 Bb2 C#3 Eb3 F#3 G#3`.
+- `ALL_CARDS` = the 34 (same order as today) followed by `SIGN_CARDS` (treble then bass, low
+  to high, as listed). `NATURAL_CARDS` = the first 34 (unchanged; used by everything in part 1).
+- `parseCardId(s)` returns `{ clef, note, sign }` (`sign: 'natural'` for the 34); still accepts
+  only ids in `ALL_CARDS`. `cardPosition` uses `note` (a sign card sits where its letter sits).
+- `cardMidi(id)` = `pitchMidi`. `cardName(id)`: nickname, else `pitchName`.
+- A self-check test asserts that every question kind of part 1 (`name-note`, `find-key-*`,
+  `find-on-staff`, `step-skip`) only ever receives natural cards, and that every part-1 lesson
+  pool is ⊆ `NATURAL_CARDS`.
+
+### 8.2 Progress schema version 2 — M8
+
+Full plan, rationale and tests: `docs/build/SCHEMA-V2.md`. Summary:
+- `CURRENT_SCHEMA_VERSION = 2`; `Progress.schemaVersion: 2`. **No new fields.** What changes is
+  that `cards` may now hold the 12 sign cards.
+- Why a bump although no field changed: an older copy of the app still cached on a phone (or a
+  backup opened in an older app) would treat sign cards as unknown and silently drop them on its
+  next save. With version 2 the older app sees "newer version" instead and never writes
+  (`storeChecks.ts` → `broken` with "This progress was saved by a newer version of the app.").
+- `UPGRADE_STEPS[1]`: returns a **new** object with every own key of the input and
+  `schemaVersion: 2` (nothing else touched; validation runs afterwards as always).
+- `checkProgress`: `schemaVersion` must be exactly `2` (§4.7 table row replaced); card keys must
+  be in the new `ALL_CARDS` (46).
+- Backups: envelope `schemaVersion: 2`. `parseBackup` accepts envelopes 1 and 2 (the progress
+  inside is upgraded); > 2 → the "newer version" message.
+- New fixture `tests/fixtures/progress-v2.json` (never edited after M8), recorded in
+  `fixtures.lock.json`. `progress-v1.json` stays and must keep loading.
+
+### 8.3 Music text and the sounding-pitch rule (`domain/music.ts`) — M9
+
+```ts
+export type Beats = 1 | 2 | 3 | 4;
+export type Dur = 'q' | 'h' | 'h.' | 'w' | 'ee';          // notes; 'ee' = half-beat pair (1 beat)
+export type RestDur = 'Q' | 'H' | 'W';
+export type RhythmToken = Dur | RestDur;
+export type Time = 2 | 3 | 4;                              // beats per box (bottom number always 4)
+export type HomeSign = 'none' | 'G' | 'F' | 'D' | 'Bb';    // G: F♯; F: B♭; D: F♯ C♯; Bb: B♭ E♭
+export interface WrittenNote { note: Note; printed: Sign | null }
+export type MusicEvent =
+  | { kind: 'note'; dur: Exclude<Dur, 'ee'>; notes: WrittenNote[] }   // >1 note = played together
+  | { kind: 'rest'; dur: RestDur };
+export interface Staffline { clef: Clef; boxes: MusicEvent[][] }
+export interface Melody { id: string; time: Time; home: HomeSign; staffs: [Staffline] | [Staffline, Staffline] } // [treble, bass] when grand
+export function beatsOf(t: RhythmToken): number;            // q1 h2 h.3 w4 ee1 Q1 H2 W4
+export function parseRhythm(s: string): RhythmToken[] | null;
+export function parseMusic(clef: Clef, s: string): MusicEvent[][] | null; // 'C4q D4q | G4w'
+export function soundingPitch(m: Melody, staff: 0 | 1, box: number, index: number): Pitch;
+export function soundingCard(m: Melody, staff: 0 | 1, box: number, index: number): CardId | null;
+```
+- Token grammar: note `^[A-G](#|b|n)?[2-6](q|h\.|h|w)$`, rest `^[QHW]$`, rhythm `ee` only in
+  rhythm patterns (`parseRhythm`), boxes split on ` | `. Anything else → `null` (a data test
+  fails). Data is parsed once at module load and the tests assert nothing is null.
+- **Sounding-pitch rule** (one function, unit-tested with every MS/MF/MK/MN example):
+  1. the note's own printed sign, if any (`n` = natural);
+  2. else the last printed sign on the **same letter and octave** earlier in the **same box**
+     of the same staff;
+  3. else the home sign for that letter (any octave);
+  4. else natural.
+- **Data checks (tests):** every box's beats = `time` (rests count); every sounding pitch of
+  every melody note is a card in `ALL_CARDS` (so no F♯5, E♭4 …); every melody's notes have staff
+  positions −2..10; grand melodies have equal box counts on both staffs.
+- `soundingCard` = the card with that clef and pitch (null only if not a card, which the data
+  checks make impossible).
+
+### 8.4 Drawing music (`notation/musicGeometry.ts` pure + `notation/Music.tsx`) — M9
+
+New glyphs (add to `tools/glyphs/extract.py` `WANT`, regenerate `glyphs.ts`; verified to exist
+in Bravura on 2026-10-14): `noteheadHalf` E0A3, `noteheadBlack` E0A4, `augmentationDot` E1E7,
+`accidentalFlat` E260, `accidentalNatural` E261, `accidentalSharp` E262, `restWhole` E4E3,
+`restHalf` E4E4, `restQuarter` E4E5, `timeSig2` E082, `timeSig3` E083, `timeSig4` E084. Same
+scale `k` as §7.3. Update `glyphs.test.ts` (each glyph present, bounds sane).
+
+Layout (all in staff spaces `S`, same `y(p)` as §7.3):
+- **Modes:** `treble`, `bass`, `grand` (as §7.3) and **`rhythm`**: one horizontal line at
+  `y = 50` in a viewBox of height 70 (no clef); every note sits on the line, stems up.
+- **Header:** clef (as §7.3) → home sign → time numbers. Home-sign positions (p): treble F♯ 8,
+  C♯ 5, B♭ 4, E♭ 7; bass F♯ 6, C♯ 3, B♭ 2, E♭ 5; each sign 1.0 S apart, in that order. Time:
+  top digit centred on p = 6, bottom digit "4" on p = 2 (rhythm mode: top digit above the line,
+  bottom below). A header element is omitted when not used (no time numbers on a lone
+  single-note question).
+- **Time grid:** `x(box, beat) = boxStart + 1.2 S + beat × 2.6 S`; box width
+  `1.2 S + time × 2.6 S + 0.6 S`; a bar line (width 0.13 S, staff height) at each box end, a
+  thicker double line at the last box end is **not** drawn (plain look). Grand: both staves share
+  the grid, so notes played together line up exactly.
+- **Notes:** heads by duration (`w` whole, `h`/`h.` half, `q`/`ee` black). Stems (width 0.12 S,
+  length 3.5 S): p < 4 up on the head's right edge, p ≥ 4 down on the left edge; rhythm mode
+  always up. `h.` adds a dot 0.5 S right of the head (moved up to the space above when the head
+  is on a line). `ee`: two black heads at beats +0 and +0.5, stems up, joined by a beam of height
+  0.5 S at the stem tops. Printed sign: glyph right-aligned 0.3 S left of the head. Notes in one
+  event (stacks, stacked intervals) share x; they are whole notes in all part-2 data, so no stems.
+- **Rests:** `Q` centred on p = 4 (rhythm: on the line); `H` sitting on p = 4 (rhythm: on top of
+  the line); `W` hanging from p = 6 (rhythm: under the line).
+- **Marked note:** the head drawn in `--focus`, plus a downward triangle (1.2 S wide) in `--ink`
+  1.5 S above the top line (or above the head if higher). Colour is not the only signal.
+- **Highlight states** for feedback: `correct` / `wrong` colour the head as in §7.3.
+- **Empty slot** (finish-box): a dashed rounded rectangle 2 S × 4 S at the missing beat.
+- Width = header + boxes; render with `width: 100%`. On a 320 px phone a two-box melody must
+  keep a staff space ≥ 9 CSS px (checked in the visual QA screenshots; if not, the music view may
+  break after the first box onto a second line, same header repeated without time numbers).
+- `aria-label`s never reveal the answer ("Music with two boxes, one note marked").
+- Geometry tests: header positions, every home-sign position, grid x for each time, stem
+  direction rule, dot placement on line vs space, beam endpoints, grand alignment (same beat →
+  same x on both staves).
+
+### 8.5 Keyboard: black keys can answer — M9
+
+`Keyboard` `onPress` now reports `{ note: Note } | { black: number /* midi */ }` (the old
+`'black'` string is replaced). Part-1 questions keep their rule (a black key is always wrong
+there): `QuestionView` maps `{black}` to the old `{ kind: 'key', note: 'black' }` answer.
+Black keys get `aria-label`s "F♯ / G♭", "C♯ / D♭", "D♯ / E♭", "G♯ / A♭", "A♯ / B♭". Black key
+states: normal / highlight / wrong (as white keys). A keyboard illustration may label black keys
+(concept cards).
+
+### 8.6 New question kinds (`domain/questions.ts`) — M10–M13
+
+```ts
+export type Question = /* the 10 part-1 kinds */
+  | { kind: 'name-accidental'; card: CardId; render: 'single' | 'grand'; showNatural: boolean; options: PitchOption[] } // 4 options
+  | { kind: 'find-key-pitch'; card: CardId; render: 'single' | 'grand' }
+  | { kind: 'beats-of'; token: RhythmToken }
+  | { kind: 'which-longer'; first: Dur; second: Dur }                 // beats differ
+  | { kind: 'count-box'; box: RhythmToken[] }                          // no time numbers shown
+  | { kind: 'finish-box'; time: Time; box: RhythmToken[]; options: RhythmToken[] } // 3 options; box = pattern minus its last token
+  | { kind: 'hear-rhythm'; time: Time; options: RhythmToken[][]; answer: 0 | 1 | 2 }
+  | { kind: 'name-in-music'; melody: string; staff: 0 | 1; box: number; index: number; card: CardId; options: PitchOption[] }
+  | { kind: 'melody-move'; melody: string; box: number; index: number }   // staff 0
+  | { kind: 'hear-melody'; options: string[]; answer: 0 | 1 | 2 }
+  | { kind: 'interval-read'; clef: Clef; first: Note; second: Note; stacked: boolean; sizes: (2|3|4|5)[] }
+  | { kind: 'together-or-not'; melody: string; treble: [number, number]; bass: [number, number] } // [box, index] on each staff
+  | { kind: 'stack-or-not'; clef: Clef; notes: [Note, Note, Note] }
+  | { kind: 'stack-name'; clef: Clef; bottom: Note; withBass?: Note };  // withBass → grand (SH)
+export type PitchOption = { letter: Letter; sign: Sign };
+export type Answer = /* part-1 answers */
+  | { kind: 'pitch-name'; letter: Letter; sign: Sign }
+  | { kind: 'pitch-key'; midi: number }
+  | { kind: 'option'; index: 0 | 1 | 2 };
+// ChoiceValue gains: 'beats-1'..'beats-4', 'size-2'..'size-5', 'together', 'apart', 'stack', 'not-stack'
+```
+Answer rules:
+- name-accidental, name-in-music → letter and sign equal the card's (name-in-music: the
+  sounding pitch). A natural card is answered with `sign: 'natural'`.
+- find-key-pitch → `midi === cardMidi(card)` (exact key; another octave is wrong).
+- beats-of → `beats-n` with n = `beatsOf(token)`. which-longer → the one with more beats.
+- count-box → `beats-n` with n = sum of the box. finish-box → the option whose beats make the box
+  sum to `time` (exactly one option does; the builder guarantees it). hear-* → `index === answer`.
+- melody-move → `stepSkipValue(previous note, marked note)` (data: the marked note is never the
+  first note of the tune and its move is a step or a skip, never a repeat or bigger).
+- interval-read → `size-n`, n = |diatonic distance| + 1.
+- together-or-not → `together` iff both events start on the same beat of the same box.
+- stack-or-not → `stack` iff the two gaps are both 2 diatonic steps.
+- stack-name → a `letter` answer equal to the bottom note's letter (Letter pad).
+- `cardOf`: name-accidental, find-key-pitch, name-in-music → their card; all others null.
+
+**name-accidental options** (also used by name-in-music when the sounding pitch has a sign, or
+the melody has any printed sign or a home sign; otherwise name-in-music uses the Letter pad and a
+`letter` answer is accepted for a natural card): candidates in this order — same letter natural,
+same letter ♯, same letter ♭, letter above with the card's sign, letter below with the card's
+sign — drop the right answer and any candidate that isn't one of the 7 naturals or the 12 sign
+names (F♯ C♯ G♯ B♭ E♭ A♭), take the first 3, add the right answer, shuffle with the lesson seed.
+Buttons show `pitchName` ("F♯"); 2 × 2 grid like step-skip.
+
+**Sound off:** `hear-rhythm` and `hear-melody` need sound. In `buildLesson`, if
+`p.settings.soundOn` is false their weights are removed from the mix (the rest is renormalised;
+a lesson whose mix becomes empty never happens in the data: tested). If the learner mutes during a
+lesson, a listening question shows the "Turn on sound" line and button (CURRICULUM §12) instead
+of auto-playing; the options stay answerable. Checkpoints never contain listening questions.
+
+### 8.7 Audio: rhythms, tunes, stacks (`audio/synth.ts`) — M11
+
+- `playMusic(events: { at: number /* beats */; midi: number[]; beats: number }[], opts: { bpm: 80; countIn: number })`:
+  `countIn` clicks (one per beat, first one accented), then the events; note length =
+  `beats × 60/bpm × 0.9` s using the existing piano partials (`playNote` by midi). Rests are gaps.
+- Click: sine 1 500 Hz, 30 ms, peak 0.10 (accented 0.15), linear attack 2 ms, exponential decay.
+- Rhythm patterns play on C5. Melodies play their sounding pitches. Stacks/stacked intervals
+  play all notes together. A new `playMusic` stops the previous one (no overlapping replays).
+- Listening questions auto-play once when shown (count-in = `time` clicks), "Play again" replays
+  (also during feedback). Same mute, error-toast and Silent-mode rules as §7.7.
+- Note questions with sign cards play the sounding pitch 250 ms after the answer sound (§7.2).
+
+### 8.8 Curriculum types and unlocks (`domain/curriculum.ts`, `unlocks.ts`) — M8 (types), M10–M13 (data)
+
+```ts
+export interface LessonMaterial {
+  rhythmPatterns?: RhythmSetId[];          // 'RA' | 'RD' | 'RR' | 'RE' (+ 'RR-Q': RR patterns containing Q)
+  rhythmEvents?: RhythmSetId[];
+  melodies?: string[];                     // melody ids (sets expanded in curriculum.ts)
+  markStaff?: 0 | 1;                       // u24-l2: marked notes only in the bass staff
+  intervals?: { clefs: Clef[]; sizes: (2|3|4|5)[]; stacked: 'no' | 'yes' | 'mixed' };
+  stacks?: StackSetId[];                   // 'ST' | 'SB' | 'SCFG' | 'SH'
+  showNaturals?: boolean;                  // unit 15: natural cards are drawn with a printed ♮
+}
+// LessonDef gains: material?: LessonMaterial; render gains 'rhythm'; unit is 1..25.
+// CheckpointDef: id 'cp-a' | … | 'cp-f'; gains mix?: Mix and material?: LessonMaterial.
+```
+- **Unlocks:** unchanged rules (§4.10). Units 12–25 have no levels 2–3 (`unitLevelCount` = 1).
+  Path order continues: `u12-l1` opens after `u11-l4`. Checkpoints d–f are always available
+  (jump ahead), like a–c. `keyboardUnlocked` unchanged.
+- **Self-check test additions:** every melody/pattern/stack id used exists and parses; mixes
+  sum to 100; every lesson using a card kind has a non-empty pool or melodies; every non-card
+  kind in a mix has the material it needs; no level-2/3 lessons for units 11–25; `cp-d..f`
+  `completesUnits` are exactly the units since the previous checkpoint.
+
+### 8.9 Lesson builder for part 2 (`domain/lessonBuilder.ts`) — M10–M13
+
+`buildLesson` dispatch: unit 1 and 11 as before; **card lessons** (units 2–10, 12–15) →
+`buildNoteLesson` with one change: in units 12–15 a new card's first slot is `name-accidental`
+(instead of `name-note`), and the kind mix is the lesson's (P1 etc.). **Material lessons**
+(units 16–25): for each of the `questionCount` slots, pick a kind from the mix (after the
+sound-off rule), then generate it:
+- beats-of: a token from `rhythmEvents` sets.
+- which-longer: two event durations (notes only) with different beats.
+- count-box: a pattern from `rhythmPatterns` (any time).
+- finish-box: a pattern with ≥ 2 tokens; remove the last token; options = it + 2 other tokens
+  from `rhythmEvents` whose beats differ from it and from each other and that would not also
+  finish the box; shuffled.
+- hear-rhythm: 3 different patterns of the same time from `rhythmPatterns` (if fewer than 3
+  exist for a time, use a time that has 3); `answer` random.
+- name-in-music: a melody from `melodies`; a note event (on `markStaff` if set); `card` =
+  `soundingCard`. Weighting as in card lessons (weight 4 if the card is new, due or box ≤ 2,
+  else 1), chosen over all (melody, note) pairs.
+- melody-move: a melody and a valid marked note (see §8.6).
+- hear-melody: 3 different melodies of the same time from `melodies`; `answer` random.
+- interval-read: as step-skip (§4.12) but distance `size − 1`; first note p 0..8 in a random
+  clef from `clefs`, second p −2..10 and a natural card; `stacked` per config (`mixed` = coin flip;
+  size 2 is never stacked).
+- together-or-not: a grand melody; one event from each staff; 50 % chance the pair is chosen
+  to start together (if the melody has such a pair), else apart.
+- stack-or-not: 50 % a real stack from `stacks`; else the same bottom note with gaps (2, 3) or
+  (3, 2) diatonic steps (never a gap of 1, so heads never touch), all three natural cards.
+- stack-name: a stack from `stacks` (SH adds `withBass`).
+- name-accidental in a material lesson (finale): a card from the lesson `pool`.
+Then: no two identical questions in a row (repair as §4.12 step 4); first slots unaffected.
+`buildCheckpoint`: as before when `mix` is absent; else 15 questions generated as above with
+no immediate repeats, retries off, pass ≥ 13.
+`buildReview`: pool = all met cards; for a sign card the kind is `name-accidental` (70 %) or
+`find-key-pitch` (30 %, only if `keyboardUnlocked`); natural cards as before.
+Property tests (STANDARDS §3) extend to every new lesson × 200 seeds: question count exact, each
+question answerable by `correctAnswerOf`, finish-box has exactly one right option, hear options
+distinct, no listening question when sound is off.
+
+### 8.10 Feedback, hints and session — M10–M13
+
+- Wrong-answer texts and extra lines: CURRICULUM §12. Sign cards get **no landmark hint**
+  (`hintFor` returns null for them); the position sentence uses the written note.
+- Feedback highlights: name-in-music colours the marked note; finish-box/hear-* outline the
+  right option in `--correct-ink` and the tapped one in `--wrong-ink`; interval-read/stack kinds
+  colour the notes as §7.2.
+- `session.ts` is unchanged (questions without cards already record `card: null`).
+
+### 8.11 UI additions — M10–M13
+
+- Tokens (M10): `--unit-12` #1D4ED8, `--unit-13` #047857, `--unit-14` #A21CAF, `--unit-15`
+  #B91C1C, `--unit-16` #0E7490, `--unit-17` #6D28D9, `--unit-18` #9D174D, `--unit-19` #4D7C0F,
+  `--unit-20` #1E40AF, `--unit-21` #92400E, `--unit-22` #115E59, `--unit-23` #C026D3,
+  `--unit-24` #3730A3, `--unit-25` #9F1239 (white-text contrast 4.7–9.9, computed 2026-10-14);
+  the contrast test covers them. Confetti may use them.
+- Path: units 12–25 with headers and bubbles exactly like part 1 (no level buttons); checkpoint
+  nodes after 15, 19, 22; the Path-end card (CURRICULUM §12) when every level-1 lesson is done.
+- Progress: a second, smaller grand-staff chart "Sharps and flats" with the 12 sign cards
+  (6 columns, each staff in pitch order, sign drawn before the head), same colours, legend and
+  tooltips. The unit list shows units 12–25 (one star each when done).
+- Question views (one file each in `screens/lesson/questions/`): `NameAccidental`,
+  `FindKeyPitch` (extends FindKey), `BeatsOf`, `WhichLonger`, `CountBox`, `FinishBox`,
+  `HearChoice` (rhythm and melody), `NameInMusic`, `MelodyMove`, `IntervalRead`,
+  `TogetherOrNot`, `StackOrNot`, `StackName`. Choice buttons ≥ 52 px high; picture options are
+  full-width buttons with the music inside on paper.
+- Gallery: every new kind, one example each, plus every melody and every rhythm pattern.
+- E2E `data-answer` for the new answers works as §7.11 (`option`, `pitch-name`, `pitch-key`).

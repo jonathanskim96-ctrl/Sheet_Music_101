@@ -1,6 +1,6 @@
 # Build guide: how the execution sessions work
 
-Planning is finished (Opus 5.5). Building happens in **seven milestones**, each done by a
+Planning is finished (Opus 5.5). Building happens in **milestones** (M1–M7: units 1–11; M8–M14: units 12–25), each done by a
 **Sonnet 5.5** session that follows its milestone file exactly, then checked by an **Opus 5.5**
 review session, then merged by the owner.
 
@@ -13,7 +13,9 @@ review session, then merged by the owner.
 | `docs/build/SPEC.md` | What to build: data model, algorithms, UI, security |
 | `docs/build/CURRICULUM.md` | Lesson data and every learner-facing text |
 | `docs/build/STANDARDS.md` | How to build: checks, coding, testing, debugging, security, reviews |
-| `docs/build/M1.md` … `M7.md` | Step-by-step tasks per milestone |
+| `docs/build/M1.md` … `M14.md` | Step-by-step tasks per milestone (M8–M14: course part 2) |
+| `docs/build/PROMPTS-PART2.md` | Ready-to-copy build, review and fix prompts for M8–M14 |
+| `docs/build/SCHEMA-V2.md` | Saved-progress version 2: what changes and the tests that prove old saves load |
 | `docs/build/m1-files/` | Verified config files copied in by M1 |
 
 ## Milestones
@@ -27,6 +29,18 @@ review session, then merged by the owner.
 | M5 | Progress, settings, backups, safety nets | Backups, progress chart, settings |
 | M6 | Full curriculum | Everything playable |
 | M7 | Hardening, reviews, go-live | Finished app |
+
+**Course part 2 (units 12–25), planned 2026-10-14.** Build in this order; each needs the one before.
+
+| # | Milestone | What the owner gets |
+|---|---|---|
+| M8 | Schema version 2 + sharp/flat cards (data model first; `SCHEMA-V2.md`) | Nothing visible; old progress safely upgraded |
+| M9 | Drawing music: signs, lengths, boxes, home signs; black keys answer | Gallery screenshots to approve the look |
+| M10 | Units 12–15 + checkpoint D (sharps, flats, naturals) | Sharps and flats playable |
+| M11 | Units 16–19 + checkpoint E (rhythm, with playback) | Rhythm playable; owner listens on the phone |
+| M12 | Units 20–22 + checkpoint F (tunes in boxes, home signs, letters apart) | Reading real music |
+| M13 | Units 23–25 (melodies, both hands, note stacks) + course end | The whole 25-unit course |
+| M14 | Part-2 hardening + owner phone test | Finished part 2 |
 
 ## The cycle for each milestone (owner's steps)
 
