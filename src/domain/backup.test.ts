@@ -9,6 +9,8 @@ import {
 } from './backup';
 import { emptyProgress, type Progress } from './progress';
 import { clone, progressArb, sampleProgress } from './testkit';
+import v1Fixture from '../../tests/fixtures/progress-v1.json';
+import v2Fixture from '../../tests/fixtures/progress-v2.json';
 
 const NOW = new Date(Date.UTC(2026, 9, 12, 20, 15, 0));
 const FIXED = new Set<string>(Object.values(BACKUP_MESSAGES));
@@ -32,7 +34,7 @@ describe('serializeBackup / backupFileName', () => {
     expect(o).toMatchObject({
       app: 'sheet-music-101',
       kind: 'backup',
-      schemaVersion: 1,
+      schemaVersion: 2,
       exportedAt: '2026-10-12T20:15:00.000Z',
     });
     expect(text).toBe(JSON.stringify(o, null, 2));
@@ -127,7 +129,7 @@ describe('failure messages', () => {
     expect(BACKUP_MESSAGES.newer).toBe(
       'This backup is from a newer version of the app. Update the app first, then try again.',
     );
-    expect(failure(edit((o) => (o['schemaVersion'] = 2)))).toBe(BACKUP_MESSAGES.newer);
+    expect(failure(edit((o) => (o['schemaVersion'] = 3)))).toBe(BACKUP_MESSAGES.newer);
     expect(
       failure(
         edit((o) => {
@@ -240,5 +242,33 @@ describe('never echoes input', () => {
       }),
       { numRuns: 200 },
     );
+  });
+});
+
+describe('schema v2 backups (SCHEMA-V2 test 7)', () => {
+  const envelope = (version: number, progress: unknown): string =>
+    JSON.stringify({
+      app: 'sheet-music-101',
+      kind: 'backup',
+      schemaVersion: version,
+      exportedAt: '2026-10-12T20:15:00.000Z',
+      progress,
+    });
+  it('a version-1 backup envelope holding the v1 fixture restores as version 2, no field lost', () => {
+    const r = parseBackup(envelope(1, v1Fixture));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.progress).toEqual({ ...v1Fixture, schemaVersion: 2 });
+    expect(r.summary.cardsLearned).toBe(12);
+  });
+  it('a version-2 export round-trips with sign cards (deep-equal)', () => {
+    const p = clone(v2Fixture) as unknown as Progress;
+    const r = parseBackup(serializeBackup(p, NOW));
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.progress).toEqual(p);
+    expect(JSON.parse(serializeBackup(p, NOW))).toMatchObject({ schemaVersion: 2 });
+  });
+  it('an envelope with version 3 gets the "newer version" message', () => {
+    expect(failure(envelope(3, v2Fixture))).toBe(BACKUP_MESSAGES.newer);
   });
 });

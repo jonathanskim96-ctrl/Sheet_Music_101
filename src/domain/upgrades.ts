@@ -7,9 +7,13 @@ export type UpgradeStep = (raw: Record<string, unknown>) => Record<string, unkno
 
 /**
  * Steps `vN → vN+1`, keyed by N. Append only: never edit or remove a step, because documents
- * saved by older versions of the app must keep loading. v1 is the first version, so none yet.
+ * saved by older versions of the app must keep loading.
  */
-export const UPGRADE_STEPS: Readonly<Record<number, UpgradeStep>> = {};
+export const UPGRADE_STEPS: Readonly<Record<number, UpgradeStep>> = {
+  // v1 → v2 (2026-10, course part 2): no field changes; the bump stops older app versions
+  // from loading (and dropping) the new sharp/flat cards. Never edit this step.
+  1: (raw) => ({ ...raw, schemaVersion: 2 }),
+};
 
 function schemaVersionOf(raw: unknown): number | null {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null;

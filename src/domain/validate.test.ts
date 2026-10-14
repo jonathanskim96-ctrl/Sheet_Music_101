@@ -85,7 +85,7 @@ describe('top level', () => {
       expect(strict(v).issues.length).toBeGreaterThan(0);
     },
   );
-  it.each([0, 2, '1', null, undefined, 1.5, true])(
+  it.each([0, 1, 3, '2', null, undefined, 1.5, true])(
     'schemaVersion %j is fatal in both modes',
     (v) => {
       const d = doc();
@@ -94,6 +94,12 @@ describe('top level', () => {
       expect(repair(d).progress).toBeNull();
     },
   );
+  it('schemaVersion 2 is accepted and the message names the required version', () => {
+    expect(strict(doc()).progress?.schemaVersion).toBe(2);
+    const d = doc();
+    d['schemaVersion'] = 1;
+    expect(strict(d).issues).toEqual(['schemaVersion: must be 2']);
+  });
   it('a missing schemaVersion is fatal', () => {
     expect(strict(without(['schemaVersion'])).progress).toBeNull();
     expect(repair(without(['schemaVersion'])).progress).toBeNull();
@@ -283,6 +289,28 @@ describe('map rules', () => {
   });
   it('card ids must be real cards', () => {
     for (const id of ['treble-C2', 'alto-C4', 'bass-F5', '__proto__', 'constructor', '']) {
+      const d = doc();
+      setOwn(d['cards'] as Doc, id, clone(sampleProgress().cards['treble-C4']));
+      expect(strict(d).progress, id).toBeNull();
+      expect(Object.keys(repair(d).progress?.cards ?? {}).sort()).toEqual(['bass-F3', 'treble-C4']);
+    }
+  });
+  it('test 6: the 12 sign cards are kept; sign-like ids outside the 12 are still dropped', () => {
+    const kept = doc();
+    setOwn(kept['cards'] as Doc, 'treble-F#4', clone(sampleProgress().cards['treble-C4']));
+    setOwn(kept['cards'] as Doc, 'bass-Bb2', clone(sampleProgress().cards['treble-C4']));
+    expect(strict(kept).issues).toEqual([]);
+    expect(Object.keys(strict(kept).progress?.cards ?? {}).sort()).toEqual(
+      ['bass-Bb2', 'bass-F3', 'treble-C4', 'treble-F#4'].sort(),
+    );
+    for (const id of [
+      'treble-F#5',
+      'treble-Gb4',
+      'bass-F#4',
+      'treble-E#4',
+      'treble-Cb5',
+      'bass-Bb3',
+    ]) {
       const d = doc();
       setOwn(d['cards'] as Doc, id, clone(sampleProgress().cards['treble-C4']));
       expect(strict(d).progress, id).toBeNull();

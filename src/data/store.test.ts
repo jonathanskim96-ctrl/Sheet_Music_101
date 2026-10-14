@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import fixtureText from '../../tests/fixtures/progress-v1.json?raw';
+import v2FixtureText from '../../tests/fixtures/progress-v2.json?raw';
 import { emptyProgress, type Progress } from '../domain/progress';
 import { planSettings } from '../domain/planners';
 import { openDb, readRecord, readRaw, transactCommit, writeFresh, type Db } from './db';
@@ -163,8 +164,64 @@ describe('saved data from earlier versions', () => {
     await store.load(NOW);
     const s = readyOf(store);
     expect(s.repaired).toEqual([]);
-    expect(s.progress).toEqual(fixture);
+    expect(s.progress).toEqual({ ...fixture, schemaVersion: 2 });
     expect(s.rev).toBe(9);
+  });
+
+  it('test 8a: the first commit after loading the v1 fixture writes schemaVersion 2 and keeps every card and lesson', async () => {
+    const name = freshName();
+    const fixture = JSON.parse(fixtureText) as Progress & { schemaVersion: number };
+    expect(fixture.schemaVersion).toBe(1);
+    const record = { rev: 9, savedAt: 'x', doc: fixture };
+    await seed(name, record);
+    const store = new ProgressStore(name);
+    await store.load(NOW);
+    expect(readyOf(store).repaired).toEqual([]);
+    // Loading alone writes nothing: the stored record is still the untouched v1 document.
+    expect(await stored(name)).toEqual(record);
+    await store.commit(addXp(5));
+    const raw = (await stored(name)) as { rev: number; doc: Progress };
+    expect(raw.rev).toBe(10);
+    expect(raw.doc.schemaVersion).toBe(2);
+    const { schemaVersion: _a, xp: xpBefore, ...before } = fixture;
+    const { schemaVersion: _b, xp: xpAfter, ...after } = raw.doc;
+    expect(xpAfter).toBe(xpBefore + 5);
+    expect(after).toEqual(before);
+    expect(Object.keys(raw.doc.cards)).toHaveLength(12);
+    expect(Object.keys(raw.doc.lessons)).toHaveLength(13);
+  });
+
+  it('test 8b: a v2 document with sign cards loads untouched and survives a save', async () => {
+    const name = freshName();
+    const fixture = JSON.parse(v2FixtureText) as Progress;
+    await seed(name, { rev: 2, savedAt: 'x', doc: fixture });
+    const store = new ProgressStore(name);
+    await store.load(NOW);
+    expect(readyOf(store).repaired).toEqual([]);
+    expect(readyOf(store).progress).toEqual(fixture);
+    await store.commit(addXp(1));
+    const raw = (await stored(name)) as { doc: Progress };
+    expect(raw.doc.cards['treble-F#4']).toEqual(fixture.cards['treble-F#4']);
+    expect(raw.doc.cards['bass-C#3']).toEqual(fixture.cards['bass-C#3']);
+    expect(raw.doc.lessons['u26-l1']).toEqual(fixture.lessons['u26-l1']);
+  });
+
+  it('test 8c: a v3 document loads as `broken` ("newer version") and the stored record stays byte-for-byte unchanged', async () => {
+    const name = freshName();
+    const record = {
+      rev: 4,
+      savedAt: 'x',
+      doc: { ...(JSON.parse(v2FixtureText) as object), schemaVersion: 3 },
+    };
+    await seed(name, record);
+    const before = JSON.stringify(await stored(name));
+    const store = new ProgressStore(name);
+    await store.load(NOW);
+    const s = store.getState();
+    expect(s.status).toBe('broken');
+    expect(s.status === 'broken' && s.reason).toContain('newer version');
+    await expect(store.commit(addXp(1))).rejects.toThrow();
+    expect(JSON.stringify(await stored(name))).toBe(before);
   });
 });
 
