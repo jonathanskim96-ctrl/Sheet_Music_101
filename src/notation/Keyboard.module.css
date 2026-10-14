@@ -7,6 +7,12 @@
 
 .key {
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Pointer taps must not paint focus over a key's result colour; keyboard users keep the ring. */
+.key:focus:not(:focus-visible) {
+  outline: none;
 }
 
 .key:focus-visible {

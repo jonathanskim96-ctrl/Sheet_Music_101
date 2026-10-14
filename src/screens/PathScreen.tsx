@@ -217,7 +217,9 @@ export function PathScreen() {
                   ? 'completed'
                   : isCurrent
                     ? 'current'
-                    : 'locked';
+                    : isAvailable(progress, lesson.id)
+                      ? 'open'
+                      : 'locked';
                 return (
                   <LessonBubble
                     key={lesson.id}

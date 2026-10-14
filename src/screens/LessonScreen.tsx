@@ -38,27 +38,33 @@ export type LessonSource =
   | { kind: 'review' }
   | { kind: 'checkpoint'; checkpoint: CheckpointDef };
 
-function planFor(source: LessonSource, p: Progress, today: DayKey, seed: number): LessonPlan {
+/** The seed id and the plan for a source, in one exhaustive switch so a new kind can't miss either. */
+function planFor(
+  source: LessonSource,
+  p: Progress,
+  today: DayKey,
+  now: Date,
+): { plan: LessonPlan; id: string } {
+  const seedFor = (id: string) => (now.getTime() ^ hashString(id)) >>> 0;
   switch (source.kind) {
     case 'lesson':
-      return buildLesson(source.def, p, today, seed);
+      return {
+        plan: buildLesson(source.def, p, today, seedFor(source.def.id)),
+        id: source.def.id,
+      };
     case 'review':
-      return buildReview(p, today, seed);
+      return { plan: buildReview(p, today, seedFor('review')), id: 'review' };
     case 'checkpoint':
-      return buildCheckpoint(source.checkpoint, seed);
+      return {
+        plan: buildCheckpoint(source.checkpoint, seedFor(source.checkpoint.id)),
+        id: source.checkpoint.id,
+      };
     default: {
       const never: never = source;
       return never;
     }
   }
 }
-
-const idOf = (source: LessonSource): string =>
-  source.kind === 'lesson'
-    ? source.def.id
-    : source.kind === 'review'
-      ? 'review'
-      : source.checkpoint.id;
 
 /** Plays one session: concept cards, Meet cards, questions, then the result screen. */
 export function LessonScreen({ source }: { source: LessonSource }) {
@@ -68,8 +74,7 @@ export function LessonScreen({ source }: { source: LessonSource }) {
   // The plan and the progress it was built from are fixed for the whole lesson.
   const [before] = useState(progress);
   const [session, dispatch] = useReducer(reduce, undefined, () => {
-    const seed = (now().getTime() ^ hashString(idOf(source))) >>> 0;
-    const plan = planFor(source, before, dayKeyOf(now()), seed);
+    const { plan } = planFor(source, before, dayKeyOf(now()), now());
     return startSession(plan, performance.now());
   });
   const [leaving, setLeaving] = useState(false);

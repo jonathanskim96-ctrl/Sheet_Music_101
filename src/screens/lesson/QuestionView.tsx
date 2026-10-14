@@ -199,7 +199,8 @@ export function QuestionView({ question: q, answered, onAnswer }: QuestionViewPr
           q={q}
           answered={answered}
           send={send}
-          correctValue={correct.kind === 'choice' ? correct.value : 'step-up'}
+          states={choiceStates()}
+          noteState={noteState}
         />
       );
       break;

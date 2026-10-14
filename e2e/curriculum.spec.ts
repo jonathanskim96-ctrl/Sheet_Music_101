@@ -139,10 +139,8 @@ test.describe('find the key', () => {
     await wrong.click();
     await expect(page.getByTestId('feedback')).toHaveAttribute('data-correct', 'false');
     await expect(wrong).toHaveAttribute('data-key-state', 'wrong');
-    // a tapped key must not keep the browser's focus paint, which hides its result colour
-    expect(
-      await page.evaluate(() => document.activeElement?.hasAttribute('data-note') ?? false),
-    ).toBe(false);
+    // a pointer tap must not paint focus over the key's result colour (owner approved this check)
+    await expect(wrong).toHaveCSS('outline-style', 'none');
     await expect(q.locator(`[data-note="${right.note}"]`)).toHaveAttribute(
       'data-key-state',
       'highlight',
@@ -365,6 +363,23 @@ test.describe('checkpoints', () => {
       await expect.poll(() => page.evaluate(() => window.location.hash), bad).toBe('#/');
       await expect(page.getByTestId('bubble-u1-l1')).toBeVisible();
     }
+  });
+
+  test('after passing cp-b from a fresh start, open lessons are not drawn as locked', async ({
+    page,
+  }) => {
+    await startFresh(page);
+    await page.getByTestId('checkpoint-cp-b').click();
+    await playLesson(page);
+    await expect(page.getByRole('heading', { name: 'Checkpoint passed!' })).toBeVisible();
+    await page.getByRole('button', { name: 'Continue' }).click();
+    // u8-l1 is open but u1-l1 is still the current lesson: unit colour, no lock, no "Start"
+    await expect(page.getByTestId('bubble-u1-l1')).toHaveAttribute('data-state', 'current');
+    await expect(page.getByTestId('bubble-u8-l1')).toHaveAttribute('data-state', 'open');
+    await expect(page.getByTestId('bubble-u8-l1')).toHaveAccessibleName(/available$/);
+    await expect(page.getByText('Start', { exact: true })).toHaveCount(1);
+    await page.getByTestId('bubble-u8-l1').click();
+    await expect(page).toHaveURL(/#\/lesson\/u8-l1$/);
   });
 
   test('failing cp-b unlocks nothing and still earns 10 XP', async ({ page }) => {
