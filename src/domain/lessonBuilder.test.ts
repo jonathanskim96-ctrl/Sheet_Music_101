@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { ALL_CARDS, parseCardId, type CardId } from './cards';
+import { NATURAL_CARDS, isCardId, isNaturalCard, parseCardId, type CardId } from './cards';
 import {
   CHECKPOINTS,
   UNITS,
@@ -18,6 +18,8 @@ import { checkAnswer, correctAnswerOf, cardOf, type Question } from './questions
 import { mulberry32 } from './rng';
 import type { Box, CardState } from './srs';
 import { deepFreeze, progressArb } from './testkit';
+import { reviewAvailable } from './unlocks';
+import v2Fixture from '../../tests/fixtures/progress-v2.json';
 
 const TODAY = '2026-10-12';
 const SEEDS = Array.from({ length: 200 }, (_, i) => i * 7919 + 13);
@@ -83,6 +85,8 @@ describe('buildLesson: properties over EVERY lesson × 200 seeds × random progr
           const cards = noteCards(plan) as CardId[];
           // every card in the pool, never null for note lessons
           for (const c of cards) expect(def.pool, label).toContain(c);
+          // SPEC 8.1 self-check: part-1 question kinds only ever receive natural cards
+          for (const c of cards) expect(isNaturalCard(c), `${label} natural ${c}`).toBe(true);
           // spec cap and new cards at least 3 times
           const count = (c: CardId): number => cards.filter((x) => x === c).length;
           for (const c of def.pool)
@@ -307,7 +311,8 @@ describe('buildReview', () => {
   it('property: 10 questions, only learned cards, no neighbours equal, answerable, retries on', () => {
     for (const seed of SEEDS) {
       for (const p of RANDOM_PROGRESS) {
-        if (Object.keys(p.cards).length < 3) continue;
+        if (Object.keys(p.cards).filter((id) => isCardId(id) && isNaturalCard(id)).length < 3)
+          continue; // part 1 reviews natural cards only
         const plan = buildReview(p, TODAY, seed);
         expect(plan.context).toEqual({ kind: 'review' });
         expect(plan.retries).toBe(true);
@@ -316,6 +321,7 @@ describe('buildReview', () => {
         expect(plan.questions).toHaveLength(10);
         const cards = noteCards(plan) as CardId[];
         for (const c of cards) expect(Object.hasOwn(p.cards, c)).toBe(true);
+        for (const c of cards) expect(isNaturalCard(c)).toBe(true);
         for (let i = 1; i < cards.length; i++) expect(cards[i]).not.toBe(cards[i - 1]);
         for (const q of plan.questions) {
           expect(checkAnswer(q, correctAnswerOf(q))).toBe(true);
@@ -339,7 +345,7 @@ describe('buildReview', () => {
   });
   it('takes the 10 weakest due cards, lowest box then oldest first', () => {
     const cards: Partial<Record<CardId, CardState>> = {};
-    ALL_CARDS.slice(0, 12).forEach((id, i) => {
+    NATURAL_CARDS.slice(0, 12).forEach((id, i) => {
       cards[id] = state((1 + (i % 5)) as Box, `2026-09-${String(10 + i).padStart(2, '0')}`);
     });
     const p = progressWith(cards);
@@ -373,7 +379,7 @@ describe('buildReview', () => {
       'treble-A3': state(1, TODAY), // the only due card
     };
     // 9 non-due cards with boxes 2..5 repeating, seen today
-    ALL_CARDS.slice(1, 10).forEach((id, i) => {
+    NATURAL_CARDS.slice(1, 10).forEach((id, i) => {
       cards[id] = state((2 + (i % 4)) as Box, TODAY);
     });
     const got = new Set(noteCards(buildReview(progressWith(cards), TODAY, 2)) as string[]);
@@ -387,7 +393,7 @@ describe('buildReview', () => {
   });
   it('keyboard locked: only name-note; unlocked: name-note and find-key-letter (about 70/30)', () => {
     const base: Partial<Record<CardId, CardState>> = {};
-    ALL_CARDS.slice(0, 11).forEach((id) => (base[id] = state(1, TODAY)));
+    NATURAL_CARDS.slice(0, 11).forEach((id) => (base[id] = state(1, TODAY)));
     const locked = progressWith(base);
     const unlocked = progressWith(base, ['u4-l5']);
     const kinds = (p: Progress): string[] =>
@@ -502,5 +508,33 @@ describe('coverage of ids', () => {
       1,
     ).questions[0];
     expect(q?.kind).toBe('name-note');
+  });
+});
+
+describe('sign cards in saved progress are left alone by part-1 review (M8 review)', () => {
+  const withSigns = (): Progress => {
+    const p = JSON.parse(JSON.stringify(v2Fixture)) as Progress;
+    return p;
+  };
+  it('the v2 fixture has sign cards, and buildReview never turns one into its natural note', () => {
+    const p = withSigns();
+    expect(Object.keys(p.cards).filter((id) => !isNaturalCard(id as CardId))).toHaveLength(3);
+    for (const seed of SEEDS) {
+      const plan = buildReview(p, TODAY, seed);
+      for (const c of noteCards(plan) as CardId[]) expect(isNaturalCard(c)).toBe(true);
+    }
+  });
+  it('reviewAvailable counts natural cards only: three sign cards alone do not open Review', () => {
+    const p = withSigns();
+    expect(reviewAvailable(p)).toBe(true);
+    const onlySigns = {
+      ...p,
+      cards: Object.fromEntries(
+        Object.entries(p.cards).filter(([id]) => !isNaturalCard(id as CardId)),
+      ),
+    };
+    expect(Object.keys(onlySigns.cards)).toHaveLength(3);
+    expect(reviewAvailable(onlySigns)).toBe(false);
+    expect(() => buildReview(onlySigns, TODAY, 1)).toThrow('at least 3 cards');
   });
 });

@@ -3,7 +3,7 @@ import type { LessonId } from './curriculum';
 import type { DayKey } from './days';
 import type { CardState } from './srs';
 
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
 export interface LessonRecord {
   timesCompleted: number; // 0 means "completed by passing a checkpoint" (skipped)
@@ -13,7 +13,7 @@ export interface LessonRecord {
 }
 
 export interface Progress {
-  schemaVersion: 1;
+  schemaVersion: 2;
   createdDay: DayKey;
   settings: { soundOn: boolean; dailyGoal: 1 | 2 | 3 };
   xp: number;
@@ -38,7 +38,7 @@ export interface Progress {
 /** A brand-new progress document for a learner who starts on `today`. */
 export function emptyProgress(today: DayKey): Progress {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     createdDay: today,
     settings: { soundOn: true, dailyGoal: 1 },
     xp: 0,

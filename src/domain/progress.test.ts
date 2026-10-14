@@ -4,7 +4,7 @@ import { CURRENT_SCHEMA_VERSION, emptyProgress, lessonsDoneToday } from './progr
 describe('emptyProgress', () => {
   it('has the documented defaults', () => {
     expect(emptyProgress('2026-10-12')).toEqual({
-      schemaVersion: 1,
+      schemaVersion: 2,
       createdDay: '2026-10-12',
       settings: { soundOn: true, dailyGoal: 1 },
       xp: 0,

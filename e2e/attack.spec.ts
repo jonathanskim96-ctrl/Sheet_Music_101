@@ -191,15 +191,15 @@ const CASES: [string, () => string | Buffer, string][] = [
     DAMAGED,
   ],
   [
-    'the envelope schemaVersion is 2',
+    'the envelope schemaVersion is 3',
     () =>
       envelope(fixtureText()).replace(
         '"schemaVersion":1,"exportedAt"',
-        '"schemaVersion":2,"exportedAt"',
+        '"schemaVersion":3,"exportedAt"',
       ),
     NEWER,
   ],
-  ['the progress schemaVersion is 2', () => withField('schemaVersion', '2'), NEWER],
+  ['the progress schemaVersion is 3', () => withField('schemaVersion', '3'), NEWER],
   ['the progress schemaVersion is "1" (text)', () => withField('schemaVersion', '"1"'), DAMAGED],
   [
     'kind is not "backup"',
@@ -322,7 +322,6 @@ test('stored data with huge arrays and wrong types is repaired and the app stays
 });
 
 for (const [label, doc, reason] of [
-  ['from a newer schema (a downgrade)', '{"schemaVersion":2,"xp":5}', 'newer version'],
   ['a bare string', '"hello"', "can't be read"],
   ['a list', '[1,2,3]', "can't be read"],
 ] as const) {
@@ -343,6 +342,22 @@ for (const [label, doc, reason] of [
     expect(await readStored(page)).toEqual(stored);
   });
 }
+
+test('stored data from a newer schema (a downgrade): broken screen offers Reload the app, no Start fresh, nothing overwritten', async ({
+  page,
+}) => {
+  await seedRawJson(page, record('{"schemaVersion":3,"xp":5}', 3));
+  await expect(
+    page.getByRole('heading', { name: "We couldn't read your saved progress." }),
+  ).toBeVisible();
+  await expect(page.getByTestId('broken-screen')).toContainText('newer version');
+  await expect(page.getByRole('button', { name: 'Start fresh' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Try again' })).toHaveCount(0);
+  const stored = await readStored(page);
+  await page.getByRole('button', { name: 'Reload the app' }).click();
+  await expect(page.getByTestId('broken-screen')).toBeVisible();
+  expect(await readStored(page)).toEqual(stored);
+});
 
 test('a stored rev that goes backwards (another tab or an old copy) is built on, not overwritten', async ({
   page,

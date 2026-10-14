@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_CARDS, parseCardId } from './cards';
+import { NATURAL_CARDS, parseCardId } from './cards';
 import { UNIT1_KEYBOARD, keyboardWindow } from './keyboardWindow';
 import { LETTERS, diatonicIndex, noteFromDiatonic, type Note } from './notes';
 
@@ -17,7 +17,7 @@ describe('keyboardWindow', () => {
     expect(UNIT1_KEYBOARD).toEqual({ from: 'C3', to: 'B4' });
   });
   it('contains the note and has exactly 14 white keys for every card', () => {
-    for (const id of ALL_CARDS) {
+    for (const id of NATURAL_CARDS) {
       const c = parseCardId(id);
       if (!c) throw new Error(id);
       const w = keyboardWindow(c.note);

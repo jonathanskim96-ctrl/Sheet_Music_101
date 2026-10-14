@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { ALL_CARDS, parseCardId, type CardId } from './cards';
+import { NATURAL_CARDS, parseCardId, type CardId } from './cards';
 import {
   LETTERS,
   diatonicIndex,
@@ -35,7 +35,7 @@ const CHOICES: ChoiceValue[] = [
   'skip-down',
 ];
 
-const card = fc.constantFrom(...ALL_CARDS);
+const card = fc.constantFrom(...NATURAL_CARDS);
 const render = fc.constantFrom<'single' | 'grand'>('single', 'grand');
 const letter = fc.constantFrom(...LETTERS);
 const clef = fc.constantFrom<Clef>('treble', 'bass');
@@ -225,7 +225,7 @@ describe('checkAnswer ∘ correctAnswerOf (property over every question kind)', 
 describe('specific rules', () => {
   it('a black key is always wrong', () => {
     const black: Answer = { kind: 'key', note: 'black' };
-    for (const id of ALL_CARDS) {
+    for (const id of NATURAL_CARDS) {
       expect(checkAnswer({ kind: 'find-key-letter', card: id, render: 'single' }, black)).toBe(
         false,
       );
@@ -378,7 +378,7 @@ describe('nearestCorrectPosition', () => {
     expect(nearestCorrectPosition('treble-E4', 4)).toBe(7);
   });
   it('always returns a position that checkAnswer accepts, for every card and every tap', () => {
-    for (const card of ALL_CARDS) {
+    for (const card of NATURAL_CARDS) {
       for (let tap = -4; tap <= 12; tap++) {
         const p = nearestCorrectPosition(card, tap);
         expect(p).toBeGreaterThanOrEqual(-4);
@@ -391,7 +391,7 @@ describe('nearestCorrectPosition', () => {
     }
   });
   it('is never further away than another right position', () => {
-    for (const card of ALL_CARDS) {
+    for (const card of NATURAL_CARDS) {
       const parts = parseCardId(card);
       if (!parts) throw new Error(card);
       for (let tap = -4; tap <= 12; tap++) {

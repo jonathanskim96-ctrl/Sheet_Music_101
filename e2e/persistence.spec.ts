@@ -1,6 +1,7 @@
 import { test, expect } from './fixtures';
 import {
   answerQuestion,
+  fixtureProgress,
   playLesson,
   progressAfter,
   readStored,
@@ -21,6 +22,35 @@ test('progress survives a reload', async ({ page }) => {
   await expect(page.getByTestId('bubble-u1-l2')).toHaveAttribute('data-state', 'current');
   // and the Welcome screen does not come back
   await expect(page.getByRole('button', { name: "Let's start" })).toHaveCount(0);
+});
+
+test('test 9: a saved version-1 document loads, a finished lesson saves it as version 2 and nothing is lost', async ({
+  page,
+}) => {
+  const v1 = fixtureProgress() as unknown as Record<string, unknown>;
+  expect(v1['schemaVersion']).toBe(1);
+  await seedRecord(page, { rev: 9, savedAt: '2026-10-12T10:00:00.000Z', doc: v1 });
+  await expect(page.getByTestId('xp-value')).toHaveText('135');
+  // loading alone must not rewrite anything
+  expect(((await readStored(page)) as { doc: { schemaVersion: number } }).doc.schemaVersion).toBe(
+    1,
+  );
+  await page.getByTestId('bubble-u4-l3').click();
+  await playLesson(page);
+  await page.getByRole('button', { name: 'Continue' }).click();
+  const saved = (await readStored(page)) as {
+    rev: number;
+    doc: Record<string, unknown> & { xp: number; cards: Record<string, unknown> };
+  };
+  expect(saved.rev).toBeGreaterThan(9);
+  expect(saved.doc['schemaVersion']).toBe(2);
+  expect(saved.doc.xp).toBeGreaterThan(135);
+  for (const id of Object.keys(v1['cards'] as object)) expect(saved.doc.cards).toHaveProperty(id);
+  for (const id of Object.keys(v1['lessons'] as object))
+    expect(saved.doc['lessons'] as object).toHaveProperty(id);
+  expect(saved.doc['daysPracticed']).toEqual(
+    expect.arrayContaining(v1['daysPracticed'] as string[]),
+  );
 });
 
 test('daily goal: the ring fills, empties the next day, and days practised only grows on practice days', async ({

@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import fixtureText from '../../tests/fixtures/progress-v1.json?raw';
+import v2FixtureText from '../../tests/fixtures/progress-v2.json?raw';
 import { emptyProgress, type Progress } from '../domain/progress';
 import { planSettings } from '../domain/planners';
 import { openDb, readRecord, readRaw, transactCommit, writeFresh, type Db } from './db';
@@ -163,8 +164,84 @@ describe('saved data from earlier versions', () => {
     await store.load(NOW);
     const s = readyOf(store);
     expect(s.repaired).toEqual([]);
-    expect(s.progress).toEqual(fixture);
+    expect(s.progress).toEqual({ ...fixture, schemaVersion: 2 });
     expect(s.rev).toBe(9);
+  });
+
+  it('test 8a: the first commit after loading the v1 fixture writes schemaVersion 2 and keeps every card and lesson', async () => {
+    const name = freshName();
+    const fixture = JSON.parse(fixtureText) as Progress & { schemaVersion: number };
+    expect(fixture.schemaVersion).toBe(1);
+    const record = { rev: 9, savedAt: 'x', doc: fixture };
+    await seed(name, record);
+    const store = new ProgressStore(name);
+    await store.load(NOW);
+    expect(readyOf(store).repaired).toEqual([]);
+    // Loading alone writes nothing: the stored record is still the untouched v1 document.
+    expect(await stored(name)).toEqual(record);
+    await store.commit(addXp(5));
+    const raw = (await stored(name)) as { rev: number; doc: Progress };
+    expect(raw.rev).toBe(10);
+    expect(raw.doc.schemaVersion).toBe(2);
+    expect(raw.doc.xp).toBe(fixture.xp + 5);
+    // everything except the version and the xp we just added is exactly as it was
+    expect({ ...raw.doc, schemaVersion: 0, xp: 0 }).toEqual({
+      ...fixture,
+      schemaVersion: 0,
+      xp: 0,
+    });
+    expect(Object.keys(raw.doc.cards)).toHaveLength(12);
+    expect(Object.keys(raw.doc.lessons)).toHaveLength(13);
+  });
+
+  it('test 8b: a v2 document with sign cards loads untouched and survives a save', async () => {
+    const name = freshName();
+    const fixture = JSON.parse(v2FixtureText) as Progress;
+    await seed(name, { rev: 2, savedAt: 'x', doc: fixture });
+    const store = new ProgressStore(name);
+    await store.load(NOW);
+    expect(readyOf(store).repaired).toEqual([]);
+    expect(readyOf(store).progress).toEqual(fixture);
+    await store.commit(addXp(1));
+    const raw = (await stored(name)) as { doc: Progress };
+    expect(raw.doc.cards['treble-F#4']).toEqual(fixture.cards['treble-F#4']);
+    expect(raw.doc.cards['bass-C#3']).toEqual(fixture.cards['bass-C#3']);
+    expect(raw.doc.lessons['u26-l1']).toEqual(fixture.lessons['u26-l1']);
+  });
+
+  it('test 8c: a v3 document loads as `broken` ("newer version") and the stored record stays byte-for-byte unchanged', async () => {
+    const name = freshName();
+    const record = {
+      rev: 4,
+      savedAt: 'x',
+      doc: { ...(JSON.parse(v2FixtureText) as object), schemaVersion: 3 },
+    };
+    await seed(name, record);
+    const before = JSON.stringify(await stored(name));
+    const store = new ProgressStore(name);
+    await store.load(NOW);
+    const s = store.getState();
+    expect(s.status).toBe('broken');
+    expect(s.status === 'broken' && s.reason).toContain('newer version');
+    await expect(store.commit(addXp(1))).rejects.toThrow();
+    expect(JSON.stringify(await stored(name))).toBe(before);
+  });
+
+  it('test 8d: a tab already open cannot overwrite what a newer app version saved meanwhile (writes nothing, shows a save error)', async () => {
+    const name = freshName();
+    await seed(name, { rev: 2, savedAt: 'x', doc: JSON.parse(v2FixtureText) as object });
+    const store = new ProgressStore(name);
+    await store.load(NOW);
+    readyOf(store);
+    await seed(name, {
+      rev: 3,
+      savedAt: 'y',
+      doc: { ...(JSON.parse(v2FixtureText) as object), schemaVersion: 3 },
+    });
+    const before = JSON.stringify(await stored(name));
+    await store.commit(addXp(1));
+    expect(readyOf(store).saveError).toContain('newer version');
+    expect(JSON.stringify(await stored(name))).toBe(before);
   });
 });
 
@@ -433,6 +510,36 @@ describe('startFresh', () => {
     await expect(store.startFresh(NOW)).rejects.toThrow(/can be read again/);
     expect(await stored(name)).toEqual(good);
     expect(store.getState().status).toBe('broken');
+  });
+
+  it('never replaces progress saved by a newer app version (owner decision: reload instead)', async () => {
+    const name = freshName();
+    const newer = {
+      rev: 5,
+      savedAt: 'x',
+      doc: { ...(JSON.parse(v2FixtureText) as object), schemaVersion: 3 },
+    };
+    await seed(name, newer);
+    const store = new ProgressStore(name);
+    await store.load(NOW);
+    expect(store.getState().status).toBe('broken');
+    await expect(store.startFresh(NOW)).rejects.toThrow(/Reload the app/);
+    expect(await stored(name)).toEqual(newer);
+  });
+
+  it('refuses inside the transaction too when the record became "newer" after the tab gave up', async () => {
+    const name = freshName();
+    await seed(name, { rev: 3, savedAt: 'x', doc: 'garbage' });
+    const store = new ProgressStore(name);
+    await store.load(NOW);
+    const newer = {
+      rev: 4,
+      savedAt: 'y',
+      doc: { ...(JSON.parse(v2FixtureText) as object), schemaVersion: 3 },
+    };
+    await seed(name, newer);
+    await expect(store.startFresh(NOW)).rejects.toThrow(/Reload the app/);
+    expect(await stored(name)).toEqual(newer);
   });
 });
 

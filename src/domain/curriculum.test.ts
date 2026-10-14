@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_CARDS, type CardId } from './cards';
+import { NATURAL_CARDS, isNaturalCard, type CardId } from './cards';
 import { CONCEPT_CARD_IDS, CONCEPT_CARDS } from './content';
 import {
   CHECKPOINTS,
@@ -50,14 +50,22 @@ describe('curriculum self-check (SPEC 4.9)', () => {
   it('every pool card is a real card and pools have no duplicates', () => {
     for (const l of everyLesson) {
       expect(new Set(l.pool).size).toBe(l.pool.length);
-      for (const c of l.pool) expect(ALL_CARDS).toContain(c);
+      for (const c of l.pool) expect(NATURAL_CARDS).toContain(c);
     }
-    for (const cp of CHECKPOINTS) for (const c of cp.pool) expect(ALL_CARDS).toContain(c);
+    for (const cp of CHECKPOINTS) for (const c of cp.pool) expect(NATURAL_CARDS).toContain(c);
+  });
+  it('SPEC 8.1 self-check: every part-1 pool, newCards list and checkpoint pool is natural cards only', () => {
+    for (const l of everyLesson) {
+      for (const c of [...l.pool, ...l.newCards])
+        expect(isNaturalCard(c), `${l.id} ${c}`).toBe(true);
+    }
+    for (const cp of CHECKPOINTS)
+      for (const c of cp.pool) expect(isNaturalCard(c), cp.id).toBe(true);
   });
   it('a card is new at most once on the whole level-1 path, and all 34 are introduced', () => {
     const seen: CardId[] = lv1.flatMap((l) => l.newCards);
     expect(new Set(seen).size).toBe(seen.length);
-    expect([...seen].sort()).toEqual([...ALL_CARDS].sort());
+    expect([...seen].sort()).toEqual([...NATURAL_CARDS].sort());
   });
   it('every pool card was introduced in the same or an earlier lesson', () => {
     const introduced = new Set<CardId>();
@@ -258,7 +266,7 @@ describe('curriculum transcription (spot checks against CURRICULUM.md)', () => {
     ]);
     expect(findCheckpoint('cp-a')?.pool[0]).toBe('treble-C4');
     expect(findCheckpoint('cp-b')?.pool[0]).toBe('bass-G2');
-    expect(findCheckpoint('cp-c')?.pool).toEqual([...ALL_CARDS]);
+    expect(findCheckpoint('cp-c')?.pool).toEqual([...NATURAL_CARDS]);
   });
 });
 

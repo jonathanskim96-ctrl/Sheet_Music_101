@@ -166,7 +166,7 @@ export function frequency(n: Note): number;                     // 440 * 2 ** ((
 A card = one note in one clef, the unit of memory. `CardId = \`${Clef}-${Note}\``, e.g.
 `treble-G4`, `bass-C4`. Treble C4 and bass C4 are **different cards**.
 
-All 34 cards (`ALL_CARDS`, in this order; M8 appends the 12 sign cards of §8.1):
+All 34 natural cards (`NATURAL_CARDS`, in this order; `ALL_CARDS` appends the 12 sign cards of §8.1, built in M8):
 - treble: A3 B3 C4 D4 E4 F4 G4 A4 B4 C5 D5 E5 F5 G5 A5 B5 C6
 - bass:   C2 D2 E2 F2 G2 A2 B2 C3 D3 E3 F3 G3 A3 B3 C4 D4 E4
 
@@ -219,7 +219,7 @@ export const SLOW_MS = 6000;
 ### 4.6 Progress document (`domain/progress.ts`)
 
 ```ts
-export const CURRENT_SCHEMA_VERSION = 1; // 2 from M8 (§8.2)
+export const CURRENT_SCHEMA_VERSION = 2; // 1 → 2 in M8 (§8.2)
 export interface LessonRecord {
   timesCompleted: number;     // 0 means "completed by passing a checkpoint" (skipped)
   bestAccuracy: number;       // integer 0..100
@@ -227,7 +227,7 @@ export interface LessonRecord {
   lastCompletedDay: DayKey;
 }
 export interface Progress {
-  schemaVersion: 1;
+  schemaVersion: 2;
   createdDay: DayKey;
   settings: { soundOn: boolean; dailyGoal: 1 | 2 | 3 };
   xp: number;
@@ -266,13 +266,13 @@ export function checkProgress(raw: unknown, mode: CheckMode): CheckResult;
   integer and clamped into range, anything else (string, NaN, null…) becomes the default
   (0, or 1 for `box`/`dailyGoal`); other invalid scalars become their default from
   `emptyProgress`; record each fix as an issue. Top level not a plain object, or
-  `schemaVersion` not `1` → `progress: null`.
+  `schemaVersion` not `2` → `progress: null` (message `schemaVersion: must be 2`; older documents go through `upgradeToCurrent` first).
 
 Rules (both modes):
 
 | Field | Rule |
 |---|---|
-| schemaVersion | exactly `1` |
+| schemaVersion | exactly `2` |
 | createdDay, *Day fields | `isDayKey`; nullable ones may be `null` |
 | settings.soundOn | boolean |
 | settings.dailyGoal | 1, 2 or 3 |
@@ -282,7 +282,7 @@ Rules (both modes):
 | box | integer 1..5 |
 | card.correct | ≤ card.seen (repair: set to seen) |
 | lessons keys | match `/^[a-z0-9-]{1,32}$/`; at most 1000 entries. Unknown-but-well-formed ids are KEPT (forward compatibility) |
-| cards keys | must be in `ALL_CARDS` (repair: drop others); at most 1000 entries |
+| cards keys | must be in `ALL_CARDS` (the 46, §8.1) (repair: drop others); at most 1000 entries |
 | daysPracticed | array of DayKey, ≤ 50 000 entries; repair: drop invalid, sort, dedupe |
 | strings | ids ≤ 32 chars; DayKey exactly 10 chars |
 
@@ -294,7 +294,7 @@ The id regex excludes `_`, so `__proto__`/`constructor` can never become keys. B
 ```ts
 export function upgradeToCurrent(raw: unknown): { ok: true; value: unknown } | { ok: false; reason: 'newer' | 'unknown' };
 ```
-v1 has no steps yet (M8 adds step 1 → 2, §8.2). Rule for the future: a change to `Progress` = bump `CURRENT_SCHEMA_VERSION`,
+Step 1 → 2 exists since M8 (§8.2; no field changes). Rule for the future: a change to `Progress` = bump `CURRENT_SCHEMA_VERSION`,
 add a step `vN → vN+1` (append only, never edit an old step), add fixture
 `tests/fixtures/progress-vN+1.json`, keep all old fixtures loading. `reason: 'newer'` when
 `schemaVersion > CURRENT_SCHEMA_VERSION`.
@@ -469,7 +469,7 @@ All `(p: Progress, …) => Progress`, never mutate the input (tests deep-freeze 
 ### 4.15 Backup format (`domain/backup.ts`)
 
 ```json
-{ "app": "sheet-music-101", "kind": "backup", "schemaVersion": 1,
+{ "app": "sheet-music-101", "kind": "backup", "schemaVersion": 2,
   "exportedAt": "2026-10-12T20:15:00.000Z", "progress": { … } }
 ```
 - `serializeBackup(p, now): string` (pretty JSON, 2 spaces). File name
@@ -696,7 +696,10 @@ current progress, the Sheet stays open; owner decision 2026-10-13) / "Replace my
 
 **Broken-data screen** (store `broken`): Mascot (encouraging), "We couldn't read your saved
 progress.", buttons "Download the saved data" (raw record as JSON file), "Try again" (reload),
-"Start fresh" (same two-step Sheet flow as Start over).
+"Start fresh" (same two-step Sheet flow as Start over). **Exception (owner, 2026-10-14):** when the
+reason is "saved by a newer version of the app" (`MSG_NEWER`), the screen offers only "Download the
+saved data" and "Reload the app" (no "Try again", no "Start fresh"), and `startFresh` refuses such a
+record (also inside its transaction): progress a newer version can read is never replaced.
 
 **Gallery** (dev/e2e only): every card on its staff, grand staff samples, keyboard states,
 all Mascot moods, buttons, FeedbackBars. Used for visual QA screenshots.

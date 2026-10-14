@@ -215,8 +215,8 @@ export function checkProgress(raw: unknown, mode: CheckMode): CheckResult {
   if (!isPlainObject(raw)) {
     return { progress: null, issues: ['The saved data is not a progress document.'] };
   }
-  if (get(raw, 'schemaVersion') !== 1) {
-    return { progress: null, issues: ['schemaVersion: must be 1'] };
+  if (get(raw, 'schemaVersion') !== 2) {
+    return { progress: null, issues: ['schemaVersion: must be 2'] };
   }
 
   let createdDay: DayKey;
@@ -243,7 +243,7 @@ export function checkProgress(raw: unknown, mode: CheckMode): CheckResult {
   const totals = section(ctx, get(raw, 'totals'), 'totals');
 
   const progress: Progress = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     createdDay,
     settings: {
       soundOn: bool(ctx, get(settings, 'soundOn'), 'settings.soundOn', defaults.settings.soundOn),

@@ -1,4 +1,4 @@
-import { cardId, parseCardId, type CardId } from './cards';
+import { isCardId, isNaturalCard, type CardId } from './cards';
 import { type ConceptCardId } from './content';
 import type { CheckpointDef, LessonDef, LessonId, QuestionKind } from './curriculum';
 import type { DayKey } from './days';
@@ -69,6 +69,9 @@ function buildNoteLesson(
   today: DayKey,
   rand: () => number,
 ): Question[] {
+  // No lesson uses 'rhythm' yet; the part-2 builder (M11) will own those.
+  const render = def.render;
+  if (render === 'rhythm') throw new Error(`${def.id}: rhythm lessons are not built yet`);
   const q = def.questionCount;
   const pool = def.pool;
   // The spec cap, tightened to half the slots so a repeat-free order always exists.
@@ -100,7 +103,7 @@ function buildNoteLesson(
     const first = !seen.has(card);
     seen.add(card);
     const kind = def.level === 1 && first ? 'name-note' : pickKind(def.mix, rand);
-    return noteQuestion(kind, card, def.render);
+    return noteQuestion(kind, card, render);
   });
 }
 
@@ -202,10 +205,10 @@ export function buildLesson(def: LessonDef, p: Progress, today: DayKey, seed: nu
 /** Builds a 10-question review of cards the learner has met, weakest and most overdue first. */
 export function buildReview(p: Progress, today: DayKey, seed: number): LessonPlan {
   const rand = mulberry32(seed);
-  const known = Object.entries(p.cards).flatMap(([id, state]) => {
-    const parts = parseCardId(id);
-    return parts ? [{ id: cardId(parts.clef, parts.note), state }] : [];
-  });
+  // Course part 1 reviews only natural cards; sign cards join in with the part-2 mixes (SPEC 8.9).
+  const known = Object.entries(p.cards).flatMap(([id, state]) =>
+    isCardId(id) && isNaturalCard(id) ? [{ id, state }] : [],
+  );
   if (known.length < 3) throw new Error('Review needs at least 3 cards');
 
   const byPriority = (a: (typeof known)[number], b: (typeof known)[number]): number =>

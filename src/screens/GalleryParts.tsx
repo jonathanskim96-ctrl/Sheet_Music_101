@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ALL_CARDS, parseCardId } from '../domain/cards';
+import { NATURAL_CARDS, parseCardId } from '../domain/cards';
 import { letterOf, type Note } from '../domain/notes';
 import { Staff, type NoteState, type StaffNote } from '../notation/Staff';
 import type { ButtonVariant } from '../ui/Button';
@@ -39,7 +39,7 @@ export function Section({
 export function CardGrid({ clef }: { clef: 'treble' | 'bass' }) {
   return (
     <div className={styles['grid']}>
-      {ALL_CARDS.map((id) => {
+      {NATURAL_CARDS.map((id) => {
         const card = parseCardId(id);
         if (card?.clef !== clef) return null;
         return (
