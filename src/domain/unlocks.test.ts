@@ -1,18 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { UNITS, allLessonIds, levelLessons, pathLessons } from './curriculum';
+import { CHECKPOINTS, UNITS, allLessonIds, levelLessons, pathLessons } from './curriculum';
 import { emptyProgress, type LessonRecord, type Progress } from './progress';
 import type { CardState } from './srs';
 import {
-  MAX_UNIT_M4,
+  checkpointReached,
   currentLesson,
-  currentPlayableLesson,
   isAvailable,
   isCompleted,
   isLevelAvailable,
-  isPlayable,
-  isReviewPlayable,
   keyboardUnlocked,
-  levelsPlayable,
+  nextLevelLesson,
   reviewAvailable,
   unitLevel,
   unitLevelCount,
@@ -227,61 +224,40 @@ describe('coverage of every id', () => {
   });
 });
 
-describe('M4 gate (TODO M6: remove with MAX_UNIT_M4)', () => {
-  const upTo = (lastId: string): Progress => {
-    const p = emptyProgress('2026-10-01');
-    for (const l of pathLessons()) {
-      p.lessons[l.id] = {
-        timesCompleted: 1,
-        bestAccuracy: 100,
-        firstCompletedDay: '2026-10-01',
-        lastCompletedDay: '2026-10-01',
-      };
-      if (l.id === lastId) break;
-    }
-    return p;
-  };
-
-  it('allows units 1–4 level 1 in order and nothing else', () => {
-    const fresh = emptyProgress('2026-10-01');
-    expect(MAX_UNIT_M4).toBe(4);
-    expect(isPlayable(fresh, 'u1-l1')).toBe(true);
-    expect(isPlayable(fresh, 'u1-l2')).toBe(false);
-    expect(currentPlayableLesson(fresh)?.id).toBe('u1-l1');
-    expect(isPlayable(fresh, 'nope')).toBe(false);
-    expect(isPlayable(fresh, 'cp-a')).toBe(false);
+describe('checkpointReached', () => {
+  const cp = (id: string) => CHECKPOINTS.find((c) => c.id === id) as (typeof CHECKPOINTS)[number];
+  it('is false until every lesson of the unit before the checkpoint is done', () => {
+    expect(checkpointReached(done(), cp('cp-a'))).toBe(false);
+    expect(checkpointReached(done(...upTo('u4-l4')), cp('cp-a'))).toBe(false);
+    expect(checkpointReached(done(...upTo('u4-l5')), cp('cp-a'))).toBe(true);
   });
-
-  it('stops after unit 4 even though unit 5 is available in the domain', () => {
-    const p = upTo('u4-l5');
-    expect(isAvailable(p, 'u5-l1')).toBe(true);
-    expect(isPlayable(p, 'u5-l1')).toBe(false);
-    expect(currentPlayableLesson(p)).toBeNull();
-    expect(isPlayable(p, 'u4-l5')).toBe(true); // replay
+  it('looks only at its own unit: cp-b needs unit 7, cp-c needs unit 10', () => {
+    expect(checkpointReached(done(...upTo('u7-l3')), cp('cp-b'))).toBe(false);
+    expect(checkpointReached(done(...upTo('u7-l4')), cp('cp-b'))).toBe(true);
+    expect(checkpointReached(done(...upTo('u10-l4')), cp('cp-c'))).toBe(false);
+    expect(checkpointReached(done(...upTo('u10-l5')), cp('cp-c'))).toBe(true);
   });
-
-  it('does not offer level 2 or 3 lessons yet', () => {
-    const p = upTo('u4-l5');
-    expect(isAvailable(p, 'u2-lv2-a')).toBe(true);
-    expect(isPlayable(p, 'u2-lv2-a')).toBe(false);
+  it('passing a checkpoint counts: its skipped lessons are completed records', () => {
+    expect(checkpointReached(done(...level1Of(4)), cp('cp-a'))).toBe(true);
   });
+});
 
-  it('keeps practice and levels 2–3 hidden even when the domain would allow them', () => {
-    const p = upTo('u4-l5');
-    for (const id of ['treble-C4', 'treble-G4', 'treble-C5']) {
-      p.cards[id as 'treble-C4'] = {
-        box: 1,
-        lastSeenDay: '2026-10-01',
-        lastPromotedDay: null,
-        seen: 1,
-        correct: 1,
-        avgMs: 1000,
-      };
-    }
-    expect(reviewAvailable(p)).toBe(true);
-    expect(isReviewPlayable(p)).toBe(false);
-    expect(keyboardUnlocked(p)).toBe(true);
-    expect(levelsPlayable()).toBe(false);
+describe('nextLevelLesson', () => {
+  it('opens lesson a first, then b, then a again when both are done', () => {
+    const base = upTo('u4-l5');
+    expect(nextLevelLesson(done(...base), 2, 2)?.id).toBe('u2-lv2-a');
+    expect(nextLevelLesson(done(...base, 'u2-lv2-a'), 2, 2)?.id).toBe('u2-lv2-b');
+    expect(nextLevelLesson(done(...base, 'u2-lv2-b'), 2, 2)?.id).toBe('u2-lv2-a');
+    expect(nextLevelLesson(done(...base, 'u2-lv2-a', 'u2-lv2-b'), 2, 2)?.id).toBe('u2-lv2-a');
+  });
+  it('works the same for level 3', () => {
+    const base = [...upTo('u4-l5'), 'u2-lv2-a', 'u2-lv2-b'];
+    expect(nextLevelLesson(done(...base), 2, 3)?.id).toBe('u2-lv3-a');
+    expect(nextLevelLesson(done(...base, 'u2-lv3-a'), 2, 3)?.id).toBe('u2-lv3-b');
+  });
+  it('is null for units without levels 2 and 3', () => {
+    expect(nextLevelLesson(done(), 1, 2)).toBeNull();
+    expect(nextLevelLesson(done(), 11, 3)).toBeNull();
   });
 });
 

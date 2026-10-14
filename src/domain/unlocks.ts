@@ -1,9 +1,9 @@
 import {
   CHECKPOINTS,
-  UNITS,
   findLesson,
   levelLessons,
   pathLessons,
+  type CheckpointDef,
   type LessonDef,
 } from './curriculum';
 import type { Progress } from './progress';
@@ -58,6 +58,20 @@ export function isLevelAvailable(p: Progress, unit: number, level: 2 | 3): boole
   return first !== undefined && isAvailable(p, first.id);
 }
 
+/**
+ * The lesson a "Level 2"/"Level 3" button opens: the first lesson of that level not completed
+ * yet, or lesson a when both are done. Null when the unit has no such level.
+ */
+export function nextLevelLesson(p: Progress, unit: number, level: 2 | 3): LessonDef | null {
+  const lessons = levelLessons(unit, level);
+  return lessons.find((l) => !isCompleted(p, l.id)) ?? lessons[0] ?? null;
+}
+
+/** True once the learner has finished the unit before the checkpoint ("Test yourself", else "Jump ahead"). */
+export function checkpointReached(p: Progress, cp: CheckpointDef): boolean {
+  return allCompleted(p, level1Of(cp.afterUnit));
+}
+
 /** Review needs at least three cards the learner has met. */
 export function reviewAvailable(p: Progress): boolean {
   return Object.keys(p.cards).length >= 3;
@@ -68,42 +82,7 @@ export function currentLesson(p: Progress): LessonDef | null {
   return PATH.find((l) => !isCompleted(p, l.id) && isAvailable(p, l.id)) ?? null;
 }
 
-/**
- * TODO(M6): remove this gate. Until the rest of the course is playable (M6), only the level-1
- * lessons of units 1–4 can be started.
- */
-export const MAX_UNIT_M4 = 4;
-
-/** Whether the lesson can be started in this build: available, level 1, and in units 1–MAX_UNIT_M4. */
-export function isPlayable(p: Progress, id: string): boolean {
-  const lesson = findLesson(id);
-  return (
-    lesson !== undefined && lesson.level === 1 && lesson.unit <= MAX_UNIT_M4 && isAvailable(p, id)
-  );
-}
-
-/** TODO(M6): remove with the gate. The next playable level-1 lesson, or null. */
-export function currentPlayableLesson(p: Progress): LessonDef | null {
-  return PATH.find((l) => !isCompleted(p, l.id) && isPlayable(p, l.id)) ?? null;
-}
-
 /** How many levels a unit has: 3 for units with level-2/3 lessons, else 1 (units 1 and 11). */
 export function unitLevelCount(unit: number): 1 | 3 {
   return levelLessons(unit, 2).length > 0 ? 3 : 1;
-}
-
-/**
- * TODO(M6): remove with the gate. Practice (review) is part of M6, so the "Practise" button and
- * `#/review` stay hidden until every unit is playable.
- */
-export function isReviewPlayable(p: Progress): boolean {
-  return MAX_UNIT_M4 >= UNITS.length && reviewAvailable(p);
-}
-
-/**
- * TODO(M6): remove with the gate. Levels 2–3 (and so the keyboard-unlocked message that points
- * to them) are playable only from M6.
- */
-export function levelsPlayable(): boolean {
-  return MAX_UNIT_M4 >= UNITS.length;
 }

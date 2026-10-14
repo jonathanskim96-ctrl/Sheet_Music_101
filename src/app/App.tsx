@@ -1,8 +1,8 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { setAudioErrorHandler } from '../audio/synth';
 import { somethingWentWrong } from '../domain/content';
-import { findLesson } from '../domain/curriculum';
-import { isPlayable } from '../domain/unlocks';
+import { findCheckpoint, findLesson } from '../domain/curriculum';
+import { isAvailable, reviewAvailable } from '../domain/unlocks';
 import { ProgressProvider, createProgressStore, useProgress } from '../data/ProgressContext';
 import { UpdateBanner } from '../pwa/UpdateBanner';
 import { BrokenDataScreen } from '../screens/BrokenDataScreen';
@@ -77,15 +77,19 @@ function Shell() {
   const loaded = state.status === 'ready' || state.status === 'unavailable';
   const progress = loaded ? state.progress : null;
 
-  // Routes the build can't show (yet) go home; so does a locked or unknown lesson (SPEC 7.2).
+  // A locked or unknown lesson, or a review with too few cards, goes home (SPEC 7.2).
   let route: Route = parsed;
   if (parsed.name === 'gallery' && !GalleryScreen) route = { name: 'home' };
   else if (parsed.name !== 'gallery') {
     if (progress && !progress.flags.welcomeSeen) route = { name: 'home' };
     else if (parsed.name === 'lesson') {
-      if (progress && !isPlayable(progress, parsed.lessonId)) route = { name: 'home' };
-    } else if (parsed.name === 'review' || parsed.name === 'checkpoint') {
-      route = { name: 'home' }; // arrive in M6
+      // isAvailable also says yes to checkpoint ids, which have their own route.
+      const known = findLesson(parsed.lessonId) !== undefined;
+      if (!known || (progress && !isAvailable(progress, parsed.lessonId))) route = { name: 'home' };
+    } else if (parsed.name === 'review') {
+      if (progress && !reviewAvailable(progress)) route = { name: 'home' };
+    } else if (parsed.name === 'checkpoint') {
+      if (!findCheckpoint(parsed.checkpointId)) route = { name: 'home' };
     }
   }
   const hash = routeToHash(route);
@@ -125,9 +129,19 @@ function Shell() {
   if (!progress?.flags.welcomeSeen) screen = <WelcomeScreen />;
   else if (route.name === 'lesson') {
     const def = findLesson(route.lessonId);
-    screen = def ? <LessonScreen key={def.id} def={def} /> : <PathScreen />;
+    screen = def ? <LessonScreen key={def.id} source={{ kind: 'lesson', def }} /> : <PathScreen />;
     banner = def !== undefined;
-  } else if (route.name === 'progress') screen = <ProgressScreen />;
+  } else if (route.name === 'checkpoint') {
+    const checkpoint = findCheckpoint(route.checkpointId);
+    screen = checkpoint ? (
+      <LessonScreen key={checkpoint.id} source={{ kind: 'checkpoint', checkpoint }} />
+    ) : (
+      <PathScreen />
+    );
+    banner = checkpoint !== undefined;
+  } else if (route.name === 'review')
+    screen = <LessonScreen key="review" source={{ kind: 'review' }} />;
+  else if (route.name === 'progress') screen = <ProgressScreen />;
   else if (route.name === 'settings') screen = <SettingsScreen />;
   else {
     screen = <PathScreen />;

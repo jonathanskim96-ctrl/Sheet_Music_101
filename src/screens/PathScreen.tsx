@@ -1,20 +1,21 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useToast } from '../app/toasts';
 import { navigate } from '../app/router';
 import { KEYBOARD_UNLOCKED, TOASTS, somethingWentWrong } from '../domain/content';
 import { dayKeyOf } from '../domain/days';
-import { UNITS, pathLessons } from '../domain/curriculum';
+import { CHECKPOINTS, UNITS, pathLessons } from '../domain/curriculum';
 import { backupReminderDue, installCardSnoozed } from '../domain/nudges';
 import { planFlag } from '../domain/planners';
 import { lessonsDoneToday } from '../domain/progress';
 import {
-  MAX_UNIT_M4,
-  currentPlayableLesson,
+  currentLesson,
+  checkpointReached,
   isCompleted,
-  isPlayable,
-  isReviewPlayable,
+  isLevelAvailable,
+  isAvailable,
   keyboardUnlocked,
-  levelsPlayable,
+  nextLevelLesson,
+  reviewAvailable,
   unitLevel,
   unitLevelCount,
 } from '../domain/unlocks';
@@ -24,6 +25,7 @@ import { Keyboard } from '../notation/Keyboard';
 import { canOfferInstall, promptInstall, useInstallInfo } from '../pwa/install';
 import { BackupReminderCard } from '../ui/BackupReminderCard';
 import { Button } from '../ui/Button';
+import { CheckpointNode } from '../ui/CheckpointNode';
 import { DailyGoalRing } from '../ui/DailyGoalRing';
 import { BarChart3, CalendarDays, Music, Settings, Star } from '../ui/icons';
 import { InstallCard } from '../ui/InstallCard';
@@ -84,11 +86,11 @@ function PathCard() {
   return null;
 }
 
-/** "New: piano keyboard!" once the keyboard unlocks (only when levels 2–3 are playable, M6). */
+/** "New: piano keyboard!", shown once when the keyboard unlocks. */
 function KeyboardUnlockedSheet() {
   const progress = useLoadedProgress();
   const commit = useCommit();
-  const open = levelsPlayable() && keyboardUnlocked(progress) && !progress.flags.keyboardUnlockSeen;
+  const open = keyboardUnlocked(progress) && !progress.flags.keyboardUnlockSeen;
   const dismiss = () => {
     void commit((p) => planFlag(p, 'keyboardUnlockSeen', true));
   };
@@ -107,13 +109,13 @@ const ZIGZAG = [0, 48, 72, 48, 0, -48, -72, -48];
 // The wave carries on from one unit to the next, so each lesson's place in the whole path decides its shift.
 const PATH_INDEX = new Map(pathLessons().map((l, i) => [l.id, i]));
 
-/** Home: the lesson path (units 1–4 for now), with XP, days practised and the daily goal on top. */
+/** Home: the lesson path, with XP, days practised and the daily goal on top. */
 export function PathScreen() {
   const progress = useLoadedProgress();
   const now = useNow();
   const toast = useToast();
   const currentRef = useRef<HTMLButtonElement>(null);
-  const current = currentPlayableLesson(progress);
+  const current = currentLesson(progress);
   const today = dayKeyOf(now());
 
   useEffect(() => {
@@ -169,7 +171,7 @@ export function PathScreen() {
       <PathCard />
 
       <main className={styles['path']}>
-        {isReviewPlayable(progress) && (
+        {reviewAvailable(progress) && (
           <div className={styles['practise']}>
             <Button
               variant="secondary"
@@ -183,45 +185,72 @@ export function PathScreen() {
             </Button>
           </div>
         )}
-        {UNITS.filter((u) => u.n <= MAX_UNIT_M4).map((unit) => (
-          <section key={unit.n} className={styles['unit']} aria-label={`Unit ${String(unit.n)}`}>
-            <UnitHeader
-              n={unit.n}
-              title={unit.title}
-              subtitle={unit.subtitle}
-              color={unit.color}
-              stars={{ level: unitLevel(progress, unit.n), max: unitLevelCount(unit.n) }}
-            />
-            {unit.lessons.map((lesson) => {
-              const offset = ZIGZAG[(PATH_INDEX.get(lesson.id) ?? 0) % ZIGZAG.length] ?? 0;
-              const isCurrent = current?.id === lesson.id;
-              const state: BubbleState = isCompleted(progress, lesson.id)
-                ? 'completed'
-                : isCurrent
-                  ? 'current'
-                  : 'locked';
-              return (
-                <LessonBubble
-                  key={lesson.id}
-                  lessonId={lesson.id}
-                  title={lesson.title}
-                  state={state}
-                  color={unit.color}
-                  offset={offset}
-                  bubbleRef={isCurrent ? currentRef : undefined}
-                  onPress={() => {
-                    if (isPlayable(progress, lesson.id)) {
-                      navigate({ name: 'lesson', lessonId: lesson.id });
-                    } else {
-                      toast(TOASTS.lockedLesson);
-                    }
-                  }}
-                />
-              );
-            })}
-          </section>
+        {UNITS.map((unit) => (
+          <Fragment key={unit.n}>
+            <section className={styles['unit']} aria-label={`Unit ${String(unit.n)}`}>
+              <UnitHeader
+                n={unit.n}
+                title={unit.title}
+                subtitle={unit.subtitle}
+                color={unit.color}
+                stars={{ level: unitLevel(progress, unit.n), max: unitLevelCount(unit.n) }}
+                levels={([2, 3] as const).flatMap((level) => {
+                  const target = isLevelAvailable(progress, unit.n, level)
+                    ? nextLevelLesson(progress, unit.n, level)
+                    : null;
+                  return target === null
+                    ? []
+                    : [
+                        {
+                          level,
+                          onPress: () => {
+                            navigate({ name: 'lesson', lessonId: target.id });
+                          },
+                        },
+                      ];
+                })}
+              />
+              {unit.lessons.map((lesson) => {
+                const offset = ZIGZAG[(PATH_INDEX.get(lesson.id) ?? 0) % ZIGZAG.length] ?? 0;
+                const isCurrent = current?.id === lesson.id;
+                const state: BubbleState = isCompleted(progress, lesson.id)
+                  ? 'completed'
+                  : isCurrent
+                    ? 'current'
+                    : 'locked';
+                return (
+                  <LessonBubble
+                    key={lesson.id}
+                    lessonId={lesson.id}
+                    title={lesson.title}
+                    state={state}
+                    color={unit.color}
+                    offset={offset}
+                    bubbleRef={isCurrent ? currentRef : undefined}
+                    onPress={() => {
+                      if (isAvailable(progress, lesson.id)) {
+                        navigate({ name: 'lesson', lessonId: lesson.id });
+                      } else {
+                        toast(TOASTS.lockedLesson);
+                      }
+                    }}
+                  />
+                );
+              })}
+            </section>
+            {CHECKPOINTS.filter((cp) => cp.afterUnit === unit.n).map((cp) => (
+              <CheckpointNode
+                key={cp.id}
+                id={cp.id}
+                title={cp.title}
+                reached={checkpointReached(progress, cp)}
+                onPress={() => {
+                  navigate({ name: 'checkpoint', checkpointId: cp.id });
+                }}
+              />
+            ))}
+          </Fragment>
         ))}
-        <p className={styles['more']}>More units are coming soon.</p>
       </main>
       <KeyboardUnlockedSheet />
     </div>

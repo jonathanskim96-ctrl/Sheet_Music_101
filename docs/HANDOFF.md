@@ -3,7 +3,7 @@
 _Read this first in every new session. Keep it short and current._
 
 ## Where we are
-- **Phase:** M1 (scaffold, guardrails, CI, deploy) **merged and live**; M1 review fixes merged (PR #3). **M2 (domain core: pure logic + tests) merged** (PR #4, 2026-10-13, after the Opus review and its fixes). No screen changed in M2, so the live app looks the same. **M3 (look, sound, notation, Gallery) merged** (PR #6, 2026-10-13; owner approved the look). The Opus review fixes and the taller keyboard came after that merge and go in through their own PR (branch `claude/tender-bohr-dsybzk`). **M4 (saving + first playable lessons, units 1–4) merged** (PR #9, 2026-10-13; it also carries the stacked-Sheets fix, so PR #8 is redundant and can be closed). The Opus review of M4 came after the merge: small fixes are in a follow-up PR (branch `claude/review-m4-pull-request-1kg4g2`), and the larger items are listed in that PR for a Sonnet fix session. **M5 (progress, settings, backups, safety nets) merged** (PR #14, 2026-10-13, after the Opus review and its fixes). **iPhone sound hardening merged** (PR #15, 2026-10-13). **Next milestone: M6** (full curriculum). **Schema version 1 is now frozen**: once M4 is merged real progress exists on the owner's phone, so any change to `Progress` needs a schema bump and an upgrade step (SPEC 4.8).
+- **Phase:** M1 (scaffold, guardrails, CI, deploy) **merged and live**; M1 review fixes merged (PR #3). **M2 (domain core: pure logic + tests) merged** (PR #4, 2026-10-13, after the Opus review and its fixes). No screen changed in M2, so the live app looks the same. **M3 (look, sound, notation, Gallery) merged** (PR #6, 2026-10-13; owner approved the look). The Opus review fixes and the taller keyboard came after that merge and go in through their own PR (branch `claude/tender-bohr-dsybzk`). **M4 (saving + first playable lessons, units 1–4) merged** (PR #9, 2026-10-13; it also carries the stacked-Sheets fix, so PR #8 is redundant and can be closed). The Opus review of M4 came after the merge: small fixes are in a follow-up PR (branch `claude/review-m4-pull-request-1kg4g2`), and the larger items are listed in that PR for a Sonnet fix session. **M5 (progress, settings, backups, safety nets) merged** (PR #14, 2026-10-13, after the Opus review and its fixes). **iPhone sound hardening merged** (PR #15, 2026-10-13). **M6 (full curriculum) built, PR open, waiting for the Opus review.** Next milestone after it: M7. **Schema version 1 is now frozen**: once M4 is merged real progress exists on the owner's phone, so any change to `Progress` needs a schema bump and an upgrade step (SPEC 4.8).
 - Repo: `jonathanskim96-ctrl/Sheet_Music_101`. App name: **Sheet Music 101**.
 - Live URL (live; deployed from `main` by CI): https://jonathanskim96-ctrl.github.io/Sheet_Music_101/
 - How the build works: `docs/build/README.md` (milestones, session prompts, owner steps).
@@ -72,12 +72,25 @@ keeps the recommended option until the owner says otherwise.
 - [ ] Add the app to the home screen on each phone (SETUP sections 6–7) and confirm the icon.
 
 ## Next step
-1. M5 is **merged** (PR #14); its review questions were decided (see the Decisions table: restore preview offers "Save a backup first"; chart tap targets accepted). Next: **M6** with the execution prompt in `docs/build/README.md`.
-2. iPhone sound hardening **merged** (PR #15, 2026-10-13, after the Opus review and the 300 ms rebuild fix). Owner check on **Chrome (Windows)**: Play sound yes, ding yes, still works after locking. **Not yet checked on iPhone**: the owner will report back if anything is wrong there; until then, treat it as working. Next: M6.
+0. **M6** is built: every lesson, level 2/3 lesson, practice and the three checkpoints are playable. Next: the Opus review of the M6 PR (prompt in `docs/build/README.md`), then M7.
+1. M5 is **merged** (PR #14); its review questions were decided (see the Decisions table: restore preview offers "Save a backup first"; chart tap targets accepted).
+2. iPhone sound hardening **merged** (PR #15, 2026-10-13, after the Opus review and the 300 ms rebuild fix). Owner check on **Chrome (Windows)**: Play sound yes, ding yes, still works after locking. **Not yet checked on iPhone**: the owner will report back if anything is wrong there; until then, treat it as working.
 3. Owner: close PR #8 if still open (already in `main`).
 
+### M6 choices the spec left open (owner may veto)
+- Checkpoint node: "Jump ahead" until every level-1 lesson of the unit before it is done (`checkpointReached`), then "Test yourself". It stays "Test yourself" after a pass. Trophy card with the checkpoint's title; no other states.
+- Level buttons: both "Level 2" and "Level 3" show once available (so level 2 stays replayable after level 3 opens). White pill buttons inside the unit header.
+- find-key-letter feedback always says "Any {Letter} key works." (also when the answer was right); step-skip feedback always names the move ("It's a skip up: line to line.") (also when right). Both are an extra line under the usual feedback.
+- find-key feedback highlights the exact key matching the note on the staff (green) and the tapped one if wrong (orange). A tapped black key cannot be shown (the keyboard only reports "black").
+- find-on-staff: the staff always has two note columns so the learner's note (left) and the nearest right position (right, green) do not jump; the position sentence in the feedback describes the nearest right note shown. ▲ ▼ are disabled until a note is placed. Aria names "Move the note up/down".
+- Step-skip with 4 buttons is a 2 x 2 grid (Step up, Step down / Skip up, Skip down).
+- On a 320 px wide phone the feedback bar covers the second row of the 2 x 2 buttons (already answered).
+- Review and checkpoint routes redirect home when not available (review needs 3 cards).
+- Fixed on the way: a tapped piano key kept the browser's focus paint (amber) over its green/orange result.
+- Test coverage not possible in the cloud: real touch on the tap bands (about 10 px tall each; the nudge buttons are the fallback).
+
 ### M5 choices the spec left open (owner may veto)
-- Gated until M6 with the `MAX_UNIT_M4` flag (code is there, hidden): the "Practise" button (`isReviewPlayable`), the "New: piano keyboard!" sheet (`levelsPlayable`, it points to Level 2, which is M6). Not built yet: the "Level 2/3" buttons on unit headers and the checkpoint nodes (both open M6 screens).
+- (Done in M6: the `MAX_UNIT_M4` gate is gone; Practise, the keyboard sheet, Level buttons and checkpoint nodes are live.)
 - Small texts the spec doesn't give: section headings in Settings ("Sound", "Daily goal", "Install the app", "Backup", "Storage", "Start over", "About"), the About line "Sheet Music 101 version 0.1.0 (build …)", Progress headings ("Notes you know", "Units"), stat labels ("Total XP", "Days practised", "Lessons completed", "First-try accuracy"), mastery words ("New", "Learning", "Almost", "Known"), the chart hint "Tap a note to see how well you know it.", chart names for cards without a nickname ("Treble E", "Bass A"), "Last backup: 1 day ago", "A new version is ready." [Reload] (spec), and a back arrow ("Back") on Progress and Settings.
 - "Lessons completed" (Progress) counts lesson records, not checkpoints (same as the backup preview); first-try accuracy shows "–" before any answer.
 - Start over, first sheet: "Save backup" moves on to the second sheet only if a file was actually saved (a closed share sheet stays on the first).
@@ -86,7 +99,7 @@ keeps the recommended option until the owner says otherwise.
 - The store's `startFresh` now opens the database itself after a failed read (the HANDOFF note for M5); it still refuses inside its transaction if the record has become readable.
 
 ### M4 choices the spec left open (owner may veto)
-- Path shows only units 1–4 (the playable ones) and a line "More units are coming soon." under them. A temporary `MAX_UNIT_M4 = 4` gate lives in `domain/unlocks.ts` as `isPlayable` / `currentPlayableLesson` (the domain's own `isAvailable` is unchanged, so the M2 tests still describe the whole course). M6 removes it (TODO comment in the code).
+- (Removed in M6.) Path showed only units 1–4 (the playable ones) and a line "More units are coming soon." under them. A temporary `MAX_UNIT_M4 = 4` gate lives in `domain/unlocks.ts` as `isPlayable` / `currentPlayableLesson` (the domain's own `isAvailable` is unchanged, so the M2 tests still describe the whole course). M6 removes it (TODO comment in the code).
 - Progress and Settings are "Coming soon" screens; `#/review` and `#/checkpoint/*` go home until M6.
 - A thin warning banner for "browser won't save" and "save failed, Try again" is shown at the top of every screen already (needed by the M4 e2e test); M5 may restyle it as the Path cards.
 - If saved data can't be read, a minimal screen says so with "Try again" (it never touches the data); M5 builds the full broken-data screen.

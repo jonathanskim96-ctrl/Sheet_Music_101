@@ -174,7 +174,12 @@ export function Staff({
           const y = yOf(stave.bottomLineY, p);
           const state = n.state ?? 'normal';
           return (
-            <g key={`${n.clef}-${n.note}-${String(i)}`} className={STATE_CLASS[state]}>
+            <g
+              key={`${n.clef}-${n.note}-${String(i)}`}
+              className={STATE_CLASS[state]}
+              data-note-state={state}
+              data-note-position={p}
+            >
               {noteTaps?.selected === i && (
                 <circle className={styles['selected']} cx={x} cy={y} r={S * 1.3} />
               )}

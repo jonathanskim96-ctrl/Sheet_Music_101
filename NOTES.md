@@ -280,3 +280,30 @@
 - Mutation checks (break, run `synth.test.ts`, restore): (a) no `rebuildUsed` check: 3 tests fail; (b) `allowRebuild` does
   nothing: 2 fail; (c) no `allowRebuild()` call in `installUnlock`: 1 fails. All restored, 38 pass.
 - Not verified: real iPhone/Bluetooth sound (owner's phone check in HANDOFF).
+
+## 2026-10-13: M6 executed (full curriculum), Sonnet session
+- Built, one commit per step: (1) FindKey view, (2) FindOnStaff view (new tested helper `nearestCorrectPosition`),
+  (3) StepSkip view (new tested helper `stepSkipExplanation`), (4) Level 2/3 buttons (`nextLevelLesson`),
+  (5) practice route (`LessonScreen` now takes a `source`: lesson, review or checkpoint), (6) checkpoint nodes and route
+  (`checkpointReached`), (7) `MAX_UNIT_M4` and its helpers and test removed, (8) `e2e/curriculum.spec.ts`,
+  (9) M6 screenshots in `e2e/screens.spec.ts`. `Progress` was not touched (schema stays 1); `synth.ts` untouched.
+- Long loop test (all 43 + 36 lessons and 3 checkpoints, phone project) takes about 5.5 minutes.
+- Gotchas:
+  - Playwright caught that the checkpoint screen was not yet rendered by `App` (the route existed, the screen did not).
+  - Seeding progress past `u4-l5` opens the one-time "New: piano keyboard!" sheet; its backdrop blocks clicks. E2E seeds that
+    start on the Path set `flags.keyboardUnlockSeen = true`.
+  - Visual QA found a real bug: after tapping a piano key, Chromium painted its focus colour (amber) over the result colour
+    (green/orange) of the tapped key and its neighbour. Keys now call `blur()` on click. Tested via `document.activeElement`.
+- Visual QA (STANDARDS 7): opened every `m6-*` screenshot for light and dark; also 320 px for Level buttons and the step-skip and
+  find-on-staff feedback. On a 320 px wide screen the feedback bar covers the second row of the 2 x 2 answer buttons (the
+  answer is already given; the page scrolls). Accepted, listed in HANDOFF.
+- Not verified: a real phone (touch behaviour of the tap bands, 17 bands of about 10 px each, nudge buttons compensate),
+  and sound on iPhone (unchanged from before).
+
+## 2026-10-14: M6 Opus review, small fixes
+- Find-on-staff wrong answer: the title ("It's Treble C.") and the landmark hint now name the green note that is drawn
+  (the nearest same-letter note, maybe another octave), like the position sentence already did. Before, a tap near C5 for
+  card treble-C4 said "It's Middle C." under a green note in space 3. The e2e test now taps next to the other octave.
+- `#/lesson/cp-a` showed the Path under a wrong address (`isAvailable` says yes to checkpoint ids); it now redirects to `#/`.
+  App uses `findCheckpoint` instead of its own lookups. The nudge bounds come from `TAP_POSITIONS`.
+- Larger items are listed on the PR for a Sonnet fix session.

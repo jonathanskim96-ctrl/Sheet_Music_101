@@ -17,7 +17,10 @@ import {
   keyboardLetterPrompt,
   promptFor,
   saveFailedText,
+  anyKeyWorks,
+  stepSkipExplanation,
 } from './content';
+import type { Note } from './notes';
 import type { Question } from './questions';
 
 /** Every string value anywhere in the content module's data exports. */
@@ -186,5 +189,35 @@ describe('error texts', () => {
     expect(content.errorMessageOf(new Error(''))).toBe('Unknown error');
     expect(content.errorMessageOf({ message: 'x' })).toBe('Unknown error');
     expect(content.somethingWentWrong(new Error('boom'))).toBe('Something went wrong: boom');
+  });
+});
+
+describe('M6 feedback lines', () => {
+  const move = (clef: 'treble' | 'bass', first: string, second: string): string =>
+    stepSkipExplanation({
+      kind: 'step-skip',
+      clef,
+      first: first as Note,
+      second: second as Note,
+      buttons: 4,
+    });
+
+  it('names a step as line to space or space to line', () => {
+    expect(move('treble', 'E4', 'F4')).toBe("It's a step up: line to space.");
+    expect(move('treble', 'F4', 'E4')).toBe("It's a step down: space to line.");
+  });
+  it('names a skip as line to line or space to space', () => {
+    expect(move('treble', 'E4', 'G4')).toBe("It's a skip up: line to line.");
+    expect(move('treble', 'A4', 'F4')).toBe("It's a skip down: space to space.");
+  });
+  it('treats notes on ledger lines and just outside the staff correctly', () => {
+    // treble C4 is on a ledger line (position -2), B3 in the space below it (-3)
+    expect(move('treble', 'C4', 'D4')).toBe("It's a step up: line to space.");
+    expect(move('treble', 'D4', 'B3')).toBe("It's a skip down: space to space.");
+    // bass: C4 sits on the ledger line above the staff (position 10)
+    expect(move('bass', 'A3', 'C4')).toBe("It's a skip up: line to line.");
+  });
+  it('says any key of the letter works', () => {
+    expect(anyKeyWorks('D')).toBe('Any D key works.');
   });
 });
