@@ -1,88 +1,19 @@
 // The one write path for progress. Everything the learner has done goes through `commit`.
 import { dayKeyOf } from '../domain/days';
 import { emptyProgress, type Progress } from '../domain/progress';
-import { upgradeToCurrent } from '../domain/upgrades';
-import { checkProgress } from '../domain/validate';
 import * as db from './db';
+import { REAL_DEPS, type StoreDeps, type StoreState } from './storeTypes';
+import {
+  MSG_READABLE_AGAIN,
+  PlannerError,
+  applyAll,
+  applyChecked,
+  interpret,
+  messageOf,
+  type Planner,
+} from './storeChecks';
 
-export type StoreState =
-  | { status: 'loading' }
-  | {
-      status: 'ready';
-      progress: Progress;
-      rev: number;
-      saveError: string | null;
-      repaired: string[];
-    }
-  | { status: 'broken'; reason: string } // stored data unreadable: never overwritten automatically
-  | { status: 'unavailable'; progress: Progress }; // IndexedDB unusable: in memory only
-
-export type Planner = (p: Progress) => Progress;
-
-/** The database functions the store uses; tests and the app use the real ones from db.ts. */
-export interface StoreDeps {
-  openDb: typeof db.openDb;
-  readRecord: typeof db.readRecord;
-  writeFresh: typeof db.writeFresh;
-  transactCommit: typeof db.transactCommit;
-  readRaw: typeof db.readRaw;
-}
-
-const REAL_DEPS: StoreDeps = {
-  openDb: db.openDb,
-  readRecord: db.readRecord,
-  writeFresh: db.writeFresh,
-  transactCommit: db.transactCommit,
-  readRaw: db.readRaw,
-};
-
-/** A planner produced something invalid (a bug in the app, never the learner's fault). */
-export class PlannerError extends Error {
-  override name = 'PlannerError';
-}
-
-const MSG_NEWER = 'This progress was saved by a newer version of the app.';
-const MSG_UNREADABLE = "The saved data can't be read.";
-const MSG_READABLE_AGAIN = 'The saved progress can be read again. Reload the app to see it.';
-
-type Interpreted =
-  { ok: true; progress: Progress; issues: string[] } | { ok: false; reason: string };
-
-/** Upgrade, then repair-validate, a stored document. Never throws. */
-function interpret(doc: unknown): Interpreted {
-  const upgraded = upgradeToCurrent(doc);
-  if (!upgraded.ok)
-    return { ok: false, reason: upgraded.reason === 'newer' ? MSG_NEWER : MSG_UNREADABLE };
-  const checked = checkProgress(upgraded.value, 'repair');
-  return checked.progress
-    ? { ok: true, progress: checked.progress, issues: checked.issues }
-    : { ok: false, reason: MSG_UNREADABLE };
-}
-
-/** Runs a planner and insists the result is a valid document (SPEC 5.2). */
-function applyChecked(planner: Planner, base: Progress): Progress {
-  let next: Progress;
-  try {
-    next = planner(base);
-  } catch (e) {
-    throw new PlannerError(`A change to the progress failed: ${messageOf(e)}`);
-  }
-  const checked = checkProgress(next, 'strict');
-  if (!checked.progress) {
-    throw new PlannerError(
-      `A change would have made the progress invalid: ${checked.issues.join('; ')}`,
-    );
-  }
-  return checked.progress;
-}
-
-function applyAll(base: Progress, planners: readonly Planner[]): Progress {
-  return planners.reduce((p, planner) => applyChecked(planner, p), base);
-}
-
-function messageOf(e: unknown): string {
-  return e instanceof Error && e.message !== '' ? e.message : 'Unknown error';
-}
+export { PlannerError, type Planner, type StoreDeps, type StoreState };
 
 export class ProgressStore {
   private state: StoreState = { status: 'loading' };
@@ -123,11 +54,30 @@ export class ProgressStore {
     return this.loadPromise;
   }
 
+  /** Opens a connection that forgets itself if the browser drops it. */
+  private async connect(): Promise<db.Db> {
+    const handle = await this.deps.openDb(this.dbName, () => {
+      if (this.handle === handle) this.handle = null;
+    });
+    return handle;
+  }
+
+  /** Closes and forgets the connection, so the next save opens a new one. */
+  private dropHandle(): void {
+    const old = this.handle;
+    this.handle = null;
+    try {
+      old?.close();
+    } catch (e) {
+      console.warn('Could not close the database connection', e);
+    }
+  }
+
   private async doLoad(now: Date): Promise<void> {
     const today = dayKeyOf(now);
     let handle: db.Db;
     try {
-      handle = await this.deps.openDb(this.dbName);
+      handle = await this.connect();
     } catch (e) {
       // Only "the database can't be opened at all" means in-memory progress.
       console.warn('Saved progress is not available in this browser', e);
@@ -213,15 +163,16 @@ export class ProgressStore {
 
   private async write(added: readonly Planner[]): Promise<void> {
     const s = this.state;
-    const handle = this.handle;
     const base = this.saved;
-    if (s.status !== 'ready' || handle === null || base === null) return;
+    if (s.status !== 'ready' || base === null) return;
     const attempt = [...this.pending, ...added];
     if (attempt.length === 0 && s.saveError === null) return;
     const out: { start: Progress; written: Progress | null } = { start: base, written: null };
     try {
+      // After a failed save the connection was dropped: open a new one for this attempt.
+      this.handle ??= await this.connect();
       const record = await this.deps.transactCommit(
-        handle,
+        this.handle,
         (current) => {
           let start = base;
           if (current !== null && current.rev !== this.rev) {
@@ -251,6 +202,9 @@ export class ProgressStore {
       });
     } catch (e) {
       if (e instanceof PlannerError) throw e;
+      // The connection may be dead (iPhone Safari drops it in the background): forget it so
+      // "Try again" opens a new one instead of failing the same way.
+      this.dropHandle();
       // The write itself failed: keep the change in memory so the lesson isn't lost. Build on
       // what the transaction read (another tab's newer save, if any), not on our older copy.
       // If the transaction failed before the planners ran, a buggy one throws here; it must not
@@ -299,7 +253,7 @@ export class ProgressStore {
       // After a failed read no connection is kept: open one now. The transaction below still
       // refuses to replace a record that has become readable.
       const opened = this.handle === null;
-      const handle = this.handle ?? (await this.deps.openDb(this.dbName));
+      const handle = this.handle ?? (await this.connect());
       const fresh = emptyProgress(dayKeyOf(now));
       let record: db.StoredRecord;
       try {

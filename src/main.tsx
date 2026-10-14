@@ -6,7 +6,8 @@ import '@fontsource/nunito/latin-800.css';
 import './styles/tokens.css';
 import './styles/base.css';
 import { App } from './app/App';
-import { installUnlock, synth } from './audio/synth';
+import { synth } from './audio/synth';
+import { installUnlock } from './audio/unlock';
 import { startInstallCapture } from './pwa/install';
 import { registerServiceWorker } from './pwa/register';
 

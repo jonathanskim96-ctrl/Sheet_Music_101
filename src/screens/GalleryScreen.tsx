@@ -1,59 +1,17 @@
-import { useState, type ReactNode } from 'react';
-import { ALL_CARDS, parseCardId } from '../domain/cards';
-import { letterOf, noteAtPosition, type Note } from '../domain/notes';
+import { useState } from 'react';
+import { letterOf, noteAtPosition } from '../domain/notes';
 import { synth } from '../audio/synth';
 import { Keyboard } from '../notation/Keyboard';
-import { Staff, type NoteState, type StaffNote } from '../notation/Staff';
-import { Button, type ButtonVariant } from '../ui/Button';
+import { Staff } from '../notation/Staff';
+import { Button } from '../ui/Button';
 import { Confetti } from '../ui/Confetti';
 import { DailyGoalRing } from '../ui/DailyGoalRing';
 import { Check } from '../ui/icons';
-import { Mascot, type MascotMood } from '../ui/Mascot';
+import { Mascot } from '../ui/Mascot';
 import { ProgressBar } from '../ui/ProgressBar';
 import { Sheet } from '../ui/Sheet';
+import { CardGrid, MOODS, NOTE_STATES, Section, VARIANTS, one } from './GalleryParts';
 import styles from './GalleryScreen.module.css';
-
-const MOODS: MascotMood[] = ['idle', 'happy', 'encouraging', 'celebrating'];
-const VARIANTS: ButtonVariant[] = ['primary', 'secondary', 'ghost', 'danger', 'choice'];
-const NOTE_STATES: NoteState[] = [
-  'normal',
-  'correct',
-  'wrong',
-  'ghost',
-  'mastery-new',
-  'mastery-learning',
-  'mastery-almost',
-  'mastery-known',
-];
-
-function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
-  return (
-    <section className={styles['section']} data-section={id} aria-label={title}>
-      <h2>{title}</h2>
-      {children}
-    </section>
-  );
-}
-
-function CardGrid({ clef }: { clef: 'treble' | 'bass' }) {
-  return (
-    <div className={styles['grid']}>
-      {ALL_CARDS.map((id) => {
-        const card = parseCardId(id);
-        if (card?.clef !== clef) return null;
-        return (
-          <div key={id} className={styles['cell']} data-testid="gallery-card" data-card={id}>
-            <Staff mode={clef} notes={[{ clef, note: card.note }]} />
-            <span className={styles['letter']}>{letterOf(card.note)}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-const one = (clef: 'treble' | 'bass', note: Note, state?: NoteState): StaffNote =>
-  state ? { clef, note, state } : { clef, note };
 
 /** Dev/e2e-only page that shows every visual building block for visual QA. */
 export function GalleryScreen() {

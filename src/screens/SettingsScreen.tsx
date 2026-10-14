@@ -1,19 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { navigate } from '../app/router';
 import { useToast } from '../app/toasts';
-import type { BackupSummary } from '../domain/backup';
-import {
-  IMPORT_PREVIEW,
-  INSTALL_CARD,
-  SILENT_HINT,
-  importSavedOn,
-  importSummaryLine,
-  somethingWentWrong,
-} from '../domain/content';
+import { INSTALL_CARD, SILENT_HINT, somethingWentWrong } from '../domain/content';
 import { dayKeyOf } from '../domain/days';
 import { lastBackupText } from '../domain/nudges';
 import { planReset, planSettings } from '../domain/planners';
-import type { Progress } from '../domain/progress';
 import { useExportBackup, useReplaceProgress } from '../data/backupHooks';
 import { readBackupFile } from '../data/files';
 import { isPersisted } from '../data/persist';
@@ -22,20 +13,11 @@ import { promptInstall, useInstallInfo } from '../pwa/install';
 import { isIosDevice } from '../pwa/platform';
 import { Button } from '../ui/Button';
 import { ScreenHeader } from '../ui/ScreenHeader';
-import { Sheet } from '../ui/Sheet';
+import { ImportPreviewSheet, type Incoming } from './ImportPreviewSheet';
 import { StartOverSheets } from '../ui/StartOverSheets';
 import styles from './SettingsScreen.module.css';
 
 const GOALS = [1, 2, 3] as const;
-
-/** "13 October 2026" in the learner's own date style. */
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-}
 
 /** Sound, daily goal, install help, backups, storage status, start over, about (SPEC 7.2). */
 export function SettingsScreen() {
@@ -47,9 +29,7 @@ export function SettingsScreen() {
   const exportBackup = useExportBackup();
   const replaceProgress = useReplaceProgress();
   const fileInput = useRef<HTMLInputElement>(null);
-  const [incoming, setIncoming] = useState<{ progress: Progress; summary: BackupSummary } | null>(
-    null,
-  );
+  const [incoming, setIncoming] = useState<Incoming | null>(null);
   const [startOver, setStartOver] = useState(false);
   const [persisted, setPersisted] = useState<boolean | null>(null);
   const today = dayKeyOf(now());
@@ -246,61 +226,20 @@ export function SettingsScreen() {
         </section>
       </main>
 
-      <Sheet
-        open={incoming !== null}
-        title={IMPORT_PREVIEW.title}
+      <ImportPreviewSheet
+        incoming={incoming}
         onClose={() => {
           setIncoming(null);
         }}
-      >
-        {incoming && (
-          <div data-testid="import-preview">
-            {incoming.summary.exportedAt !== null && (
-              <p>{importSavedOn(formatDate(incoming.summary.exportedAt))}</p>
-            )}
-            <p className={styles['summary']} data-testid="import-summary">
-              {importSummaryLine(
-                incoming.summary.xp,
-                incoming.summary.lessonsCompleted,
-                incoming.summary.daysPracticed,
-              )}
-            </p>
-            <p className={styles['warning']}>{IMPORT_PREVIEW.warning}</p>
-            <div className={styles['buttons']}>
-              <Button
-                variant="secondary"
-                fullWidth
-                onClick={() => {
-                  // Offer an export before anything is replaced (CLAUDE.md); the preview stays open.
-                  void exportBackup();
-                }}
-              >
-                {IMPORT_PREVIEW.saveFirst}
-              </Button>
-              <Button
-                variant="danger"
-                fullWidth
-                onClick={() => {
-                  const next = incoming.progress;
-                  setIncoming(null);
-                  void replaceProgress(next);
-                }}
-              >
-                {IMPORT_PREVIEW.replace}
-              </Button>
-              <Button
-                variant="ghost"
-                fullWidth
-                onClick={() => {
-                  setIncoming(null);
-                }}
-              >
-                {IMPORT_PREVIEW.cancel}
-              </Button>
-            </div>
-          </div>
-        )}
-      </Sheet>
+        onSaveFirst={() => {
+          // Offer an export before anything is replaced (CLAUDE.md); the preview stays open.
+          void exportBackup();
+        }}
+        onReplace={(next) => {
+          setIncoming(null);
+          void replaceProgress(next);
+        }}
+      />
 
       <StartOverSheets
         open={startOver}
