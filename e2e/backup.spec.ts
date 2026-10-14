@@ -41,7 +41,8 @@ test('Save a backup downloads a dated file that parses back to the same progress
   expect(name).toBe(`sheet-music-101-backup-${DAY}.json`);
   const parsed = parseBackup(text);
   expect(parsed.ok).toBe(true);
-  if (parsed.ok) expect(parsed.progress).toEqual(p);
+  // the app holds the v1 fixture as version 2 once loaded, so the backup is version 2
+  if (parsed.ok) expect(parsed.progress).toEqual({ ...p, schemaVersion: 2 });
   await expect(page.getByTestId('toast')).toHaveText('Backup saved.');
   await expect(page.getByTestId('last-backup')).toHaveText('Last backup: today');
   expect((await storedDoc(page)).flags.lastExportDay).toBe(DAY);
@@ -83,7 +84,7 @@ test('backup, start over, restore: progress comes back exactly', async ({ page }
   expect(restored.xp).toBe(p.xp);
   expect(restored.lessons).toEqual(p.lessons);
   expect(restored.cards).toEqual(p.cards);
-  expect(restored).toEqual(p);
+  expect(restored).toEqual({ ...p, schemaVersion: 2 });
   await page.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(page.getByTestId('xp-value')).toHaveText(String(p.xp));
 });
@@ -149,9 +150,9 @@ const bad: [string, () => string | Buffer, string][] = [
       JSON.stringify({
         app: 'sheet-music-101',
         kind: 'backup',
-        schemaVersion: 2,
+        schemaVersion: 3,
         exportedAt: '2026-10-12T20:15:00.000Z',
-        progress: { ...fixtureProgress(), schemaVersion: 2 },
+        progress: { ...fixtureProgress(), schemaVersion: 3 },
       }),
     'This backup is from a newer version of the app. Update the app first, then try again.',
   ],
