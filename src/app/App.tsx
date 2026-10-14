@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { setAudioErrorHandler } from '../audio/synth';
 import { somethingWentWrong } from '../domain/content';
-import { CHECKPOINTS, findLesson } from '../domain/curriculum';
+import { findCheckpoint, findLesson } from '../domain/curriculum';
 import { isAvailable, reviewAvailable } from '../domain/unlocks';
 import { ProgressProvider, createProgressStore, useProgress } from '../data/ProgressContext';
 import { UpdateBanner } from '../pwa/UpdateBanner';
@@ -83,12 +83,13 @@ function Shell() {
   else if (parsed.name !== 'gallery') {
     if (progress && !progress.flags.welcomeSeen) route = { name: 'home' };
     else if (parsed.name === 'lesson') {
-      if (progress && !isAvailable(progress, parsed.lessonId)) route = { name: 'home' };
+      // isAvailable also says yes to checkpoint ids, which have their own route.
+      const known = findLesson(parsed.lessonId) !== undefined;
+      if (!known || (progress && !isAvailable(progress, parsed.lessonId))) route = { name: 'home' };
     } else if (parsed.name === 'review') {
       if (progress && !reviewAvailable(progress)) route = { name: 'home' };
     } else if (parsed.name === 'checkpoint') {
-      const known = CHECKPOINTS.some((c) => c.id === parsed.checkpointId);
-      if (!known) route = { name: 'home' };
+      if (!findCheckpoint(parsed.checkpointId)) route = { name: 'home' };
     }
   }
   const hash = routeToHash(route);
@@ -131,7 +132,7 @@ function Shell() {
     screen = def ? <LessonScreen key={def.id} source={{ kind: 'lesson', def }} /> : <PathScreen />;
     banner = def !== undefined;
   } else if (route.name === 'checkpoint') {
-    const checkpoint = CHECKPOINTS.find((c) => c.id === route.checkpointId);
+    const checkpoint = findCheckpoint(route.checkpointId);
     screen = checkpoint ? (
       <LessonScreen key={checkpoint.id} source={{ kind: 'checkpoint', checkpoint }} />
     ) : (

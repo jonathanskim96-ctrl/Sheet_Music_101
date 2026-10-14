@@ -299,3 +299,11 @@
   answer is already given; the page scrolls). Accepted, listed in HANDOFF.
 - Not verified: a real phone (touch behaviour of the tap bands, 17 bands of about 10 px each, nudge buttons compensate),
   and sound on iPhone (unchanged from before).
+
+## 2026-10-14: M6 Opus review, small fixes
+- Find-on-staff wrong answer: the title ("It's Treble C.") and the landmark hint now name the green note that is drawn
+  (the nearest same-letter note, maybe another octave), like the position sentence already did. Before, a tap near C5 for
+  card treble-C4 said "It's Middle C." under a green note in space 3. The e2e test now taps next to the other octave.
+- `#/lesson/cp-a` showed the Path under a wrong address (`isAvailable` says yes to checkpoint ids); it now redirects to `#/`.
+  App uses `findCheckpoint` instead of its own lookups. The nudge bounds come from `TAP_POSITIONS`.
+- Larger items are listed on the PR for a Sonnet fix session.

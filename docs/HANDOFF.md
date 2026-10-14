@@ -73,8 +73,8 @@ keeps the recommended option until the owner says otherwise.
 
 ## Next step
 0. **M6** is built: every lesson, level 2/3 lesson, practice and the three checkpoints are playable. Next: the Opus review of the M6 PR (prompt in `docs/build/README.md`), then M7.
-1. M5 is **merged** (PR #14); its review questions were decided (see the Decisions table: restore preview offers "Save a backup first"; chart tap targets accepted). Next: **M6** with the execution prompt in `docs/build/README.md`.
-2. iPhone sound hardening **merged** (PR #15, 2026-10-13, after the Opus review and the 300 ms rebuild fix). Owner check on **Chrome (Windows)**: Play sound yes, ding yes, still works after locking. **Not yet checked on iPhone**: the owner will report back if anything is wrong there; until then, treat it as working. Next: M6.
+1. M5 is **merged** (PR #14); its review questions were decided (see the Decisions table: restore preview offers "Save a backup first"; chart tap targets accepted).
+2. iPhone sound hardening **merged** (PR #15, 2026-10-13, after the Opus review and the 300 ms rebuild fix). Owner check on **Chrome (Windows)**: Play sound yes, ding yes, still works after locking. **Not yet checked on iPhone**: the owner will report back if anything is wrong there; until then, treat it as working.
 3. Owner: close PR #8 if still open (already in `main`).
 
 ### M6 choices the spec left open (owner may veto)

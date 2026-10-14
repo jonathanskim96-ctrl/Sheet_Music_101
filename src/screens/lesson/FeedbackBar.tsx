@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { parseCardId } from '../../domain/cards';
+import { cardId, parseCardId, type CardId } from '../../domain/cards';
 import {
   CHOICE_TEXT,
   COMBO_MILESTONES,
@@ -36,10 +36,9 @@ export interface FeedbackBarProps {
 const pick = <T,>(items: readonly T[]): T =>
   items[Math.floor(Math.random() * items.length)] ?? (items[0] as T);
 
-/** The right answer as words, for "It's {X}." */
-function answerText(q: Question): string {
+/** The right answer as words, for "It's {X}." (`card` is the note the feedback shows.) */
+function answerText(q: Question, card: CardId | null): string {
   const a = correctAnswerOf(q);
-  const card = cardOf(q);
   if (card !== null) return cardName(card);
   if (a.kind === 'letter') return a.letter;
   if (a.kind === 'choice') return CHOICE_TEXT[a.value];
@@ -47,20 +46,26 @@ function answerText(q: Question): string {
   return '';
 }
 
+/**
+ * The card the feedback is about. Find-on-staff accepts the letter in any octave and draws the
+ * nearest right note beside the learner's, so its name, position and hint describe that note.
+ */
+function shownCard(q: Question, a: Answer): CardId | null {
+  const card = cardOf(q);
+  if (card === null || q.kind !== 'find-on-staff' || a.kind !== 'position') return card;
+  const parts = parseCardId(card);
+  const note = parts && noteAtPosition(parts.clef, nearestCorrectPosition(card, a.position));
+  if (!parts || !note) return card;
+  const nearest = cardId(parts.clef, note);
+  return parseCardId(nearest) ? nearest : card;
+}
+
 /** Slides up after an answer: a cheer, or the right answer with where the note sits. */
 export function FeedbackBar({ question, result, progress, combo, onContinue }: FeedbackBarProps) {
   // Chosen once per question so the wording doesn't change on re-render.
   const [phrase] = useState(() => (result.correct ? pick(CORRECT_PHRASES) : pick(WRONG_PHRASES)));
-  const card = cardOf(question);
+  const card = shownCard(question, result.answer);
   const parts = card === null ? null : parseCardId(card);
-  // Find-on-staff draws the nearest right note beside the learner's, so describe that one.
-  const shown =
-    parts && question.kind === 'find-on-staff' && result.answer.kind === 'position'
-      ? (noteAtPosition(
-          parts.clef,
-          nearestCorrectPosition(question.card, result.answer.position),
-        ) ?? parts.note)
-      : parts?.note;
   const milestone = COMBO_MILESTONES.find((m) => m.at === combo);
 
   return (
@@ -85,10 +90,10 @@ export function FeedbackBar({ question, result, progress, combo, onContinue }: F
           ) : (
             <>
               <p className={styles['feedbackTitle']}>
-                {fillWrongPhrase(phrase, answerText(question))}
+                {fillWrongPhrase(phrase, answerText(question, card))}
               </p>
-              {parts && shown && (
-                <p className={styles['feedbackLine']}>{describePosition(parts.clef, shown)}</p>
+              {parts && (
+                <p className={styles['feedbackLine']}>{describePosition(parts.clef, parts.note)}</p>
               )}
               {card !== null && <HintLine card={card} progress={progress} />}
             </>

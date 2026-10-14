@@ -3,13 +3,15 @@ import { parseCardId } from '../../../domain/cards';
 import { PROMPTS } from '../../../domain/content';
 import { noteAtPosition } from '../../../domain/notes';
 import { nearestCorrectPosition } from '../../../domain/questions';
+import { TAP_POSITIONS } from '../../../notation/geometry';
 import { Staff, type NoteState, type StaffNote } from '../../../notation/Staff';
 import { Button } from '../../../ui/Button';
 import type { KindProps } from './types';
 import styles from './questions.module.css';
 
-const LOWEST = -4;
-const HIGHEST = 12;
+// The ends of the tappable range (SPEC 7.2: -4..12); the nudges stop there.
+const LOWEST = TAP_POSITIONS[0] ?? -4;
+const HIGHEST = TAP_POSITIONS[TAP_POSITIONS.length - 1] ?? 12;
 
 /** "Put a G on the staff": tap a spot, nudge it with ▲ ▼, then Check. */
 export function FindOnStaff({ q, answered, send }: KindProps<'find-on-staff'>) {

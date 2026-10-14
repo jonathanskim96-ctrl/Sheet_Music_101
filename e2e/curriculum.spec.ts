@@ -1,5 +1,9 @@
 import type { Locator } from '@playwright/test';
+import { cardId } from '../src/domain/cards';
+import { cardName } from '../src/domain/content';
 import { levelLessons, pathLessons, UNITS } from '../src/domain/curriculum';
+import { describePosition } from '../src/domain/landmarks';
+import { noteAtPosition } from '../src/domain/notes';
 import type { CardState } from '../src/domain/srs';
 import { test, expect } from './fixtures';
 import {
@@ -193,27 +197,40 @@ test.describe('find on the staff', () => {
     await expect(q.getByRole('button', { name: 'Check' })).toBeDisabled();
   });
 
-  test('a wrong note shows beside the nearest right one', async ({ page }) => {
+  test('a wrong note shows beside the nearest right one, even in another octave', async ({
+    page,
+  }) => {
     await page.clock.setFixedTime(new Date(`${DAY}T10:00:00`));
     await seedProgress(page, everythingDone());
     await go(page, '#/lesson/u2-lv3-a');
     const q = await reachQuestion(page, 'find-on-staff');
     const right = await answerOf(q);
     if (right.kind !== 'position') throw new Error('expected a position answer');
-    const off = right.position + (right.position < 12 ? 1 : -1);
+    // The same letter an octave away (7 positions) always fits in the tappable range -4..12.
+    // Tap just beyond it, so it (not the card's own position) is the nearest right note.
+    const other = right.position + 7 <= 12 ? right.position + 7 : right.position - 7;
+    const away = other > right.position ? 1 : -1;
+    const off = other + away >= -4 && other + away <= 12 ? other + away : other - away;
     await q.locator(`[data-position="${String(off)}"]`).click();
     await q.getByRole('button', { name: 'Check' }).click();
-    await expect(page.getByTestId('feedback')).toHaveAttribute('data-correct', 'false');
+    const feedback = page.getByTestId('feedback');
+    await expect(feedback).toHaveAttribute('data-correct', 'false');
     await expect(q.locator('[data-note-state="wrong"]')).toHaveAttribute(
       'data-note-position',
       String(off),
     );
-    // the right note is the card's letter: the same position, or one or more octaves away (7 steps)
-    const shown = Number(
-      await q.locator('[data-note-state="correct"]').getAttribute('data-note-position'),
+    await expect(q.locator('[data-note-state="correct"]')).toHaveAttribute(
+      'data-note-position',
+      String(other),
     );
-    expect(Math.abs(shown - off)).toBeLessThan(Math.abs(off - right.position) + 1);
-    expect((shown - right.position) % 7).toBe(0);
+    // the words describe the green note that is drawn, not the card's own octave
+    const clef = 'treble'; // unit 2 is a treble unit
+    const note = noteAtPosition(clef, other);
+    if (!note) throw new Error('no note');
+    await expect(feedback).toContainText(
+      new RegExp(`(It's|is) ${cardName(cardId(clef, note))}\\.`),
+    );
+    await expect(feedback).toContainText(describePosition(clef, note));
   });
 
   test('the nudge buttons stop at the ends of the tappable range', async ({ page }) => {
@@ -337,6 +354,17 @@ test.describe('checkpoints', () => {
     await expect(page.getByRole('dialog', { name: 'New: piano keyboard!' })).toBeVisible();
     await expect(page.getByTestId('checkpoint-cp-a')).toContainText('Test yourself');
     await expect(page.getByTestId('unit-3-level-2')).toBeVisible();
+  });
+
+  test('a checkpoint id under the lesson route goes home; unknown checkpoints do too', async ({
+    page,
+  }) => {
+    await startFresh(page);
+    for (const bad of ['#/lesson/cp-a', '#/checkpoint/cp-z']) {
+      await go(page, bad);
+      await expect.poll(() => page.evaluate(() => window.location.hash), bad).toBe('#/');
+      await expect(page.getByTestId('bubble-u1-l1')).toBeVisible();
+    }
   });
 
   test('failing cp-b unlocks nothing and still earns 10 XP', async ({ page }) => {
