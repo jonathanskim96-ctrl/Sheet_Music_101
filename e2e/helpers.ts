@@ -6,7 +6,7 @@ import type { Answer } from '../src/domain/questions';
 import { LETTERS } from '../src/domain/notes';
 import { expect } from './fixtures';
 
-const CHOICE_LABEL: Record<string, string> = {
+export const CHOICE_LABEL: Record<string, string> = {
   line: 'Line',
   space: 'Space',
   first: 'First note',
@@ -71,6 +71,30 @@ export async function seedRecord(page: Page, record: unknown): Promise<void> {
       };
     });
   }, record);
+  await page.reload();
+}
+
+/** Writes a record whose JSON text is parsed inside the page, so `__proto__` keys survive. */
+export async function seedRawJson(page: Page, json: string): Promise<void> {
+  await page.goto('./');
+  await expect(page.getByText('Loading…')).toHaveCount(0);
+  await page.evaluate(async (text) => {
+    const rec: unknown = JSON.parse(text);
+    await new Promise<void>((resolve, reject) => {
+      const open = indexedDB.open('sheet-music-101', 1);
+      open.onerror = () => {
+        reject(new Error('open failed'));
+      };
+      open.onsuccess = () => {
+        const tx = open.result.transaction('kv', 'readwrite');
+        tx.objectStore('kv').put(rec, 'progress');
+        tx.oncomplete = () => {
+          open.result.close();
+          resolve();
+        };
+      };
+    });
+  }, json);
   await page.reload();
 }
 
