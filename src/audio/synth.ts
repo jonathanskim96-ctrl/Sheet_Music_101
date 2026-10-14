@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { frequency, type Note } from '../domain/notes';
+import { CORRECT_PLAN, FANFARE_PLAN, WRONG_PLAN, notePlan, type TonePlan } from './tonePlans';
 
 // Just the parts of the Web Audio API we use, so tests can pass a fake context.
 interface ParamLike {
@@ -38,72 +39,8 @@ export interface AudioContextLike {
 }
 export type AudioContextFactory = () => AudioContextLike;
 
-/** Partial multiples and their relative loudness for a piano-ish note (SPEC 7.7). */
-export const PARTIALS: readonly { multiple: number; amp: number }[] = [
-  { multiple: 1, amp: 1.0 },
-  { multiple: 2, amp: 0.5 },
-  { multiple: 3, amp: 0.25 },
-  { multiple: 4, amp: 0.12 },
-];
 const ATTACK = 0.008;
 const SILENCE = 0.0001;
-
-export interface PartialPlan {
-  frequency: number;
-  peak: number;
-  start: number;
-  /** When the partial has decayed to silence. */
-  end: number;
-}
-
-/** When and how loud each of the four partials of a note is. */
-export function notePlan(note: Note, start: number, dur: number): PartialPlan[] {
-  const f = frequency(note);
-  return PARTIALS.map((p) => ({
-    frequency: f * p.multiple,
-    peak: 0.25 * p.amp,
-    start,
-    end: start + dur / Math.sqrt(p.multiple),
-  }));
-}
-
-export interface ToneStep {
-  note: Note;
-  at: number;
-  dur: number;
-}
-export interface TonePlan {
-  wave: OscillatorType;
-  peak: number;
-  steps: readonly ToneStep[];
-}
-
-export const CORRECT_PLAN: TonePlan = {
-  wave: 'triangle',
-  peak: 0.15,
-  steps: [
-    { note: 'C6', at: 0, dur: 0.18 },
-    { note: 'E6', at: 0.09, dur: 0.18 },
-  ],
-};
-export const WRONG_PLAN: TonePlan = {
-  wave: 'sine',
-  peak: 0.18,
-  steps: [
-    { note: 'E3', at: 0, dur: 0.25 },
-    { note: 'C3', at: 0.12, dur: 0.25 },
-  ],
-};
-export const FANFARE_PLAN: TonePlan = {
-  wave: 'triangle',
-  peak: 0.15,
-  steps: [
-    { note: 'C5', at: 0, dur: 0.2 },
-    { note: 'E5', at: 0.12, dur: 0.2 },
-    { note: 'G5', at: 0.24, dur: 0.2 },
-    { note: 'C6', at: 0.36, dur: 0.6 },
-  ],
-};
 
 export interface Synth {
   playNote: (note: Note, delay?: number, dur?: number) => void;
@@ -322,47 +259,4 @@ export const synth: Synth = createSynth(
 export function useSound(): Synth & { muted: boolean } {
   const muted = useSyncExternalStore(synth.subscribe, synth.isMuted);
   return { ...synth, muted };
-}
-
-/** The few parts of `document` that `installUnlock` needs (a fake in tests). */
-export interface UnlockTarget {
-  readonly visibilityState: string;
-  addEventListener(type: string, listener: () => void, capture?: boolean): void;
-  removeEventListener(type: string, listener: () => void, capture?: boolean): void;
-}
-const UNLOCK_EVENTS = ['pointerup', 'touchend', 'click', 'keydown'] as const;
-
-/**
- * Starts the sound engine on the first tap anywhere (capture phase, so it runs inside the
- * gesture before any button handler). Keeps listening until the engine is `running`, and
- * listens again after the page has been hidden (iOS may interrupt the engine then).
- * Returns a function that removes everything.
- */
-export function installUnlock(s: Synth, doc: UnlockTarget): () => void {
-  let attached = false;
-  const onTap = () => {
-    if (s.isRunning()) detach();
-    else s.unlock();
-  };
-  const attach = () => {
-    if (attached) return;
-    attached = true;
-    for (const t of UNLOCK_EVENTS) doc.addEventListener(t, onTap, true);
-  };
-  const detach = () => {
-    if (!attached) return;
-    attached = false;
-    for (const t of UNLOCK_EVENTS) doc.removeEventListener(t, onTap, true);
-  };
-  const onVisibility = () => {
-    if (doc.visibilityState !== 'hidden') return;
-    s.allowRebuild();
-    attach();
-  };
-  attach();
-  doc.addEventListener('visibilitychange', onVisibility);
-  return () => {
-    detach();
-    doc.removeEventListener('visibilitychange', onVisibility);
-  };
 }

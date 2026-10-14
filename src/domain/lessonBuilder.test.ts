@@ -11,13 +11,8 @@ import {
   type LessonDef,
 } from './curriculum';
 import { diatonicIndex, staffPosition } from './notes';
-import {
-  buildCheckpoint,
-  buildLesson,
-  buildReview,
-  orderWithoutRepeats,
-  type LessonPlan,
-} from './lessonBuilder';
+import { buildCheckpoint, buildLesson, buildReview, type LessonPlan } from './lessonBuilder';
+import { orderWithoutRepeats } from './cardOrder';
 import { emptyProgress, type Progress } from './progress';
 import { checkAnswer, correctAnswerOf, cardOf, type Question } from './questions';
 import { mulberry32 } from './rng';

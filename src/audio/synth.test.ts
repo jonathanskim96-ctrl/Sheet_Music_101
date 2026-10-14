@@ -1,17 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { frequency } from '../domain/notes';
-import {
-  CORRECT_PLAN,
-  FANFARE_PLAN,
-  WRONG_PLAN,
-  createSynth,
-  installUnlock,
-  notePlan,
-  setAudioErrorHandler,
-  synth,
-  type AudioContextLike,
-  type UnlockTarget,
-} from './synth';
+import { createSynth, setAudioErrorHandler, synth, type AudioContextLike } from './synth';
+import { CORRECT_PLAN, FANFARE_PLAN, WRONG_PLAN, notePlan } from './tonePlans';
+import { installUnlock, type UnlockTarget } from './unlock';
 
 type Call = [name: string, value: number, time: number];
 
