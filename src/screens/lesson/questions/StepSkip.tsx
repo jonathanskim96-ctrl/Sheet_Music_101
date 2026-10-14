@@ -1,6 +1,6 @@
 import { BUTTON_LABELS } from '../../../domain/content';
 import type { ChoiceValue } from '../../../domain/questions';
-import { Staff } from '../../../notation/Staff';
+import { Staff, type NoteState } from '../../../notation/Staff';
 import { ChoiceButtons } from './ChoiceButtons';
 import type { ResultState } from './LetterPad';
 import type { KindProps } from './types';
@@ -20,16 +20,12 @@ export function StepSkip({
   q,
   answered,
   send,
-  correctValue,
-}: KindProps<'step-skip'> & { correctValue: ChoiceValue }) {
-  const states: Partial<Record<ChoiceValue, ResultState>> = {};
-  if (answered) {
-    states[correctValue] = 'correct';
-    if (!answered.correct && answered.answer.kind === 'choice') {
-      states[answered.answer.value] = 'wrong';
-    }
-  }
-  const noteState = answered ? (answered.correct ? 'correct' : 'wrong') : 'normal';
+  states,
+  noteState,
+}: KindProps<'step-skip'> & {
+  states: Partial<Record<ChoiceValue, ResultState>>;
+  noteState: NoteState;
+}) {
   return (
     <>
       <Staff
