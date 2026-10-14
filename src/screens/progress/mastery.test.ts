@@ -55,3 +55,11 @@ describe('overallAccuracy', () => {
     expect(overallAccuracy(p)).toBe(67);
   });
 });
+
+describe('chartName with a sign card', () => {
+  it('keeps the sign, so F sharp is not labelled "Treble F"', () => {
+    expect(chartName('treble-F#4')).toBe('Treble F♯');
+    expect(chartName('bass-Bb2')).toBe('Bass B♭');
+    expect(chartName('treble-F4')).toBe('Treble F');
+  });
+});
