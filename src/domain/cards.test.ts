@@ -100,3 +100,16 @@ describe('cards', () => {
     expect(cardPosition('bass-G2')).toBe(0);
   });
 });
+
+describe('guards on junk ids (M8 review)', () => {
+  it('isSignCard and isNaturalCard are both false for a string that is not a card', () => {
+    // @ts-expect-error deliberately not a CardId: callers may hold unvalidated strings
+    const junk: Parameters<typeof isSignCard>[0] = 'treble-Z9';
+    expect(isSignCard(junk)).toBe(false);
+    expect(isNaturalCard(junk)).toBe(false);
+  });
+  it('cardMidi throws for an unknown id instead of answering MIDI 0', () => {
+    // @ts-expect-error deliberately not a CardId
+    expect(() => cardMidi('treble-Z9')).toThrow('Unknown card');
+  });
+});

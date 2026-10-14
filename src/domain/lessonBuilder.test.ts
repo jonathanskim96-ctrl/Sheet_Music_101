@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { NATURAL_CARDS, isNaturalCard, parseCardId, type CardId } from './cards';
+import { NATURAL_CARDS, isCardId, isNaturalCard, parseCardId, type CardId } from './cards';
 import {
   CHECKPOINTS,
   UNITS,
@@ -18,6 +18,8 @@ import { checkAnswer, correctAnswerOf, cardOf, type Question } from './questions
 import { mulberry32 } from './rng';
 import type { Box, CardState } from './srs';
 import { deepFreeze, progressArb } from './testkit';
+import { reviewAvailable } from './unlocks';
+import v2Fixture from '../../tests/fixtures/progress-v2.json';
 
 const TODAY = '2026-10-12';
 const SEEDS = Array.from({ length: 200 }, (_, i) => i * 7919 + 13);
@@ -309,7 +311,7 @@ describe('buildReview', () => {
   it('property: 10 questions, only learned cards, no neighbours equal, answerable, retries on', () => {
     for (const seed of SEEDS) {
       for (const p of RANDOM_PROGRESS) {
-        if (Object.keys(p.cards).filter((id) => !id.includes('#') && !/-.b/.test(id)).length < 3)
+        if (Object.keys(p.cards).filter((id) => isCardId(id) && isNaturalCard(id)).length < 3)
           continue; // part 1 reviews natural cards only
         const plan = buildReview(p, TODAY, seed);
         expect(plan.context).toEqual({ kind: 'review' });
@@ -506,5 +508,33 @@ describe('coverage of ids', () => {
       1,
     ).questions[0];
     expect(q?.kind).toBe('name-note');
+  });
+});
+
+describe('sign cards in saved progress are left alone by part-1 review (M8 review)', () => {
+  const withSigns = (): Progress => {
+    const p = JSON.parse(JSON.stringify(v2Fixture)) as Progress;
+    return p;
+  };
+  it('the v2 fixture has sign cards, and buildReview never turns one into its natural note', () => {
+    const p = withSigns();
+    expect(Object.keys(p.cards).filter((id) => !isNaturalCard(id as CardId))).toHaveLength(3);
+    for (const seed of SEEDS) {
+      const plan = buildReview(p, TODAY, seed);
+      for (const c of noteCards(plan) as CardId[]) expect(isNaturalCard(c)).toBe(true);
+    }
+  });
+  it('reviewAvailable counts natural cards only: three sign cards alone do not open Review', () => {
+    const p = withSigns();
+    expect(reviewAvailable(p)).toBe(true);
+    const onlySigns = {
+      ...p,
+      cards: Object.fromEntries(
+        Object.entries(p.cards).filter(([id]) => !isNaturalCard(id as CardId)),
+      ),
+    };
+    expect(Object.keys(onlySigns.cards)).toHaveLength(3);
+    expect(reviewAvailable(onlySigns)).toBe(false);
+    expect(() => buildReview(onlySigns, TODAY, 1)).toThrow('at least 3 cards');
   });
 });

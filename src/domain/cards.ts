@@ -113,12 +113,14 @@ export function isCardId(s: unknown): s is CardId {
 
 /** True when `id` is one of the 34 natural cards (everything in course part 1). */
 export function isNaturalCard(id: CardId): id is NaturalCardId {
-  return !isSignCard(id);
+  return CARD_LOOKUP.get(id)?.sign === 'natural';
 }
 
-/** True for the 12 sharp/flat cards. */
+const SIGN_SET: ReadonlySet<string> = new Set(SIGN_CARDS);
+
+/** True for the 12 sharp/flat cards (and false for anything else, including junk). */
 export function isSignCard(id: CardId): id is SignCardId {
-  return CARD_LOOKUP.get(id)?.sign !== 'natural';
+  return SIGN_SET.has(id);
 }
 
 /** Splits a card id into clef, written note and sign; null for anything that is not a real card. */
@@ -136,5 +138,6 @@ export function cardPosition(id: CardId): number {
 /** MIDI number of the sound a card stands for (F♯4 is one above F4). */
 export function cardMidi(id: CardId): number {
   const c = parseCardId(id);
-  return c ? pitchMidi({ note: c.note, sign: c.sign }) : 0;
+  if (!c) throw new Error(`Unknown card: ${id}`);
+  return pitchMidi({ note: c.note, sign: c.sign });
 }

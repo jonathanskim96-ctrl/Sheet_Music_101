@@ -226,6 +226,23 @@ describe('saved data from earlier versions', () => {
     await expect(store.commit(addXp(1))).rejects.toThrow();
     expect(JSON.stringify(await stored(name))).toBe(before);
   });
+
+  it('test 8d: a tab already open cannot overwrite what a newer app version saved meanwhile (writes nothing, shows a save error)', async () => {
+    const name = freshName();
+    await seed(name, { rev: 2, savedAt: 'x', doc: JSON.parse(v2FixtureText) as object });
+    const store = new ProgressStore(name);
+    await store.load(NOW);
+    readyOf(store);
+    await seed(name, {
+      rev: 3,
+      savedAt: 'y',
+      doc: { ...(JSON.parse(v2FixtureText) as object), schemaVersion: 3 },
+    });
+    const before = JSON.stringify(await stored(name));
+    await store.commit(addXp(1));
+    expect(readyOf(store).saveError).toContain('newer version');
+    expect(JSON.stringify(await stored(name))).toBe(before);
+  });
 });
 
 describe('commit', () => {
