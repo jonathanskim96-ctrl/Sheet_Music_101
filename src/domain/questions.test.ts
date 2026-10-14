@@ -405,3 +405,26 @@ describe('nearestCorrectPosition', () => {
     }
   });
 });
+
+describe('sign cards (course part 2 questions arrive in M10, SPEC 8.6)', () => {
+  const sign: CardId = 'treble-F#4';
+  const refused = /sign card/i;
+
+  it('name-note, find-key and find-on-staff refuse a sign card instead of using the white key', () => {
+    const kinds = ['name-note', 'find-key-letter', 'find-key-exact', 'find-on-staff'] as const;
+    for (const kind of kinds) {
+      const question = (
+        kind === 'find-on-staff' ? { kind, card: sign } : { kind, card: sign, render: 'single' }
+      ) as Question;
+      expect(() => correctAnswerOf(question), kind).toThrow(refused);
+      const answer: Answer =
+        kind === 'name-note'
+          ? { kind: 'letter', letter: 'F' }
+          : kind === 'find-on-staff'
+            ? { kind: 'position', position: 3 }
+            : { kind: 'key', note: 'F4' };
+      expect(() => checkAnswer(question, answer), kind).toThrow(refused);
+    }
+    expect(() => nearestCorrectPosition(sign, 3)).toThrow(refused);
+  });
+});

@@ -22,7 +22,7 @@ export const LANDMARKS: Record<Clef, readonly CardId[]> = {
  */
 export function hintFor(card: CardId, p: Progress): string | null {
   const here = parseCardId(card);
-  if (!here) return null;
+  if (!here || here.sign !== 'natural') return null; // SPEC 8.10: no hint for sign cards
   const mine = diatonicIndex(here.note);
   let best: { id: CardId; d: number; below: boolean } | null = null;
   for (const id of LANDMARKS[here.clef]) {

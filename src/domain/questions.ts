@@ -43,6 +43,10 @@ export type Answer =
 function cardParts(card: CardId): { clef: Clef; note: Note } {
   const parts = parseCardId(card);
   if (!parts) throw new Error(`Unknown card: ${card}`);
+  // Sharp/flat cards would silently use the white key. M10 adds their questions (SPEC 8.6).
+  if (parts.sign !== 'natural') {
+    throw new Error(`Question not supported for sign card ${card} until M10 (SPEC 8.6)`);
+  }
   return parts;
 }
 

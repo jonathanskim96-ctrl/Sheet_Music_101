@@ -50,12 +50,13 @@ function answerText(q: Question, card: CardId | null): string {
  * The card the feedback is about. Find-on-staff accepts the letter in any octave and draws the
  * nearest right note beside the learner's, so its name, position and hint describe that note.
  */
-function shownCard(q: Question, a: Answer): CardId | null {
+export function shownCard(q: Question, a: Answer): CardId | null {
   const card = cardOf(q);
   if (card === null || q.kind !== 'find-on-staff' || a.kind !== 'position') return card;
   const parts = parseCardId(card);
-  const note = parts && noteAtPosition(parts.clef, nearestCorrectPosition(card, a.position));
-  if (!parts || !note) return card;
+  if (!parts || parts.sign !== 'natural') return card; // a sign card keeps its sign
+  const note = noteAtPosition(parts.clef, nearestCorrectPosition(card, a.position));
+  if (!note) return card;
   const nearest = cardId(parts.clef, note);
   return parseCardId(nearest) ? nearest : card;
 }

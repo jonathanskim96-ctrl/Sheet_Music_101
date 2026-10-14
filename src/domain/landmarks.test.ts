@@ -132,3 +132,13 @@ describe('hintFor', () => {
     expect(JSON.stringify(p)).toBe(copy);
   });
 });
+
+describe('hintFor with a sign card (SPEC 8.10)', () => {
+  it('returns null for a sign card even when a landmark is learned', () => {
+    const p = learned('treble-C4', 'treble-G4');
+    expect(hintFor('treble-F#4', p)).toBeNull();
+    expect(hintFor('bass-Bb2', learned('bass-C2'))).toBeNull();
+    // The natural card beside it still gets its hint.
+    expect(hintFor('treble-F4', p)).not.toBeNull();
+  });
+});

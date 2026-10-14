@@ -1,5 +1,5 @@
 import { NATURAL_CARDS, parseCardId, type CardId } from '../../domain/cards';
-import type { Clef, Note } from '../../domain/notes';
+import { pitchName, type Clef, type Note } from '../../domain/notes';
 import { NICKNAMES } from '../../domain/content';
 import type { Progress } from '../../domain/progress';
 import { masteryOf } from '../../domain/srs';
@@ -29,7 +29,8 @@ export function chartName(card: CardId): string {
   if (nickname !== undefined) return nickname;
   const parsed = parseCardId(card);
   if (!parsed) return card;
-  return `${parsed.clef === 'treble' ? 'Treble' : 'Bass'} ${parsed.note.charAt(0)}`;
+  const name = pitchName({ note: parsed.note, sign: parsed.sign });
+  return `${parsed.clef === 'treble' ? 'Treble' : 'Bass'} ${name}`;
 }
 
 /**
