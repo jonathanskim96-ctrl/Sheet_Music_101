@@ -65,10 +65,7 @@ test('the page carries a strict CSP, and the browser blocks eval and injected in
   consoleErrors.length = 0;
 });
 
-test('the manifest and head tags match SPEC 7.8 and 7.9', async ({
-  page,
-  request,
-}) => {
+test('the manifest and head tags match SPEC 7.8 and 7.9', async ({ page, request }) => {
   await page.goto('./');
   expect(await page.locator('meta[name="referrer"]').getAttribute('content')).toBe('no-referrer');
   expect(await page.locator('meta[name="viewport"]').getAttribute('content')).toContain(
