@@ -3,7 +3,7 @@
 _Read this first in every new session. Keep it short and current._
 
 ## Where we are
-- **Phase:** M1 (scaffold, guardrails, CI, deploy) **merged and live**; M1 review fixes merged (PR #3). **M2 (domain core: pure logic + tests) merged** (PR #4, 2026-10-13, after the Opus review and its fixes). No screen changed in M2, so the live app looks the same. **M3 (look, sound, notation, Gallery) merged** (PR #6, 2026-10-13; owner approved the look). The Opus review fixes and the taller keyboard came after that merge and go in through their own PR (branch `claude/tender-bohr-dsybzk`). **M4 (saving + first playable lessons, units 1–4) merged** (PR #9, 2026-10-13; it also carries the stacked-Sheets fix, so PR #8 is redundant and can be closed). The Opus review of M4 came after the merge: small fixes are in a follow-up PR (branch `claude/review-m4-pull-request-1kg4g2`), and the larger items are listed in that PR for a Sonnet fix session. **M5 (progress, settings, backups, safety nets) merged** (PR #14, 2026-10-13, after the Opus review and its fixes). **iPhone sound hardening merged** (PR #15, 2026-10-13). **M6 (full curriculum) built, PR open, waiting for the Opus review.** Next milestone after it: M7. **Schema version 1 is now frozen**: once M4 is merged real progress exists on the owner's phone, so any change to `Progress` needs a schema bump and an upgrade step (SPEC 4.8).
+- **Phase:** M1 (scaffold, guardrails, CI, deploy) **merged and live**; M1 review fixes merged (PR #3). **M2 (domain core: pure logic + tests) merged** (PR #4, 2026-10-13, after the Opus review and its fixes). No screen changed in M2, so the live app looks the same. **M3 (look, sound, notation, Gallery) merged** (PR #6, 2026-10-13; owner approved the look). The Opus review fixes and the taller keyboard came after that merge and go in through their own PR (branch `claude/tender-bohr-dsybzk`). **M4 (saving + first playable lessons, units 1–4) merged** (PR #9, 2026-10-13; it also carries the stacked-Sheets fix, so PR #8 is redundant and can be closed). The Opus review of M4 came after the merge: small fixes are in a follow-up PR (branch `claude/review-m4-pull-request-1kg4g2`), and the larger items are listed in that PR for a Sonnet fix session. **M5 (progress, settings, backups, safety nets) merged** (PR #14, 2026-10-13, after the Opus review and its fixes). **iPhone sound hardening merged** (PR #15, 2026-10-13). **M6 (full curriculum) merged** (PR #18, plus review follow-ups in PR #19, 2026-10-14). **M7 (hardening) built by a Sonnet session, PR open, waiting for the Opus review passes and the owner's phone test.** **Schema version 1 is now frozen**: once M4 is merged real progress exists on the owner's phone, so any change to `Progress` needs a schema bump and an upgrade step (SPEC 4.8).
 - Repo: `jonathanskim96-ctrl/Sheet_Music_101`. App name: **Sheet Music 101**.
 - Live URL (live; deployed from `main` by CI): https://jonathanskim96-ctrl.github.io/Sheet_Music_101/
 - How the build works: `docs/build/README.md` (milestones, session prompts, owner steps).
@@ -73,10 +73,30 @@ keeps the recommended option until the owner says otherwise.
 - [ ] Add the app to the home screen on each phone (SETUP sections 6–7) and confirm the icon.
 
 ## Next step
-0. **M6** is built: every lesson, level 2/3 lesson, practice and the three checkpoints are playable. Next: the Opus review of the M6 PR (prompt in `docs/build/README.md`), then M7.
+0. **M7** is built (no feature changes): mutation checks, coverage table, attack/accessibility/speed tests, size budget. Next: (a) Opus review of the M7 PR with `/code-review high` and `/security-review` over the whole codebase (M7 steps 5 and 6), (b) the owner's phone test (below), (c) fixes from it, then the app is final.
 1. M5 is **merged** (PR #14); its review questions were decided (see the Decisions table: restore preview offers "Save a backup first"; chart tap targets accepted).
 2. iPhone sound hardening **merged** (PR #15, 2026-10-13, after the Opus review and the 300 ms rebuild fix). Owner check on **Chrome (Windows)**: Play sound yes, ding yes, still works after locking. **Not yet checked on iPhone**: the owner will report back if anything is wrong there; until then, treat it as working.
 3. Owner: close PR #8 if still open (already in `main`).
+
+### M7 (hardening): what was done and what is left
+- Done (Sonnet): coverage table and 12 mutation checks recorded in `NOTES.md` (all fail as expected; mutation 11 exposed a missing CSP e2e test, now added); `e2e/hardening.spec.ts` (hostile backups, hostile routes, CSP, frame-busting, no outside requests, service worker scope, manifest, keyboard-only lesson, accessible names, reduced motion, 200% zoom, speed with 4× slower processor); `check-dist` fails if JavaScript is over 300 kB gzipped (now 118 kB).
+- Left: M7 step 6 (Opus code review of the whole codebase) and an Opus read of the attack results; step 8 (owner phone test); step 9 (fixes).
+- **Known limitations** (also for the Opus security review):
+  1. Another website can show the app inside a frame (frame-busting only works from the same site, and GitHub Pages cannot send the header that forbids it). Harm is limited: no accounts, no data leaves the phone, and erasing progress needs two in-app confirmations. A fix (e.g. hiding the screen when framed) would be a new behaviour: planning session.
+  2. The "Something went wrong" screen for a crash while drawing a screen has no automated test (nothing can cause that crash on demand).
+  3. The mascot's moods are checked only by looking at screenshots.
+  4. Sound on iPhone, real touch on the staff tap bands, home-screen install and Android are not testable in the cloud: the owner's phone test covers them.
+  5. A phone that is unused for about 7 days can lose site data unless the app is on the Home Screen (SPEC 5.3); that is why backups are offered.
+- **How to update the live app:** merge a pull request into `main`; CI runs `verify` and deploys by itself. Phones pick up the new version the next time the app is opened online and show "A new version is ready." [Reload]; nothing reloads by itself.
+- **How to back up:** Settings → "Save a backup" (a file `sheet-music-101-backup-YYYY-MM-DD.json`; on iPhone it opens the share sheet → "Save to Files"). To restore: Settings → "Restore from backup". The app reminds after 5 lessons and 30 days.
+- **Ideas for later** (PLAN §7): MIDI keyboard input (Web MIDI); microphone ("play the note and the app hears it"); sharps/flats, key signatures, rhythm, simple melodies, chords; two profiles on one device.
+
+#### Owner's phone test (M7 step 8), in plain words
+1. Install: iPhone: open the link in Safari → Share button → "Add to Home Screen". Android: Chrome menu → "Install app" (or "Add to Home screen"). Open it from the new icon.
+2. Play the first 3 lessons with sound on. Then flip the iPhone Silent switch (sound should stop; the app shows a hint about Silent mode) and tap the speaker in a lesson to mute it in the app.
+3. Turn on airplane mode, open the app from the icon and play a lesson (it must work offline).
+4. Settings → "Save a backup". Check that the file appears in the Files app (iPhone) or Downloads (Android).
+5. Write down anything confusing, too hard, too easy, ugly or broken, and send it to the next planning session.
 
 ### M6 review follow-up (PR #18 was already merged when this was done)
 - Done (branch `claude/youthful-euler-p9cmq3`): item 2 (StepSkip takes `states`/`noteState` from QuestionView) and item 3 (LessonScreen `planFor` returns plan and seed id from one exhaustive switch).

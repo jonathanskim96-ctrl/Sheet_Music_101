@@ -314,3 +314,113 @@
 - Item 1: `blur()` removed from Keyboard; CSS `.key:focus:not(:focus-visible) { outline: none }` instead. The old `activeElement` check tested the fix, not what the learner sees; it is now `toHaveCSS('outline-style','none')` (checked: fails without the CSS rule).
 - Item 4: new `open` bubble state (available, not current): unit colour, no lock, no Start. e2e test passes cp-b from a fresh start (fails on the old code).
 - Gotcha: a fresh cloud checkout has no `node_modules`; `tsc`/`eslint` silently print nothing useful until `npm ci` has run.
+
+## 2026-10-14: M7 executed (hardening), Sonnet session
+No feature was added and the app's behaviour did not change. New: `e2e/hardening.spec.ts` (attack, accessibility and speed checks)
+and a JavaScript size budget in `scripts/check-dist.mjs`. Baseline before any change: `npm run verify` green on `main`
+(925 unit tests; 183 e2e passed, 19 skipped, 11 minutes).
+
+### Step 1: coverage table (SPEC and CURRICULUM section → tests)
+| Section | Covered by |
+|---|---|
+| SPEC 1 Fixed decisions | decisions, not code; the behaviours are covered through the sections below |
+| SPEC 2 Tech stack | `package-lock.json` + `npm ci`/`npm audit` in the PR checklist; CI `verify` |
+| SPEC 3 Source layout, purity | ESLint rules (no `Date.now`/`Math.random`/`idb`/DOM in `src/domain`), `check-safety` |
+| 4.1 Notes | `notes.test.ts` (table of all 34 cards, round-trip properties) |
+| 4.2 Cards | `cards.test.ts` |
+| 4.3 Days | `days.test.ts` (DST, year ends, properties) |
+| 4.4 Random | `rng.test.ts` |
+| 4.5 Spaced repetition | `srs.test.ts` (rules 1–6, property) |
+| 4.6 Progress document | `progress.test.ts`, `validate.test.ts` |
+| 4.7 Validation | `validate.test.ts` (strict/repair, fuzz, prototype keys, huge numbers, deep nesting) |
+| 4.8 Schema upgrades | `upgrades.test.ts` (steps machinery, fixtures keep loading) |
+| 4.9 Curriculum types and self-check | `curriculum.test.ts`, `curriculum.lock.test.ts` |
+| 4.10 Unlock rules | `unlocks.test.ts`, `edge.test.ts`, `e2e/lesson.spec.ts`, `e2e/curriculum.spec.ts` |
+| 4.11 Questions | `questions.test.ts` (property over every kind) |
+| 4.12 Lesson builder | `lessonBuilder.test.ts` (every lesson × 200 seeds), `edge.test.ts` |
+| 4.13 Session state machine | `session.test.ts` |
+| 4.14 Planners | `planners.test.ts`, `edge.test.ts` |
+| 4.15 Backup format | `backup.test.ts`, `e2e/backup.spec.ts`, `e2e/hardening.spec.ts` (hostile files) |
+| 4.16 Landmark hints | `landmarks.test.ts` |
+| 4.17 Keyboard window | `keyboardWindow.test.ts` |
+| 5.1 IndexedDB | `store.test.ts` (fake-indexeddb), `e2e/persistence.spec.ts` |
+| 5.2 Store, one write path | `store.test.ts` (queue, rev conflict, broken, unavailable), `e2e/safety.spec.ts`, `e2e/persistence.spec.ts` |
+| 5.3 Persistence and nudges | `persist.test.ts`, `nudges.test.ts`, `e2e/settings.spec.ts` |
+| 5.4 Files | `files.test.ts`, `e2e/backup.spec.ts` |
+| 6 Guardrails 1–3 | `e2e/backup.spec.ts` (two-step Start over, preview before replace), `e2e/safety.spec.ts`, `e2e/persistence.spec.ts` |
+| 6 Guardrail 4 (ids lock) | `curriculum.lock.test.ts` (mutation 10) |
+| 6 Guardrail 5 (fixtures) | `check-safety`, `upgrades.test.ts`, `store.test.ts` |
+| 7.1 Visual system | `tokens.test.ts` (contrast), `e2e/screens.spec.ts` screenshots (looked at by a person) |
+| 7.2 Screens and routes | `e2e/lesson.spec.ts`, `e2e/curriculum.spec.ts`, `e2e/settings.spec.ts`, `e2e/persistence.spec.ts`, `e2e/backup.spec.ts`, `router.test.ts`, `e2e/hardening.spec.ts` (hostile routes, names, keyboard) |
+| 7.3 Notation | `geometry.test.ts`, `glyphs.test.ts`, `e2e/gallery.spec.ts` (34 notes on the right line or space) |
+| 7.4 Keyboard | `e2e/gallery.spec.ts` (tap, key presses, height), `e2e/curriculum.spec.ts` |
+| 7.5 Mascot | **screenshots only** (`e2e/screens.spec.ts`, Gallery); no assertion on moods |
+| 7.6 Confetti | `e2e/gallery.spec.ts`, `e2e/hardening.spec.ts` (none with reduced motion) |
+| 7.7 Audio | `synth.test.ts`, `e2e/sound-unlock.spec.ts`, `e2e/silent-hint.spec.ts`, `platform.test.ts`; **real iPhone sound not testable here** |
+| 7.8 PWA | `e2e/smoke.spec.ts`, `e2e/hardening.spec.ts` (full manifest, head tags, service worker scope), `e2e/safety.spec.ts` (update banner) |
+| 7.9 Security hardening | `check-dist`, `e2e/hardening.spec.ts` (CSP refuses eval/inline script/handler, frame-busting, no outside requests) |
+| 7.10 Errors | `e2e/safety.spec.ts` (toast, broken screen); **the render-crash screen (ErrorBoundary) has no test**: nothing in the app can make a render crash on demand and adding a test-only crash hook is not in SPEC 7.11 |
+| 7.11 E2E hooks | `check-dist` (no `data-answer` in production); every lesson e2e test uses the hook |
+| CURRICULUM 1 Question mixes | `curriculum.test.ts` ("level lessons follow section 1"), `lessonBuilder.test.ts` |
+| CURRICULUM 2 Units and lessons | `curriculum.test.ts` (counts, lessons per unit), `e2e/curriculum.spec.ts` (all 82 lessons and 3 checkpoints played) |
+| CURRICULUM 3 Concept cards | `content.test.ts` (parses the document and compares all 24 cards) |
+| CURRICULUM 4 Meet cards, nicknames, tips, hints | `content.test.ts`, `landmarks.test.ts` |
+| CURRICULUM 5 UI text | `content.test.ts` (every quoted string exists in `content.ts`) |
+
+Gaps found: (a) CSP absence went unnoticed by e2e (mutation 11) → added; (b) only the manifest name was checked → full
+manifest, head tags and service worker scope added; (c) hostile routes, hostile files, keyboard run, 200% zoom, reduced
+motion, speed and size had no tests → added. Left open: ErrorBoundary render-crash screen, Mascot moods (visual only).
+
+### Step 2: mutation checks (each broken on purpose, tests run, then `git checkout -- <file>` and green again)
+| # | Break | Result |
+|---|---|---|
+| 1 | `validate.ts`: accept non-integer xp in strict mode | failed as expected: 20 tests in `validate.test.ts`, `backup.test.ts`, `store.test.ts` |
+| 2 | `backup.ts`: remove the 1 MB size check | failed as expected: 1 test in `backup.test.ts` |
+| 3 | `store.ts`: remove the rev-conflict re-apply | failed as expected: 2 tests in `store.test.ts` |
+| 4 | `store.ts`: unreadable stored data becomes the empty document | failed as expected: 5 tests in `store.test.ts` |
+| 5 | `store.ts`: skip strict validation before writing | failed as expected: 1 test in `store.test.ts` |
+| 6 | `geometry.ts`: drop the last ledger line | failed as expected: 3 tests in `geometry.test.ts` |
+| 7 | `srs.ts`: wrong answer → `box - 1` | failed as expected: 2 tests in `srs.test.ts` |
+| 8 | `lessonBuilder.ts`: remove the consecutive-duplicate repair | failed as expected: 76 tests in `lessonBuilder.test.ts` |
+| 9 | `session.ts`: allow a second retry of the same question | failed as expected: 2 tests in `session.test.ts` |
+| 10 | `curriculum.ts`: delete lesson `u2-l2` | failed as expected: `curriculum.lock.test.ts`, `curriculum.test.ts`, `planners.test.ts` (9 tests) |
+| 11 | `vite.config.ts`: remove the CSP plugin | **first run: `check-dist` failed but all e2e passed → a test was missing.** Added the CSP test in `e2e/hardening.spec.ts`; second run: `check-dist` and the e2e CSP test both fail as expected |
+| 12 | `planners.ts`: checkpoint completes units 1–10 whatever `completesUnits` says | failed as expected: 2 tests in `planners.test.ts` |
+| extra | `check-dist.mjs`: JavaScript budget set to 1 kB | failed as expected ("JavaScript is 118 kB gzipped; the budget is 300 kB"), restored to 300 kB |
+After every restore the full unit suite was green again (925 tests).
+
+### Step 3: accessibility (`e2e/hardening.spec.ts`, plus what was already there)
+- Desktop, keyboard only: a whole lesson played with Tab, Enter and Space; the focused control shows an outline of at least 2 px;
+  the Leave sheet keeps Tab inside, closes with Escape and focus goes back to the X button. (The existing Gallery test also
+  covers stacked sheets and the inert page behind.)
+- The feedback bar is `aria-live="polite"` and has text; every button on Path, Progress, Settings, concept/Meet card, question and
+  feedback has an accessible name.
+- Reduced motion: no confetti, no running animation on the completion screen.
+- "200% text zoom": the app's text is in px, so the browser's text-size setting does not change it; page zoom does. Checked at
+  640 px wide (200% of a 1280 window) and 320 px (narrowest phone): no sideways scroll, no clipped text, nothing off the right
+  edge on Path, Progress, Settings, a concept card, a question and the feedback.
+
+### Step 4: speed
+- JavaScript total: 118 kB gzipped (limit 300 kB); `check-dist` now fails above 300 kB.
+- Path shown (progress seeded, page reloaded) after about 0.09 s normally and 0.26–0.40 s with the processor throttled 4×
+  (limit 2 s); the test fails above 2 s.
+
+### Step 5: black-box attack (done by a Sonnet session as automated tests; the Opus session still has to review it)
+Against the e2e build, all passing: malicious backups (`__proto__`/`constructor` keys, 10 000 levels of nesting, invalid UTF-8,
+1e999, huge integers, text/fraction/null where a number belongs, wrong top-level types, empty file, 1 000 001 characters, 1 500
+lessons, made-up card ids) are refused with one of three fixed messages and the saved progress is unchanged; hostile hash routes
+(`<script>`, `../../`, `%00`, `constructor`, `__proto__`, 5 000-character and 3 000-segment hashes) end on the Path with no script,
+dialog or error; `Object.prototype` stays clean; the CSP refuses a string handed to `setTimeout`, an inline event handler and an
+injected inline script (3 violations); a lesson, Progress and Settings make no request outside the app's origin; the service
+worker scope is `/Sheet_Music_101/`.
+- **Finding: frame-busting works only for a page on the same origin.** A page on another origin can still show the app in an
+  iframe: Chrome refuses the script's "go to the top window" move unless the person tapped inside the frame, and a `<meta>` CSP
+  cannot carry `frame-ancestors`; GitHub Pages sends no `X-Frame-Options`. Risk: clickjacking of a no-account, on-device app whose
+  destructive actions all need a two-step in-app confirmation. Not fixed (no spec for it); listed as a limitation for the owner and
+  for the Opus security review.
+- The DevTools console is exempt from a page's CSP by browser design (typing `eval(...)` there still runs); the CSP test uses code
+  that runs from the page itself instead.
+
+### Steps still open
+- Step 6 (Opus `/code-review high` over the whole codebase) and the Opus read of step 5: not done in this session.
+- Step 8 (owner phone test) and step 9 (fixes from it): owner.

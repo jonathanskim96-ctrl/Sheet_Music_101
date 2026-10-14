@@ -1,6 +1,7 @@
 // Checks the production build in dist/. Run after `npm run build`.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { gzipSync } from 'node:zlib';
 
 const problems = [];
 const dist = 'dist';
@@ -47,8 +48,18 @@ for (const file of files) {
     problems.push(`${file}: inline <script> found`);
 }
 
+// Speed budget (M7 step 4): all JavaScript together stays under 300 kB gzipped.
+const JS_BUDGET_BYTES = 300 * 1000;
+const jsBytes = files
+  .filter((file) => file.endsWith('.js'))
+  .reduce((sum, file) => sum + gzipSync(readFileSync(file), { level: 9 }).length, 0);
+if (jsBytes > JS_BUDGET_BYTES)
+  problems.push(`JavaScript is ${Math.round(jsBytes / 1000)} kB gzipped; the budget is 300 kB`);
+
 if (problems.length) {
   console.error(`check-dist: ${problems.length} problem(s)\n- ${problems.join('\n- ')}`);
   process.exit(1);
 }
-console.log(`check-dist: OK (${files.length} files)`);
+console.log(
+  `check-dist: OK (${files.length} files, JavaScript ${Math.round(jsBytes / 1000)} kB gzipped)`,
+);
