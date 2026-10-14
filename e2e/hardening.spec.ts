@@ -1,12 +1,14 @@
 import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
 import {
+  CHOICE_LABEL,
   answerQuestion,
   fixtureProgress,
   playLesson,
   progressAfter,
   readStored,
   seedProgress,
+  seedRawJson,
   startFresh,
 } from './helpers';
 
@@ -61,8 +63,10 @@ test('the page carries a strict CSP, and the browser blocks eval and injected in
   expect(result.seen.length).toBe(3);
 
   // The browser logs each refusal as a console error; those three are the point of this test.
-  expect(consoleErrors.filter((e) => e.includes('Content Security Policy'))).toHaveLength(3);
-  consoleErrors.length = 0;
+  const refusals = consoleErrors.filter((e) => e.includes('Content Security Policy'));
+  expect(refusals).toHaveLength(3);
+  // Only the three refusals are expected; any other error still fails the test (fixture).
+  for (const e of refusals) consoleErrors.splice(consoleErrors.indexOf(e), 1);
 });
 
 test('the manifest and head tags match SPEC 7.8 and 7.9', async ({ page, request }) => {
@@ -123,13 +127,15 @@ test('the service worker is scoped to the app folder only', async ({ page }) => 
 
 test('a full lesson, Progress and Settings make no request outside the app’s own origin', async ({
   page,
+  context,
+  baseURL,
 }) => {
-  const origin = new URL(page.url() === 'about:blank' ? 'http://localhost:4173' : page.url())
-    .origin;
+  const origin = new URL(baseURL ?? '').origin;
   const outside: string[] = [];
-  page.on('request', (req) => {
+  // The context also sees the service worker's requests; origins are compared exactly.
+  context.on('request', (req) => {
     const url = req.url();
-    if (!url.startsWith('data:') && !url.startsWith('blob:') && !url.startsWith(origin)) {
+    if (!url.startsWith('data:') && !url.startsWith('blob:') && new URL(url).origin !== origin) {
       outside.push(url);
     }
   });
@@ -173,6 +179,8 @@ for (const hash of HOSTILE_HASHES) {
     });
     await seedProgress(page, progressAfter(2));
     await page.goto(`./${hash}`);
+    // goto returns before the app has handled the new hash: wait for it to settle on home.
+    await expect.poll(() => page.evaluate(() => location.hash)).toBe('#/');
     await expect(page.getByTestId('bubble-u1-l1')).toBeVisible();
     expect(
       await page.evaluate(() => (window as unknown as Record<string, unknown>)['__pwned']),
@@ -304,8 +312,9 @@ test('hostile backup carrying __proto__ keys: Object.prototype stays clean, also
 test('hostile saved data (not a backup): prototype keys and wrong types are repaired or refused, never trusted', async ({
   page,
 }) => {
-  const raw = valid().replace(/^\{/, '{"__proto__":{"polluted":"yes"},');
-  await seedProgress(page, JSON.parse(raw) as never);
+  // Parsed inside the page: Playwright drops `__proto__` keys from evaluate arguments.
+  const doc = valid().replace(/^\{/, '{"__proto__":{"polluted":"yes"},');
+  await seedRawJson(page, `{"rev":5,"savedAt":"x","doc":${doc}}`);
   await expect(
     page.getByTestId('bubble-u1-l1').or(page.getByRole('heading', { name: /couldn't read/ })),
   ).toBeVisible();
@@ -384,19 +393,9 @@ test.describe('keyboard only', () => {
         const label =
           answer.kind === 'letter'
             ? (answer.letter ?? '')
-            : answer.value === 'line'
-              ? 'Line'
-              : answer.value === 'space'
-                ? 'Space'
-                : answer.value === 'first'
-                  ? 'First note'
-                  : answer.value === 'second'
-                    ? 'Second note'
-                    : answer.value === 'treble'
-                      ? 'Treble clef'
-                      : answer.value === 'bass'
-                        ? 'Bass clef'
-                        : '';
+            : answer.kind === 'choice'
+              ? (CHOICE_LABEL[answer.value ?? ''] ?? '')
+              : '';
         if (label === '') {
           // Keyboard questions are answered with the keys' own buttons (tested in e2e/lesson).
           await answerQuestion(page, true);
@@ -429,6 +428,7 @@ test('feedback is announced politely, and every button on every screen has a nam
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
   await named('settings');
   await page.goto('./#/lesson/u2-l1');
+  await expect(page.getByTestId('concept-card')).toBeVisible();
   for (let i = 0; i < 3; i++) {
     await named('card');
     await page.getByRole('button', { name: 'Got it' }).click();
@@ -495,6 +495,7 @@ for (const size of [
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
     await check('settings');
     await page.goto('./#/lesson/u2-l1');
+    await expect(page.getByTestId('concept-card')).toBeVisible();
     await check('concept card');
     for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Got it' }).click();
     await check('question');
