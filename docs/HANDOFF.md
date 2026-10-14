@@ -77,6 +77,10 @@ keeps the recommended option until the owner says otherwise.
 2. iPhone sound hardening **merged** (PR #15, 2026-10-13, after the Opus review and the 300 ms rebuild fix). Owner check on **Chrome (Windows)**: Play sound yes, ding yes, still works after locking. **Not yet checked on iPhone**: the owner will report back if anything is wrong there; until then, treat it as working.
 3. Owner: close PR #8 if still open (already in `main`).
 
+### M6 review follow-up (PR #18 was already merged when this was done)
+- Done (branch `claude/youthful-euler-p9cmq3`): item 2 (StepSkip takes `states`/`noteState` from QuestionView) and item 3 (LessonScreen `planFor` returns plan and seed id from one exhaustive switch).
+- **Waiting on the owner:** item 1 (remove `blur()` in Keyboard, use CSS) breaks the e2e check at `curriculum.spec.ts:144` (`document.activeElement`). CLAUDE.md needs the owner's OK to change that test. Item 4 (look of open-but-not-current lesson bubbles after a checkpoint jump: (a) unit colour, no lock, recommended; (b) keep lock, tap shows locked toast; (c) leave) needs a decision recorded here first.
+
 ### M6 choices the spec left open (owner may veto)
 - Checkpoint node: "Jump ahead" until every level-1 lesson of the unit before it is done (`checkpointReached`), then "Test yourself". It stays "Test yourself" after a pass. Trophy card with the checkpoint's title; no other states.
 - Level buttons: both "Level 2" and "Level 3" show once available (so level 2 stays replayable after level 3 opens). White pill buttons inside the unit header.

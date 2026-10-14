@@ -307,3 +307,9 @@
 - `#/lesson/cp-a` showed the Path under a wrong address (`isAvailable` says yes to checkpoint ids); it now redirects to `#/`.
   App uses `findCheckpoint` instead of its own lookups. The nudge bounds come from `TAP_POSITIONS`.
 - Larger items are listed on the PR for a Sonnet fix session.
+
+## 2026-10-14: M6 review fix session (items 2 and 3)
+- StepSkip no longer rebuilds button states or invents a `'step-up'` fallback; QuestionView passes `choiceStates()` and `noteState`.
+- LessonScreen: `planFor` returns `{ plan, id }` from one exhaustive switch (`never` check); `idOf` is gone. Same seeds as before.
+- Not done: item 1 (needs the owner's OK to change the `activeElement` e2e check) and item 4 (needs an owner decision). See HANDOFF.
+- Gotcha: a fresh cloud checkout has no `node_modules`; `tsc`/`eslint` silently print nothing useful until `npm ci` has run.
