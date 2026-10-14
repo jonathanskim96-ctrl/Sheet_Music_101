@@ -51,8 +51,8 @@ for (const file of tracked) {
 for (const file of tracked) {
   if (/(^|\/)\.env/.test(file) && !file.endsWith('.env.example'))
     problems.push(`${file}: env file must not be committed`);
-  if (/sheet-music-101-backup-.*\.json$/.test(file))
-    problems.push(`${file}: backup files must not be committed`);
+  if (/sheet-music-101-(backup|saved-data)-.*\.json$/.test(file))
+    problems.push(`${file}: backup and saved-data files must not be committed`);
 }
 
 // 3. Fixtures are permanent: every locked fixture must exist with the same hash.
