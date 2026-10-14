@@ -696,7 +696,10 @@ current progress, the Sheet stays open; owner decision 2026-10-13) / "Replace my
 
 **Broken-data screen** (store `broken`): Mascot (encouraging), "We couldn't read your saved
 progress.", buttons "Download the saved data" (raw record as JSON file), "Try again" (reload),
-"Start fresh" (same two-step Sheet flow as Start over).
+"Start fresh" (same two-step Sheet flow as Start over). **Exception (owner, 2026-10-14):** when the
+reason is "saved by a newer version of the app" (`MSG_NEWER`), the screen offers only "Download the
+saved data" and "Reload the app" (no "Try again", no "Start fresh"), and `startFresh` refuses such a
+record (also inside its transaction): progress a newer version can read is never replaced.
 
 **Gallery** (dev/e2e only): every card on its staff, grand staff samples, keyboard states,
 all Mascot moods, buttons, FeedbackBars. Used for visual QA screenshots.

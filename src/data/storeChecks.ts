@@ -10,7 +10,10 @@ export class PlannerError extends Error {
   override name = 'PlannerError';
 }
 
-const MSG_NEWER = 'This progress was saved by a newer version of the app.';
+export const MSG_NEWER = 'This progress was saved by a newer version of the app.';
+/** Shown when something tries to replace progress that only a newer app version can read. */
+export const MSG_NEWER_NO_RESET =
+  'This progress was saved by a newer version of the app. Reload the app to update it.';
 const MSG_UNREADABLE = "The saved data can't be read.";
 export const MSG_READABLE_AGAIN = 'The saved progress can be read again. Reload the app to see it.';
 

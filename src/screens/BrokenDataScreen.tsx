@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { errorMessageOf } from '../domain/content';
+import { MSG_NEWER } from '../data/storeChecks';
 import { useExportRaw, useReadRawSaved, useStartFresh } from '../data/backupHooks';
 import { Button } from '../ui/Button';
 import { Mascot } from '../ui/Mascot';
@@ -22,6 +23,8 @@ export function BrokenDataScreen({ reason }: { reason: string }) {
   const [raw, setRaw] = useState<Raw>({ status: 'reading' });
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Saved by a newer app version: the only fix is to reload (the new version is already there).
+  const newer = reason === MSG_NEWER;
 
   // Read it now, so the download button can open the share sheet straight from the tap.
   useEffect(() => {
@@ -72,27 +75,29 @@ export function BrokenDataScreen({ reason }: { reason: string }) {
           Download the saved data
         </Button>
         <Button
-          variant="secondary"
+          variant={newer ? 'primary' : 'secondary'}
           fullWidth
           onClick={() => {
             window.location.reload();
           }}
         >
-          Try again
+          {newer ? 'Reload the app' : 'Try again'}
         </Button>
-        <Button
-          variant="danger"
-          fullWidth
-          onClick={() => {
-            setError(null);
-            setConfirming(true);
-          }}
-        >
-          Start fresh
-        </Button>
+        {!newer && (
+          <Button
+            variant="danger"
+            fullWidth
+            onClick={() => {
+              setError(null);
+              setConfirming(true);
+            }}
+          >
+            Start fresh
+          </Button>
+        )}
       </div>
       <StartOverSheets
-        open={confirming}
+        open={confirming && !newer}
         onClose={() => {
           setConfirming(false);
         }}

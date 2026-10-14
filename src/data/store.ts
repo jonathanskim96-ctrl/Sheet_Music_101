@@ -4,6 +4,8 @@ import { emptyProgress, type Progress } from '../domain/progress';
 import * as db from './db';
 import { REAL_DEPS, type StoreDeps, type StoreState } from './storeTypes';
 import {
+  MSG_NEWER,
+  MSG_NEWER_NO_RESET,
   MSG_READABLE_AGAIN,
   PlannerError,
   applyAll,
@@ -247,9 +249,12 @@ export class ProgressStore {
   /** From the "broken" screen only, after the learner confirms: replaces the unreadable record. */
   startFresh(now: Date): Promise<void> {
     return this.enqueue(async () => {
-      if (this.state.status !== 'broken') {
+      const state = this.state;
+      if (state.status !== 'broken') {
         throw new Error('Start fresh is only possible when the saved data is unreadable.');
       }
+      // Progress from a newer app version is never replaced: the fix is to reload the app.
+      if (state.reason === MSG_NEWER) throw new Error(MSG_NEWER_NO_RESET);
       // After a failed read no connection is kept: open one now. The transaction below still
       // refuses to replace a record that has become readable.
       const opened = this.handle === null;
@@ -262,7 +267,11 @@ export class ProgressStore {
           (current) => {
             // Another tab (or a newer app version) may have saved readable progress since this
             // tab gave up on it: that progress must never be replaced.
-            if (current !== null && interpret(current.doc).ok) throw new Error(MSG_READABLE_AGAIN);
+            if (current !== null) {
+              const seen = interpret(current.doc);
+              if (seen.ok) throw new Error(MSG_READABLE_AGAIN);
+              if (seen.reason === MSG_NEWER) throw new Error(MSG_NEWER_NO_RESET);
+            }
             return fresh;
           },
           now.toISOString(),

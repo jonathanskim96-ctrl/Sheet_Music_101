@@ -511,6 +511,36 @@ describe('startFresh', () => {
     expect(await stored(name)).toEqual(good);
     expect(store.getState().status).toBe('broken');
   });
+
+  it('never replaces progress saved by a newer app version (owner decision: reload instead)', async () => {
+    const name = freshName();
+    const newer = {
+      rev: 5,
+      savedAt: 'x',
+      doc: { ...(JSON.parse(v2FixtureText) as object), schemaVersion: 3 },
+    };
+    await seed(name, newer);
+    const store = new ProgressStore(name);
+    await store.load(NOW);
+    expect(store.getState().status).toBe('broken');
+    await expect(store.startFresh(NOW)).rejects.toThrow(/Reload the app/);
+    expect(await stored(name)).toEqual(newer);
+  });
+
+  it('refuses inside the transaction too when the record became "newer" after the tab gave up', async () => {
+    const name = freshName();
+    await seed(name, { rev: 3, savedAt: 'x', doc: 'garbage' });
+    const store = new ProgressStore(name);
+    await store.load(NOW);
+    const newer = {
+      rev: 4,
+      savedAt: 'y',
+      doc: { ...(JSON.parse(v2FixtureText) as object), schemaVersion: 3 },
+    };
+    await seed(name, newer);
+    await expect(store.startFresh(NOW)).rejects.toThrow(/Reload the app/);
+    expect(await stored(name)).toEqual(newer);
+  });
 });
 
 describe('after a failed read', () => {
