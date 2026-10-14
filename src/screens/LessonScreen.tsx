@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useState } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import { navigate } from '../app/router';
 import { parseCardId } from '../domain/cards';
 import { LEAVE_LESSON, SILENT_HINT } from '../domain/content';
@@ -78,6 +78,7 @@ export function LessonScreen({ source }: { source: LessonSource }) {
     return startSession(plan, performance.now());
   });
   const [leaving, setLeaving] = useState(false);
+  const answeredIndex = useRef(-1);
   const soundOn = progress.settings.soundOn;
   // Only on iPhone/iPad, on the first screen, while sound is on; gone after the first "Got it" or
   // answer. It counts as used only once it has actually been shown.
@@ -93,6 +94,10 @@ export function LessonScreen({ source }: { source: LessonSource }) {
 
   const answer = (a: Answer) => {
     if (session.phase !== 'question' || !current) return;
+    // Two taps in the same frame both see this render's phase; the reducer ignores the second
+    // answer, but the sounds would play twice. Remember which question has been answered.
+    if (answeredIndex.current === session.index) return;
+    answeredIndex.current = session.index;
     setHintOpen(false);
     const correct = checkAnswer(current.q, a);
     if (correct) synth.playCorrect();
