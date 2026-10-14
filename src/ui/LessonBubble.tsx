@@ -2,7 +2,7 @@ import type { Ref } from 'react';
 import { Check, Lock } from './icons';
 import styles from './LessonBubble.module.css';
 
-export type BubbleState = 'completed' | 'current' | 'locked';
+export type BubbleState = 'completed' | 'current' | 'open' | 'locked';
 
 export interface LessonBubbleProps {
   lessonId: string;
@@ -19,10 +19,11 @@ export interface LessonBubbleProps {
 const SUFFIX: Record<BubbleState, string> = {
   completed: 'completed',
   current: 'start here',
+  open: 'available',
   locked: 'locked',
 };
 
-/** A round lesson button on the path: done (check), current (pulsing, "Start") or locked. */
+/** A round lesson button on the path: done (check), current (pulsing, "Start"), open (available but not the current one, e.g. after a checkpoint jump) or locked. */
 export function LessonBubble({
   lessonId,
   title,

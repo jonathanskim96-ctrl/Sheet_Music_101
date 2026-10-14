@@ -365,6 +365,23 @@ test.describe('checkpoints', () => {
     }
   });
 
+  test('after passing cp-b from a fresh start, open lessons are not drawn as locked', async ({
+    page,
+  }) => {
+    await startFresh(page);
+    await page.getByTestId('checkpoint-cp-b').click();
+    await playLesson(page);
+    await expect(page.getByRole('heading', { name: 'Checkpoint passed!' })).toBeVisible();
+    await page.getByRole('button', { name: 'Continue' }).click();
+    // u8-l1 is open but u1-l1 is still the current lesson: unit colour, no lock, no "Start"
+    await expect(page.getByTestId('bubble-u1-l1')).toHaveAttribute('data-state', 'current');
+    await expect(page.getByTestId('bubble-u8-l1')).toHaveAttribute('data-state', 'open');
+    await expect(page.getByTestId('bubble-u8-l1')).toHaveAccessibleName(/available$/);
+    await expect(page.getByText('Start', { exact: true })).toHaveCount(1);
+    await page.getByTestId('bubble-u8-l1').click();
+    await expect(page).toHaveURL(/#\/lesson\/u8-l1$/);
+  });
+
   test('failing cp-b unlocks nothing and still earns 10 XP', async ({ page }) => {
     await startFresh(page);
     await page.getByTestId('checkpoint-cp-b').click();
