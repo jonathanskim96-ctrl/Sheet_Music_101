@@ -148,7 +148,7 @@ describe('schema v2 (SCHEMA-V2 §5)', () => {
       'settings',
       'totals',
     ])
-      expect(after[key as keyof typeof after]).toEqual(v1[key]);
+      expect(after[key]).toEqual(v1[key]);
   });
 
   it('test 2: the v2 fixture strict-validates and keeps its sign cards and the u26-l1 record', () => {
