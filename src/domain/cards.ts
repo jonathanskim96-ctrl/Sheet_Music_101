@@ -1,19 +1,23 @@
 import { pitchMidi, staffPosition, type Clef, type Note, type Sign } from './notes';
 
+/** The 12 sharp/flat cards (course part 2), treble then bass, low to high; the one source of truth. */
+const SIGN_TABLE = [
+  { id: 'treble-F#4', clef: 'treble', note: 'F4', sign: 'sharp' },
+  { id: 'treble-G#4', clef: 'treble', note: 'G4', sign: 'sharp' },
+  { id: 'treble-Ab4', clef: 'treble', note: 'A4', sign: 'flat' },
+  { id: 'treble-Bb4', clef: 'treble', note: 'B4', sign: 'flat' },
+  { id: 'treble-C#5', clef: 'treble', note: 'C5', sign: 'sharp' },
+  { id: 'treble-Eb5', clef: 'treble', note: 'E5', sign: 'flat' },
+  { id: 'bass-Ab2', clef: 'bass', note: 'A2', sign: 'flat' },
+  { id: 'bass-Bb2', clef: 'bass', note: 'B2', sign: 'flat' },
+  { id: 'bass-C#3', clef: 'bass', note: 'C3', sign: 'sharp' },
+  { id: 'bass-Eb3', clef: 'bass', note: 'E3', sign: 'flat' },
+  { id: 'bass-F#3', clef: 'bass', note: 'F3', sign: 'sharp' },
+  { id: 'bass-G#3', clef: 'bass', note: 'G3', sign: 'sharp' },
+] as const satisfies readonly { id: string; clef: Clef; note: Note; sign: 'sharp' | 'flat' }[];
+
 export type NaturalCardId = `${Clef}-${Note}`;
-export type SignCardId =
-  | 'treble-F#4'
-  | 'treble-G#4'
-  | 'treble-Ab4'
-  | 'treble-Bb4'
-  | 'treble-C#5'
-  | 'treble-Eb5'
-  | 'bass-Ab2'
-  | 'bass-Bb2'
-  | 'bass-C#3'
-  | 'bass-Eb3'
-  | 'bass-F#3'
-  | 'bass-G#3';
+export type SignCardId = (typeof SIGN_TABLE)[number]['id'];
 export type CardId = NaturalCardId | SignCardId;
 
 const TREBLE: readonly Note[] = [
@@ -67,32 +71,12 @@ export const NATURAL_CARDS: readonly NaturalCardId[] = [
 ];
 
 /** The 12 sharp/flat cards (course part 2), all inside the staff: treble then bass, low to high. */
-export const SIGN_CARDS: readonly SignCardId[] = [
-  'treble-F#4',
-  'treble-G#4',
-  'treble-Ab4',
-  'treble-Bb4',
-  'treble-C#5',
-  'treble-Eb5',
-  'bass-Ab2',
-  'bass-Bb2',
-  'bass-C#3',
-  'bass-Eb3',
-  'bass-F#3',
-  'bass-G#3',
-];
+export const SIGN_CARDS: readonly SignCardId[] = SIGN_TABLE.map((row) => row.id);
 
 /** All 46 cards: the 34 naturals (same order as always) then the 12 sign cards. */
 export const ALL_CARDS: readonly CardId[] = [...NATURAL_CARDS, ...SIGN_CARDS];
 
 type ParsedCard = { clef: Clef; note: Note; sign: Sign };
-
-function parseSignCard(id: SignCardId): ParsedCard {
-  const clef: Clef = id.startsWith('treble-') ? 'treble' : 'bass';
-  const rest = id.slice(clef.length + 1); // e.g. 'F#4'
-  const sign: Sign = rest.charAt(1) === '#' ? 'sharp' : 'flat';
-  return { clef, note: `${rest.charAt(0)}${rest.charAt(2)}` as Note, sign };
-}
 
 const CARD_LOOKUP: ReadonlyMap<string, ParsedCard> = new Map([
   ...TREBLE.map((n): [string, ParsedCard] => [
@@ -103,7 +87,10 @@ const CARD_LOOKUP: ReadonlyMap<string, ParsedCard> = new Map([
     cardId('bass', n),
     { clef: 'bass', note: n, sign: 'natural' },
   ]),
-  ...SIGN_CARDS.map((id): [string, ParsedCard] => [id, parseSignCard(id)]),
+  ...SIGN_TABLE.map((r): [string, ParsedCard] => [
+    r.id,
+    { clef: r.clef, note: r.note, sign: r.sign },
+  ]),
 ]);
 
 /** True when `s` is one of the 46 real card ids. */
