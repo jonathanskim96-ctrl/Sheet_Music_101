@@ -14,11 +14,18 @@ export interface StoredRecord {
 
 export type Db = IDBPDatabase;
 
-/** Opens (and on first run creates) the database. Rejects if IndexedDB is unusable. */
-export function openDb(name: string = DB_NAME): Promise<Db> {
+/**
+ * Opens (and on first run creates) the database. Rejects if IndexedDB is unusable.
+ * `onTerminated` runs if the browser drops the connection (iPhone Safari does this after the
+ * app has been in the background), so the caller can forget it and open a new one.
+ */
+export function openDb(name: string = DB_NAME, onTerminated?: () => void): Promise<Db> {
   return openDB(name, 1, {
     upgrade(db) {
       db.createObjectStore(STORE);
+    },
+    terminated() {
+      onTerminated?.();
     },
   });
 }

@@ -4,7 +4,7 @@ import fixtureText from '../../tests/fixtures/progress-v1.json?raw';
 import { emptyProgress, type Progress } from '../domain/progress';
 import { planSettings } from '../domain/planners';
 import { openDb, readRecord, readRaw, transactCommit, writeFresh, type Db } from './db';
-import { ProgressStore, type StoreState } from './store';
+import { ProgressStore, type StoreDeps, type StoreState } from './store';
 
 const NOW = new Date(2026, 9, 14, 10, 0);
 let counter = 0;
@@ -305,6 +305,108 @@ describe('commit', () => {
     const s = readyOf(b);
     expect(s.saveError).toBe('disk full');
     expect(s.progress.xp).toBe(11);
+  });
+});
+
+describe('a lost database connection (iPhone Safari after the app was in the background)', () => {
+  /** Real functions, but every handle listed in `dead` fails writes like a dropped connection. */
+  function depsWithDeadHandles(dead: Set<Db>, killNew = { value: false }) {
+    const opened: Db[] = [];
+    const deps: StoreDeps = {
+      openDb: async (name, onTerminated) => {
+        const handle = await openDb(name, onTerminated);
+        opened.push(handle);
+        if (killNew.value) dead.add(handle);
+        return handle;
+      },
+      readRecord,
+      writeFresh,
+      readRaw,
+      transactCommit: (handle, apply, savedAt) =>
+        dead.has(handle)
+          ? Promise.reject(
+              new DOMException('Connection to Indexed Database server lost.', 'InvalidStateError'),
+            )
+          : transactCommit(handle, apply, savedAt),
+    };
+    return { deps, opened };
+  }
+
+  it('Try again opens a new connection and saves the lesson', async () => {
+    const name = freshName();
+    const dead = new Set<Db>();
+    const { deps, opened } = depsWithDeadHandles(dead);
+    const store = new ProgressStore(name, deps);
+    await store.load(NOW);
+    dead.add(opened[0] as Db);
+    await store.commit(addXp(15));
+    expect(readyOf(store).saveError).toContain('Connection');
+    await store.retrySave();
+    const s = readyOf(store);
+    expect(s.saveError).toBeNull();
+    expect(s.progress.xp).toBe(15);
+    expect(((await stored(name)) as { doc: Progress }).doc.xp).toBe(15);
+    expect(opened).toHaveLength(2);
+  });
+
+  it('reopens once per attempt, not once per failure, and later commits reuse the new connection', async () => {
+    const name = freshName();
+    const dead = new Set<Db>();
+    const killNew = { value: false };
+    const { deps, opened } = depsWithDeadHandles(dead, killNew);
+    const store = new ProgressStore(name, deps);
+    await store.load(NOW);
+    dead.add(opened[0] as Db);
+    await store.commit(addXp(5)); // fails, forgets connection 1
+    killNew.value = true;
+    await store.retrySave(); // opens connection 2, which is dead too
+    expect(opened).toHaveLength(2);
+    expect(readyOf(store).saveError).toContain('Connection');
+    killNew.value = false;
+    await store.retrySave(); // reopens: connection 3, which works
+    expect(opened).toHaveLength(3);
+    expect(readyOf(store).saveError).toBeNull();
+    await store.commit(addXp(1));
+    expect(opened).toHaveLength(3); // the new connection is kept
+    expect(readyOf(store).progress.xp).toBe(6);
+    expect(((await stored(name)) as { doc: Progress }).doc.xp).toBe(6);
+  });
+
+  it('keeps the change and the warning when reopening fails too, then recovers', async () => {
+    const name = freshName();
+    const dead = new Set<Db>();
+    const { deps, opened } = depsWithDeadHandles(dead);
+    let blocked = false;
+    const store = new ProgressStore(name, {
+      ...deps,
+      openDb: (n, t) => (blocked ? Promise.reject(new Error('cannot open')) : deps.openDb(n, t)),
+    });
+    await store.load(NOW);
+    dead.add(opened[0] as Db);
+    await store.commit(addXp(15));
+    blocked = true;
+    await store.retrySave();
+    let s = readyOf(store);
+    expect(s.saveError).toBe('cannot open');
+    expect(s.progress.xp).toBe(15);
+    blocked = false;
+    await store.retrySave();
+    s = readyOf(store);
+    expect(s.saveError).toBeNull();
+    expect(((await stored(name)) as { doc: Progress }).doc.xp).toBe(15);
+  });
+
+  it('does not load again or touch the screen state beyond the save result', async () => {
+    const dead = new Set<Db>();
+    const { deps, opened } = depsWithDeadHandles(dead);
+    const store = new ProgressStore(freshName(), deps);
+    await store.load(NOW);
+    dead.add(opened[0] as Db);
+    await store.commit(addXp(2));
+    await store.retrySave();
+    await store.load(NOW);
+    expect(readyOf(store).progress.xp).toBe(2);
+    expect(readyOf(store).repaired).toEqual([]);
   });
 });
 

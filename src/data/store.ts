@@ -123,11 +123,30 @@ export class ProgressStore {
     return this.loadPromise;
   }
 
+  /** Opens a connection that forgets itself if the browser drops it. */
+  private async connect(): Promise<db.Db> {
+    const handle = await this.deps.openDb(this.dbName, () => {
+      if (this.handle === handle) this.handle = null;
+    });
+    return handle;
+  }
+
+  /** Closes and forgets the connection, so the next save opens a new one. */
+  private dropHandle(): void {
+    const old = this.handle;
+    this.handle = null;
+    try {
+      old?.close();
+    } catch (e) {
+      console.warn('Could not close the database connection', e);
+    }
+  }
+
   private async doLoad(now: Date): Promise<void> {
     const today = dayKeyOf(now);
     let handle: db.Db;
     try {
-      handle = await this.deps.openDb(this.dbName);
+      handle = await this.connect();
     } catch (e) {
       // Only "the database can't be opened at all" means in-memory progress.
       console.warn('Saved progress is not available in this browser', e);
@@ -213,15 +232,16 @@ export class ProgressStore {
 
   private async write(added: readonly Planner[]): Promise<void> {
     const s = this.state;
-    const handle = this.handle;
     const base = this.saved;
-    if (s.status !== 'ready' || handle === null || base === null) return;
+    if (s.status !== 'ready' || base === null) return;
     const attempt = [...this.pending, ...added];
     if (attempt.length === 0 && s.saveError === null) return;
     const out: { start: Progress; written: Progress | null } = { start: base, written: null };
     try {
+      // After a failed save the connection was dropped: open a new one for this attempt.
+      this.handle ??= await this.connect();
       const record = await this.deps.transactCommit(
-        handle,
+        this.handle,
         (current) => {
           let start = base;
           if (current !== null && current.rev !== this.rev) {
@@ -251,6 +271,9 @@ export class ProgressStore {
       });
     } catch (e) {
       if (e instanceof PlannerError) throw e;
+      // The connection may be dead (iPhone Safari drops it in the background): forget it so
+      // "Try again" opens a new one instead of failing the same way.
+      this.dropHandle();
       // The write itself failed: keep the change in memory so the lesson isn't lost. Build on
       // what the transaction read (another tab's newer save, if any), not on our older copy.
       // If the transaction failed before the planners ran, a buggy one throws here; it must not
@@ -299,7 +322,7 @@ export class ProgressStore {
       // After a failed read no connection is kept: open one now. The transaction below still
       // refuses to replace a record that has become readable.
       const opened = this.handle === null;
-      const handle = this.handle ?? (await this.deps.openDb(this.dbName));
+      const handle = this.handle ?? (await this.connect());
       const fresh = emptyProgress(dayKeyOf(now));
       let record: db.StoredRecord;
       try {
