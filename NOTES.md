@@ -511,3 +511,26 @@ Branch `claude/wizardly-curie-x3hi6f`, built on the M7 PR head (`17d93de`). Base
 - **Item 3 (files over ~300 lines), split with no logic change:** `synth.ts` → `tonePlans.ts`, `unlock.ts`; `store.ts` → `storeTypes.ts`, `storeChecks.ts` (`PlannerError`, `Planner`, `StoreDeps`, `StoreState` are still exported from `store.ts`); `lessonBuilder.ts` → `cardOrder.ts`; `SettingsScreen.tsx` → `ImportPreviewSheet.tsx`; `GalleryScreen.tsx` → `GalleryParts.tsx`. Only test import paths changed.
 - Item 4 (ErrorBoundary has no automated test) stays as it is. Framing: owner chose (a), no change.
 - Verified: `npm run verify` green after the last code edit (930 unit tests; 404 e2e passed, 20 skipped). Not verified: a real iPhone dropping its connection (fake handles that reject like `InvalidStateError` stand in for it). The "debug again" pass was the diff self-review and the screen screenshots run inside `verify`; no second clean-room install (`npm ci` was run at the start of this session on a fresh checkout).
+
+## 2026-10-14: Course part 2 planned (units 12–25), Opus planning session
+- Owner answered six questions (decisions in `docs/HANDOFF.md`, "Course part 2"): pitch first,
+  then rhythm, then combined; range stays C2–C6; rhythm/tune questions are answered with buttons
+  and the app plays rhythms and tunes (no tapping); three new jump-ahead checkpoints after units
+  15, 19 and 22; plain words only (symbols ♯ ♭ ♮ shown and explained), no octave numbers;
+  microphone/MIDI later; "go with the recommendations" for the rest.
+- Wrote: `CURRICULUM.md` Part 2 (§6–§12: outline, 12 sign cards, mixes, rhythm/tune/stack
+  libraries, units 12–25, concept cards, UI text), `SPEC.md` §8 (pitches, schema v2, music text
+  and sounding-pitch rule, music drawing, black-key answers, 14 new question kinds, audio,
+  curriculum types, builder, feedback, UI), `SCHEMA-V2.md` (data-model impact and tests),
+  milestones `M8`–`M14`, README milestone table, `PROMPTS-PART2.md` (filled-in prompts).
+- Gotcha: `content.test.ts` reads CURRICULUM §5 up to the next `## ` heading, so Part 2 must start
+  with a `## ` heading (a `# ` heading made the test read Part 2 text as §5 and fail).
+- Checked in this session: the 12 extra Bravura glyphs exist and extract with `fonttools==4.60.1`
+  from a cloud session (bounds printed); the 14 new unit colours have white-text contrast 4.7–9.9;
+  every melody box in CURRICULUM §9.2 and every rhythm pattern in §9.1 sums to its time, every
+  sounding pitch (with box signs and home signs) is a card, and every note sits at staff position
+  −2..10 (checked with a throwaway script: 0 problems; M9 adds the permanent data test).
+- Not checked: nothing was built or run against the app; layout widths of two-box melodies on a
+  320 px phone are an estimate (M9 visual QA decides, with a fallback written into SPEC §8.4).
+- Key finding: `validate.ts` drops unknown card ids, so adding sharp/flat cards **requires**
+  schema v2 even though no field changes (an older cached app would otherwise delete them).
