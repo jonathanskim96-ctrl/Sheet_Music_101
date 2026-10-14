@@ -424,3 +424,83 @@ worker scope is `/Sheet_Music_101/`.
 ### Steps still open
 - Step 6 (Opus `/code-review high` over the whole codebase) and the Opus read of step 5: not done in this session.
 - Step 8 (owner phone test) and step 9 (fixes from it): owner.
+
+## 2026-10-14: M7 Opus review (whole codebase: code review, security review, black-box attack)
+Branch `claude/wizardly-curie-x3hi6f`, built on the M7 PR head (`17d93de`). Baseline on that head: `npm run verify` green
+(925 unit; 266 e2e passed, 20 skipped, 14 min).
+
+### Process check (M7 steps 1–4, 7, 10)
+- The 12 mutation checks were run again by script (break, run the named tests, `git checkout -- <file>`, run again). Every
+  one **failed as expected** and was green after the restore. Counts differ a little from the Sonnet table because the
+  breaks were written fresh (e.g. #1 here allows any finite number in `num`, so 3 tests fail, not 20). #10 also fails
+  `curriculum.lock.test.ts` (checked on its own). #11 (CSP plugin removed): `check-dist` fails ("CSP meta missing") and
+  both e2e CSP tests fail.
+- Coverage table spot-checked against the test files (4.3 DST and year-end tests, 4.5 rules 1–6, 4.7, 4.13, 4.15, 5.2, 6
+  guardrail 4, 7.3 hand-counted y table, 7.8 update banner, 7.10 toasts, CURRICULUM 3 all 24 rows): every row names tests that
+  exist and test what the row says. The 7.10 and 7.5 gaps are stated honestly.
+- Speed and size: 118 kB of JavaScript gzipped (budget 300 kB); the 4× slower processor test passes (Path under 2 s; the
+  whole test, seeding included, took 1.3 s).
+- Hardening tests are meaningful: protections broken on purpose and caught by e2e: CSP plugin removed (2 tests),
+  frame-busting removed (1), the validator's lesson-id pattern loosened (3), the store's rev-conflict merge removed (3),
+  the backup `app` check removed (1), a failed write no longer kept in memory (1).
+
+### Code review fixes made here
+- `store.ts`: if a save failed before its transaction ran and the change was itself invalid (a planner bug), that change
+  stayed in `pending` and every later save failed with it. It is now dropped (new unit test; fails without the fix).
+- `e2e/hardening.spec.ts` (from `/code-review high`): hostile-route tests now wait for the hash to settle on `#/` (they could
+  pass against the old Path); the hostile *stored* data test really stores a `__proto__` key (Playwright drops `__proto__`
+  from `evaluate` arguments, so it had stored a clean document); the zoom and accessible-name checks wait for the concept
+  card (they could inspect Settings); the CSP test removes only the three expected refusals from the console errors (it
+  cleared all of them); the network test listens on the browser context (sees service-worker requests) and compares
+  origins exactly; the keyboard test reuses `CHOICE_LABEL` (it missed the step/skip labels).
+- `check-dist`: the whole CSP must equal SPEC 7.9 (before, only `script-src` was checked: `connect-src *` or a dropped
+  `object-src` passed); any `https://` URL in the build fails except two library error-message links (react.dev/errors,
+  Workbox's bit.ly link), which are text and never fetched; the budget message uses the constant.
+- `check-safety` and `.gitignore`: the broken screen's raw export (`sheet-music-101-saved-data-*.json`) can't be committed
+  either (only backup files were caught).
+- `LICENSES/Nunito-OFL.txt` added (the Nunito font files ship in the app; only Bravura's licence was there).
+
+### Security review
+- `/security-review` over the whole codebase: no findings. Manual audit (STANDARDS §6, every box): no banned APIs in `src/`
+  (check-safety mutation-tested for all nine), no URL built from input (the only `href`s are a Blob URL and the page's own
+  location), no secrets, no `.env`, no committed backups. CI: top-level `contents: read`, only deploy has
+  `pages: write`/`id-token: write`, every action pinned to a full SHA, no `${{ }}` in `run:`, `persist-credentials: false`,
+  no `pull_request_target`.
+- Dependencies: `npm audit` 0 and `npm audit --omit=dev --audit-level=moderate` 0. Runtime deps (react/react-dom 19.3.0 by
+  Meta, idb 8.0.3 by Jake Archibald, @fontsource/nunito 5.3.0, lucide-react 1.48.0) are all over two weeks old with no
+  install scripts. The lockfile is unchanged since M1: every package from registry.npmjs.org with an integrity hash; the only
+  install scripts are `fsevents` (dev, macOS only).
+- Service worker: precaches only the app's own files (e2e-checked), no runtime caching of other sites, scope
+  `/Sheet_Music_101/`, never reloads by itself, `controllerchange` only shows the banner when a worker was already in control.
+  A poisoned cache would need script execution on the origin first (blocked by the CSP).
+
+### Black-box attack (M7 step 5, second pass): new `e2e/attack.spec.ts` (all passing, phone and desktop)
+- Backup files (33 cases): `__proto__`/`constructor.prototype` in the envelope, settings, lessons map, cards map and inside a
+  card; 10 000 levels inside a card; invalid UTF-8 inside a valid file (in `exportedAt`: ignored; as a lesson id: refused);
+  UTF-8 BOM and UTF-16 with BOM (both decoded by the browser and accepted after strict checking); −1, −0 (accepted as 0),
+  1e9+1, 1e308, 2.5, 1.0 (accepted), dailyGoal 4; markup and control characters and 100 000 characters in `exportedAt` (date
+  ignored, nothing shown); markup as a day, app name; 33-character id; duplicate keys; wrong inner types; 3 000 lessons and 5 000
+  card ids; newer schema in the envelope or the document; `"1"` as schema. Each: the right fixed message (or a clean preview),
+  stored record unchanged, no injected element, nothing from the file on screen, `Object.prototype` clean. Plus the 1 000 000 /
+  1 000 001 byte boundary, a hostile file name, and a valid backup with `__proto__` keys restored for real (no prototype key stored).
+- Hostile stored data (written inside the page so `__proto__` survives): repaired in memory without pollution and **not
+  rewritten on load**; 60 000-entry arrays and wrong types repaired; newer schema / string / list → broken screen, record
+  unchanged after Cancel; a rev that goes backwards is built on (the other copy's XP kept).
+- Routes (18 more): double-encoded, `%00`, CRLF, full-width digit, RTL mark, `javascript:`, `data:`, `#/lesson/cp-a`,
+  `#/checkpoint/u2-l1`, `constructor`/`__proto__` checkpoints, dot segments, 120 000-character hash: all settle on `#/`.
+- CSP: the policy equals SPEC 7.9 line by line and is the first element of `<head>`; refused: `fetch` and XHR to another
+  origin, a remote script, a remote image, an inline `<style>`, a `<base>` to another site (plus the existing setTimeout string,
+  inline handler and inline script). `eval`/`new Function` can't be tested from Playwright: code it evaluates is exempt from the
+  page's CSP, like the console.
+- Network: a full session (Welcome, a lesson, review, checkpoint cp-a, Progress, Settings, save a backup, restore it, Start
+  over) makes no request outside the app's origin (context-level listener, exact origin compare).
+- Service worker: offline cold start (reload with no network) shows the Path and Progress.
+- Races: two tabs finishing lessons at once both keep their result; a restore in one tab while a lesson is open in another
+  (the lesson lands on top of the restored progress); a refused write (QuotaExceededError) keeps the lesson in memory, shows
+  the error, and Try again saves it as rev 51; five taps on one answer and two on Continue never skip a question; the clock at
+  23:59 on 31 December, then 1 January, then set back to June: three practice days recorded, XP correct.
+- Framing: not re-proven here (the preview server answers on one host name only, so a second origin could not be served).
+  The Sonnet finding stands: another site can frame the app. Options are in the PR comment for the owner.
+
+### Not done or not testable here
+- Real phones (iPhone sound, touch, home-screen install, Android), the ErrorBoundary crash screen, and mascot moods (as before).
