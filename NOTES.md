@@ -311,5 +311,6 @@
 ## 2026-10-14: M6 review fix session (items 2 and 3)
 - StepSkip no longer rebuilds button states or invents a `'step-up'` fallback; QuestionView passes `choiceStates()` and `noteState`.
 - LessonScreen: `planFor` returns `{ plan, id }` from one exhaustive switch (`never` check); `idOf` is gone. Same seeds as before.
-- Not done: item 1 (needs the owner's OK to change the `activeElement` e2e check) and item 4 (needs an owner decision). See HANDOFF.
+- Item 1: `blur()` removed from Keyboard; CSS `.key:focus:not(:focus-visible) { outline: none }` instead. The old `activeElement` check tested the fix, not what the learner sees; it is now `toHaveCSS('outline-style','none')` (checked: fails without the CSS rule).
+- Item 4: new `open` bubble state (available, not current): unit colour, no lock, no Start. e2e test passes cp-b from a fresh start (fails on the old code).
 - Gotcha: a fresh cloud checkout has no `node_modules`; `tsc`/`eslint` silently print nothing useful until `npm ci` has run.

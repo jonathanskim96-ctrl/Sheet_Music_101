@@ -40,6 +40,7 @@ _Read this first in every new session. Keep it short and current._
 | 2026-10-13 | M5: the iPhone sound hardening stays a separate Sonnet session (not in the M5 PR). |
 | 2026-10-13 | M5 review: the restore preview offers "Save a backup first" (saves the current progress, the sheet stays open) before "Replace my progress" (CLAUDE.md: anything that replaces progress offers an export first). |
 | 2026-10-13 | M5 review: the Progress chart's tap targets (~19 px wide on a phone, one per column) are an accepted exception to the 44 px rule (STANDARDS §2); the tooltip names the tapped note, so a wrong tap is obvious. |
+| 2026-10-14 | M6 review item 4 (owner): open-but-not-current lessons after a checkpoint jump are drawn in the unit colour, no lock, no Start label. M6 review item 1 (owner): the focus e2e check may be replaced by an outline check. |
 | 2026-10-12 | Tech: versions in `docs/build/SPEC.md` §2 were verified to install, build and test together (with npm 11 for installs; npm 10 has a resolver bug). |
 
 ### Gaps the spec left open in M2, with the Opus review verdict (2026-10-13)
@@ -79,7 +80,8 @@ keeps the recommended option until the owner says otherwise.
 
 ### M6 review follow-up (PR #18 was already merged when this was done)
 - Done (branch `claude/youthful-euler-p9cmq3`): item 2 (StepSkip takes `states`/`noteState` from QuestionView) and item 3 (LessonScreen `planFor` returns plan and seed id from one exhaustive switch).
-- **Waiting on the owner:** item 1 (remove `blur()` in Keyboard, use CSS) breaks the e2e check at `curriculum.spec.ts:144` (`document.activeElement`). CLAUDE.md needs the owner's OK to change that test. Item 4 (look of open-but-not-current lesson bubbles after a checkpoint jump: (a) unit colour, no lock, recommended; (b) keep lock, tap shows locked toast; (c) leave) needs a decision recorded here first.
+- Item 1 done (owner approved changing the e2e check, 2026-10-14): no `blur()`; `.key:focus:not(:focus-visible)` hides pointer focus paint, the `:focus-visible` ring stays. The e2e check now asserts the tapped key has `outline-style: none` (it fails if the CSS rule is removed).
+- Item 4 done (owner chose option a, 2026-10-14): a lesson that is open (`isAvailable`) but neither done nor current is drawn in its unit colour with no lock and no "Start" label (`BubbleState` `open`, aria "available"). Tapping it opens the lesson.
 
 ### M6 choices the spec left open (owner may veto)
 - Checkpoint node: "Jump ahead" until every level-1 lesson of the unit before it is done (`checkpointReached`), then "Test yourself". It stays "Test yourself" after a pass. Trophy card with the checkpoint's title; no other states.
