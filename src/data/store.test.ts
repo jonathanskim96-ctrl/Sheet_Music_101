@@ -183,10 +183,13 @@ describe('saved data from earlier versions', () => {
     const raw = (await stored(name)) as { rev: number; doc: Progress };
     expect(raw.rev).toBe(10);
     expect(raw.doc.schemaVersion).toBe(2);
-    const { schemaVersion: _a, xp: xpBefore, ...before } = fixture;
-    const { schemaVersion: _b, xp: xpAfter, ...after } = raw.doc;
-    expect(xpAfter).toBe(xpBefore + 5);
-    expect(after).toEqual(before);
+    expect(raw.doc.xp).toBe(fixture.xp + 5);
+    // everything except the version and the xp we just added is exactly as it was
+    expect({ ...raw.doc, schemaVersion: 0, xp: 0 }).toEqual({
+      ...fixture,
+      schemaVersion: 0,
+      xp: 0,
+    });
     expect(Object.keys(raw.doc.cards)).toHaveLength(12);
     expect(Object.keys(raw.doc.lessons)).toHaveLength(13);
   });

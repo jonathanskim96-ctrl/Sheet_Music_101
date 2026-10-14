@@ -136,9 +136,8 @@ describe('schema v2 (SCHEMA-V2 §5)', () => {
     const strict = checkProgress(up.value, 'strict');
     expect(strict.issues).toEqual([]);
     expect(strict.progress?.schemaVersion).toBe(2);
-    const { schemaVersion: _was, ...before } = v1;
-    const { schemaVersion: _now, ...after } = strict.progress ?? {};
-    expect(after).toEqual(before);
+    const after: Record<string, unknown> = { ...strict.progress };
+    expect({ ...after, schemaVersion: 0 }).toEqual({ ...v1, schemaVersion: 0 });
     for (const key of [
       'xp',
       'lessons',
