@@ -82,6 +82,9 @@ keeps the recommended option until the owner says otherwise.
 - [ ] Protect `main` (`docs/SETUP.md` section 3).
 - [ ] Add the app to the home screen on each phone (SETUP sections 6–7) and confirm the icon.
 
+## M8 review items 2 and 4 fixed (2026-10-14, branch `claude/bold-ride-vz4rgx`)
+- Sign cards keep their sign: `FeedbackBar` `shownCard`, `mastery` `chartName` (F♯ not "Treble F"), `hintFor` → null (SPEC 8.10); `questions.ts` `cardParts` throws for sign cards until M10 adds the sign questions (SPEC 8.6). `SIGN_CARDS`/`SignCardId` now come from one table in `cards.ts`. Item 1 was fixed in the review; item 3 is now a line in the M10 and M11 Steps lists.
+
 ## Next step
 **Course part 2:** (a) planning PR merged; (b) **M8** built: now the Opus review of the M8 PR (review prompt with M8, plus `/security-review`), then the owner merges; (c) M9 … M14 the same way, in order. M9 ends with screenshots for the owner to approve the new music drawing; M11 asks the owner to listen to the rhythms on the phone; M14 is the phone test. The part-1 items below still apply (phone test of M7, protect `main`).
 

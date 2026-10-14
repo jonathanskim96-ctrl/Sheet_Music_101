@@ -548,3 +548,9 @@ Branch `claude/wizardly-curie-x3hi6f`, built on the M7 PR head (`17d93de`). Base
 - Small fixes by the reviewer: `isSignCard` is exact (it was true for junk strings), `cardMidi` throws on an unknown id (it answered MIDI 0), a test used a hand-written regex instead of `isNaturalCard`, HANDOFF said schema v1 is current. New tests: junk ids; `buildReview`/`reviewAvailable` with the v2 fixture's sign cards; `store.olderApp.test.ts` (an app version from before M8, simulated by an upgrade table that stops at 1, refuses v2 data and writes nothing); store test 8d (an open tab cannot overwrite a newer save).
 - Larger items are a numbered list in the PR for a Sonnet fix session.
 - Owner decision applied (same review): newer-version data → broken screen with "Reload the app" only; `startFresh` throws `MSG_NEWER_NO_RESET` for it (pre-check and inside the transaction); unit tests in `store.test.ts` (`startFresh`), e2e in `attack.spec.ts`. SPEC 7.2 updated. Review item 1 is done; items 2–4 remain.
+
+## 2026-10-14: M8 review items 2 and 4 (Sonnet fix session)
+- Item 2: four places dropped a sign card's sign. Fixed with a failing test first for each: `shownCard` (exported for the test; returns a sign card unchanged), `chartName` (uses `pitchName`), `hintFor` (null), `cardParts` (throws "Question not supported for sign card … until M10 (SPEC 8.6)", so name-note, find-key and find-on-staff cannot silently use the white key).
+- Item 4: `SIGN_CARDS`, `SignCardId` and the lookup come from one `SIGN_TABLE` in `cards.ts`; no position-based parsing, no `as Note`. `ids.lock.json` untouched.
+- Item 3 left for M10/M11: added as step 9 in both milestone files.
+- Gotcha: `shownCard` computed the nearest position before checking the sign, so the `cardParts` throw would have hit it first; the sign check must come before.
