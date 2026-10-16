@@ -177,7 +177,7 @@ export function GalleryPart2() {
                 <Music mode="rhythm" score={rhythmScore(p.tokens, p.time)} />
               </Labelled>
             ))}
-            <div className={styles['grid']}>
+            <div className={styles['stack']}>
               {EVENT_SETS[set].map((t) => (
                 <Labelled key={t} label={`single ${t}`}>
                   <Music mode="rhythm" score={rhythmScore([t], 4)} showTime={false} />
@@ -208,7 +208,7 @@ export function GalleryPart2() {
         </Block>
 
         <Block id="part-2-stacks" title="Note stacks">
-          <div className={styles['grid']}>
+          <div className={styles['stack']}>
             {ST.map((m) => (
               <Labelled key={m.id} label={m.id}>
                 <Music mode="treble" score={melodyScore(m)} showTime={false} />
