@@ -942,7 +942,7 @@ Layout (all in staff spaces `S`, same `y(p)` as §7.3):
   1.5 S above the top line (or above the head if higher). Colour is not the only signal.
 - **Highlight states** for feedback: `correct` / `wrong` colour the head as in §7.3.
 - **Empty slot** (finish-box): a dashed rounded rectangle 2 S × 4 S at the missing beat.
-- Width = header + boxes; render with `width: 100%`. On a 320 px phone a two-box melody must
+- Width = header + boxes; render with `width: 100%`. A picture with a single box is never wider than a two-box 4-beat picture would be on the same screen (M9 review item 2; `widthFraction`), centred, so one-box rhythm pictures are not drawn about three times larger than tunes. On a 320 px phone a two-box melody must
   keep a staff space ≥ 9 CSS px (checked in the visual QA screenshots; if not, the music view may
   break after the first box onto a second line, same header repeated without time numbers).
 - `aria-label`s never reveal the answer ("Music with two boxes, one note marked").

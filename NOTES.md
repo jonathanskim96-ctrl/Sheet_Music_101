@@ -566,3 +566,10 @@ Branch `claude/wizardly-curie-x3hi6f`, built on the M7 PR head (`17d93de`). Base
 - Checked: every M9 step; every melody of CURRICULUM §9.2 compared with `library.ts` by script (56/56 identical), rhythm patterns and stacks by eye; the sounding-pitch table in `music.test.ts` re-derived by hand for all of MS, MF, MK, MN; screenshots of t1, s1, kd1, h1, h6 and every RE pattern checked note by note against SPEC 8.4 (positions, stems, dots, ledger lines, home-sign positions, grand alignment all correct).
 - Fixed in the review: the rhythm picture was 70 high, which cut off the bottom time digit (now 80; SPEC 8.4 updated, test that both digits fit); a marked whole note on the rhythm line had its marker inside the head; a marked stack drew one marker per note (now one, over the top note: `markerIndex`, tested); `drawBeats` re-used `beatsOf` instead of a second table; aria label says "two boxes" (SPEC wording) instead of "2 boxes".
 - Left for the owner and a Sonnet fix session (PR #27 comment): the SPEC grid (2.6 S per beat) puts a printed sign almost on the previous note's stem and makes half-beat heads touch; black-key labels are about 6 px on a two-octave keyboard; one-box rhythm pictures are very large.
+
+### M9 review items 1 and 2 (Sonnet fix session, 2026-10-16)
+- Item 1 (owner chose (a)): `BEAT_WIDTH` 2.6 S → 3.0 S; SPEC 8.4 and the geometry tests follow (one hard-coded half-beat distance, 13 → 15, changed because the spec value changed). New tests: a sign keeps ≥ 0.4 S clear of the 1-beat head before it; half-beat heads and the head after a pair keep ≥ 0.25 S.
+- Item 2: `widthFraction` caps a one-box picture at the size of a two-box 4-beat picture, centred.
+- Gotcha: the first version of the cap measured the width on the element it was capping, so every resize shrank it again (the keyboard buttons were never "stable" in e2e). The measured holder and the capped box are now separate elements.
+- Screenshots in `docs/build/m9-screenshots/` re-taken (390 px, light).
+

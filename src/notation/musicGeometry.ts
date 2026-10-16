@@ -208,6 +208,30 @@ export function planRows(input: MusicLayoutInput, widthPx: number, minSpacePx: n
   return rows;
 }
 
+const REFERENCE_BEATS: Time = 4;
+
+/**
+ * How much of the available width a single-box picture may use (0..1): the staff spaces are never
+ * bigger than those of a two-box 4-beat picture on the same screen (M9 review item 2). More than one
+ * box is never narrowed, so a melody that wrapped to rows keeps its larger spaces.
+ */
+export function widthFraction(
+  input: MusicLayoutInput,
+  widthPx: number,
+  minSpacePx: number,
+): number {
+  if (input.boxCount !== 1) return 1;
+  const own = layoutMusic(input).width;
+  const two = { ...input, boxBeats: REFERENCE_BEATS, boxCount: 2 };
+  const rows = planRows(two, widthPx, minSpacePx);
+  const widest = Math.max(
+    ...rows.map(
+      (count, i) => layoutMusic({ ...two, time: i === 0 ? two.time : null, boxCount: count }).width,
+    ),
+  );
+  return Math.min(1, own / widest);
+}
+
 // ---- notes -----------------------------------------------------------------------------
 
 export interface NoteShape {

@@ -19,6 +19,7 @@ import {
   planRows,
   restShape,
   stemUp,
+  widthFraction,
   timeDigitYs,
   xAt,
   type MusicLayoutInput,
@@ -154,6 +155,41 @@ describe('room between notes (M9 review item 1)', () => {
     const c = noteShape('rhythm', RHYTHM_LINE_Y, xAt(l, 0, 1), 0, 'q', null);
     const w = GLYPHS.noteheadBlack.advance * K;
     expect(c.x - w / 2 - (b.x + w / 2)).toBeGreaterThanOrEqual(0.25 * S);
+  });
+});
+
+describe('widthFraction (M9 review item 2)', () => {
+  it('lets a one-box picture use only the width of a two-box picture', () => {
+    const one = base({ boxCount: 1 });
+    const f = widthFraction(one, 390, 9);
+    expect(f).toBeCloseTo(layoutMusic(one).width / layoutMusic({ ...one, boxCount: 2 }).width);
+    expect(f).toBeLessThan(0.7);
+  });
+  it('sizes a short 2-beat box against the 4-beat reference, so every one-box picture looks alike', () => {
+    const f2 = widthFraction(base({ boxCount: 1, time: 2, boxBeats: 2 }), 390, 9);
+    expect(f2).toBeCloseTo(
+      layoutMusic(base({ boxCount: 1, time: 2, boxBeats: 2 })).width /
+        layoutMusic(base({ boxCount: 2 })).width,
+    );
+  });
+  it('never narrows more than one box', () => {
+    expect(widthFraction(base({ boxCount: 2 }), 390, 9)).toBe(1);
+    expect(widthFraction(base({ boxCount: 3 }), 390, 9)).toBe(1);
+  });
+  it('keeps a one-box picture at least the staff space a wrapped two-box picture gets', () => {
+    const one = base({ boxCount: 1, home: 'Bb' });
+    for (const px of [320, 390, 600]) {
+      const f = widthFraction(one, px, 9);
+      const space = (px * f * S) / layoutMusic(one).width;
+      const rows = planRows({ ...one, boxCount: 2 }, px, 9);
+      const widest = Math.max(
+        ...rows.map(
+          (n, i) => layoutMusic({ ...one, time: i === 0 ? one.time : null, boxCount: n }).width,
+        ),
+      );
+      expect(space).toBeLessThanOrEqual((px * S) / widest + 1e-9);
+      expect(f).toBeLessThanOrEqual(1);
+    }
   });
 });
 

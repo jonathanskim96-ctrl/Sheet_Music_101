@@ -16,6 +16,7 @@ import {
   timeDigitYs,
   xAt,
   EMPTY_SLOT,
+  widthFraction,
   type MusicLayout,
   type MusicMode,
   type NoteShape,
@@ -381,7 +382,9 @@ export function Music({ mode, score, showTime = true, minSpace = 9, ariaLabel }:
     boxBeats: score.time,
     boxCount,
   };
-  const rows = px === null || px <= 0 ? [boxCount] : planRows(input, px, minSpace);
+  const known = px !== null && px > 0;
+  const rows = known ? planRows(input, px, minSpace) : [boxCount];
+  const fraction = known ? widthFraction(input, px, minSpace) : 1;
   // Every row shares one viewBox width, so staff spaces are the same size on every row.
   const plan = rows.map((count, ri) => ({
     firstBox: rows.slice(0, ri).reduce((sum, n) => sum + n, 0),
@@ -400,17 +403,20 @@ export function Music({ mode, score, showTime = true, minSpace = 9, ariaLabel }:
   );
   return (
     <div className={styles['paper']}>
-      <div
-        ref={holder}
-        className={styles['rows']}
-        role="img"
-        aria-label={ariaLabel ?? defaultLabel(score, mode)}
-        data-testid="music"
-        data-rows={plan.length}
-      >
-        {plan.map((r) => (
-          <Row key={r.firstBox} mode={mode} score={score} width={width} {...r} />
-        ))}
+      {/* The holder is measured and never capped; only the inner box is narrowed, so the cap cannot feed back into the measurement. */}
+      <div ref={holder}>
+        <div
+          className={styles['rows']}
+          role="img"
+          aria-label={ariaLabel ?? defaultLabel(score, mode)}
+          data-testid="music"
+          data-rows={plan.length}
+          style={fraction < 1 ? { maxWidth: `${String(fraction * 100)}%` } : undefined}
+        >
+          {plan.map((r) => (
+            <Row key={r.firstBox} mode={mode} score={score} width={width} {...r} />
+          ))}
+        </div>
       </div>
     </div>
   );
