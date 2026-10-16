@@ -926,8 +926,8 @@ Layout (all in staff spaces `S`, same `y(p)` as §7.3):
   top digit centred on p = 6, bottom digit "4" on p = 2 (rhythm mode: top digit above the line,
   bottom below). A header element is omitted when not used (no time numbers on a lone
   single-note question).
-- **Time grid:** `x(box, beat) = boxStart + 1.2 S + beat × 2.6 S`; box width
-  `1.2 S + time × 2.6 S + 0.6 S`; a bar line (width 0.13 S, staff height) at each box end, a
+- **Time grid:** `x(box, beat) = boxStart + 1.2 S + beat × 3.0 S`; box width
+  `1.2 S + time × 3.0 S + 0.6 S`; a bar line (width 0.13 S, staff height) at each box end, a
   thicker double line at the last box end is **not** drawn (plain look). Grand: both staves share
   the grid, so notes played together line up exactly.
 - **Notes:** heads by duration (`w` whole, `h`/`h.` half, `q`/`ee` black). Stems (width 0.12 S,

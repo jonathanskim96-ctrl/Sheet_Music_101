@@ -24,7 +24,7 @@ export const BEAM_HEIGHT = 0.5 * S;
 export const BAR_WIDTH = 0.13 * S;
 /** Space before the first beat of a box, per beat, and after the last beat. */
 const BOX_LEAD = 1.2 * S;
-const BEAT_WIDTH = 2.6 * S;
+const BEAT_WIDTH = 3.0 * S;
 const BOX_TAIL = 0.6 * S;
 const HEAD_GAP = 0.3 * S;
 export const EMPTY_SLOT = { width: 2 * S, height: 4 * S } as const;

@@ -105,12 +105,12 @@ describe('header', () => {
 
 describe('time grid', () => {
   for (const time of [2, 3, 4] as Time[]) {
-    it(`time ${String(time)}: x = boxStart + 1.2 S + beat × 2.6 S, box width 1.2 S + time × 2.6 S + 0.6 S`, () => {
+    it(`time ${String(time)}: x = boxStart + 1.2 S + beat × 3.0 S, box width 1.2 S + time × 3.0 S + 0.6 S`, () => {
       const l = layoutMusic(base({ time, boxBeats: time, boxCount: 3 }));
-      expect(boxWidth(time)).toBeCloseTo(12 + time * 26 + 6);
+      expect(boxWidth(time)).toBeCloseTo(12 + time * 30 + 6);
       for (let b = 0; b < 3; b++) {
         for (let beat = 0; beat < time; beat++)
-          expect(xAt(l, b, beat)).toBeCloseTo(def(l.boxStarts[b]) + 12 + beat * 26);
+          expect(xAt(l, b, beat)).toBeCloseTo(def(l.boxStarts[b]) + 12 + beat * 30);
         expect(def(l.boxEnd[b]) - def(l.boxStarts[b])).toBeCloseTo(boxWidth(time));
       }
       expect(l.boxStarts[1]).toBeCloseTo(def(l.boxEnd[0]));
@@ -129,6 +129,31 @@ describe('time grid', () => {
     const one = layoutMusic(base({ boxCount: 1 })).width;
     const two = layoutMusic(base({ boxCount: 2 })).width;
     expect(two - one).toBeCloseTo(boxWidth(4));
+  });
+});
+
+describe('room between notes (M9 review item 1)', () => {
+  const l = layoutMusic(base({ boxCount: 1 }));
+  const bottom = def(l.staves[0]).bottomLineY;
+  for (const sign of ['sharp', 'flat', 'natural'] as const) {
+    it(`a ${sign} sign keeps at least 0.4 S clear of the 1-beat head before it`, () => {
+      const prev = noteShape('treble', bottom, xAt(l, 0, 0), 0, 'q', null);
+      const next = noteShape('treble', bottom, xAt(l, 0, 1), 0, 'q', sign);
+      const prevRight = prev.x + (GLYPHS.noteheadBlack.advance * K) / 2;
+      expect(def(next.sign).x - prevRight).toBeGreaterThanOrEqual(0.4 * S);
+    });
+  }
+  it('the two heads of a half-beat pair have a gap of at least 0.25 S', () => {
+    const a = noteShape('rhythm', RHYTHM_LINE_Y, xAt(l, 0, 0), 0, 'ee', null);
+    const b = noteShape('rhythm', RHYTHM_LINE_Y, xAt(l, 0, 0.5), 0, 'ee', null);
+    const w = GLYPHS.noteheadBlack.advance * K;
+    expect(b.x - w / 2 - (a.x + w / 2)).toBeGreaterThanOrEqual(0.25 * S);
+  });
+  it('the head after a half-beat pair has a gap of at least 0.25 S', () => {
+    const b = noteShape('rhythm', RHYTHM_LINE_Y, xAt(l, 0, 0.5), 0, 'ee', null);
+    const c = noteShape('rhythm', RHYTHM_LINE_Y, xAt(l, 0, 1), 0, 'q', null);
+    const w = GLYPHS.noteheadBlack.advance * K;
+    expect(c.x - w / 2 - (b.x + w / 2)).toBeGreaterThanOrEqual(0.25 * S);
   });
 });
 
@@ -217,7 +242,7 @@ describe('beams', () => {
     expect(beam.x).toBeCloseTo(def(a.stem).x - STEM_WIDTH / 2);
     expect(beam.x + beam.width).toBeCloseTo(def(b.stem).x + STEM_WIDTH / 2);
     expect(beam.y).toBeCloseTo(50 - STEM_LENGTH);
-    expect(b.x - a.x).toBeCloseTo(13);
+    expect(b.x - a.x).toBeCloseTo(15);
   });
   it('needs two stems', () => {
     const a = noteShape('rhythm', 50, 0, 0, 'w', null);
