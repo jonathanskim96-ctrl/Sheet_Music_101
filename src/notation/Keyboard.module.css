@@ -67,3 +67,16 @@
 .wrong .dot {
   fill: var(--ink);
 }
+
+.blackLabel {
+  fill: var(--paper);
+  font-family: inherit;
+  font-weight: 800;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.highlight .blackLabel,
+.wrong .blackLabel {
+  fill: var(--ink);
+}

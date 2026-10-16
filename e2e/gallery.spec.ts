@@ -42,7 +42,10 @@ test('tapping a keyboard key shows which key was pressed', async ({ page }) => {
   const keyboard = page.getByTestId('keyboard').first();
   await keyboard.locator('[data-note="C4"]').click();
   await expect(page.getByTestId('last-key')).toHaveText('Last key: C4');
-  await keyboard.getByRole('button', { name: 'Black key' }).first().click();
+  await keyboard
+    .getByRole('button', { name: /\u266F \/ / })
+    .first()
+    .click();
   await expect(page.getByTestId('last-key')).toHaveText('Last key: black');
 });
 

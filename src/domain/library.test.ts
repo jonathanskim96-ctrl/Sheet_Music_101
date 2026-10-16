@@ -19,7 +19,14 @@ import {
   STACKS,
   rhythmPatterns,
 } from './library';
-import { beatsOf, eventBeats, soundingCard, type Melody } from './music';
+import {
+  beatsOf,
+  eventBeats,
+  soundingCard,
+  type Melody,
+  type MusicEvent,
+  type Staffline,
+} from './music';
 import { staffPosition } from './notes';
 import { ALL_CARDS } from './cards';
 
@@ -127,18 +134,18 @@ describe('melodies and stacks', () => {
               }
   });
   it('gives grand-staff tunes the same number of boxes on both staves, treble first', () => {
-    for (const mel of ALL)
-      if (mel.staffs.length === 2) {
-        expect(mel.staffs[0].clef).toBe('treble');
-        expect(mel.staffs[1].clef).toBe('bass');
-        expect(mel.staffs[0].boxes.length, mel.id).toBe(mel.staffs[1].boxes.length);
-        mel.staffs[0].boxes.forEach((box, b) => {
-          expect(
-            box.reduce((n, e) => n + eventBeats(e), 0),
-            `${mel.id} box ${String(b)}`,
-          ).toBe(mel.staffs[1].boxes[b]?.reduce((n, e) => n + eventBeats(e), 0));
-        });
-      }
+    for (const mel of ALL) {
+      const [treble, bass] = mel.staffs as readonly Staffline[];
+      if (treble === undefined || bass === undefined) continue;
+      expect(treble.clef).toBe('treble');
+      expect(bass.clef).toBe('bass');
+      expect(treble.boxes.length, mel.id).toBe(bass.boxes.length);
+      treble.boxes.forEach((box, b) => {
+        const beats = (events: readonly MusicEvent[] | undefined) =>
+          (events ?? []).reduce((n, e) => n + eventBeats(e), 0);
+        expect(beats(box), `${mel.id} box ${String(b)}`).toBe(beats(bass.boxes[b]));
+      });
+    }
     expect(MH.every((x) => x.staffs.length === 2)).toBe(true);
     expect(SH.every((x) => x.staffs.length === 2)).toBe(true);
   });

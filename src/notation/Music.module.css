@@ -1,0 +1,60 @@
+.paper {
+  background: var(--paper);
+  border-radius: var(--radius);
+  border: 2px solid var(--border);
+  padding: 4px 8px;
+  width: 100%;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.line {
+  stroke: var(--ink);
+}
+
+.ink {
+  fill: var(--ink);
+  stroke: var(--ink);
+}
+
+.correct {
+  fill: var(--correct-ink);
+  stroke: var(--correct-ink);
+}
+
+.wrong {
+  fill: var(--wrong-ink);
+  stroke: var(--wrong-ink);
+}
+
+.ghost {
+  opacity: 0.4;
+}
+
+.focus {
+  fill: var(--focus);
+  stroke: var(--focus);
+}
+
+.marker {
+  fill: var(--ink);
+  stroke: none;
+}
+
+.slot {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.2px;
+  stroke-dasharray: 3 2.5;
+  opacity: 0.7;
+}
