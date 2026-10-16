@@ -22,6 +22,7 @@ import {
 } from './musicGeometry';
 import {
   drawBeats,
+  markerIndex,
   type DrawEvent,
   type DrawNote,
   type DrawState,
@@ -187,6 +188,7 @@ function EventShapes({ layout, staveIndex, clef, box, beat, event }: EventProps)
       </g>
     );
   }
+  const markerAt = markerIndex(event.notes, pitchOf);
   return (
     <>
       {event.notes.map((n, i) => {
@@ -199,7 +201,7 @@ function EventShapes({ layout, staveIndex, clef, box, beat, event }: EventProps)
             data-marked={n.marked === true ? 'true' : undefined}
           >
             <NoteParts shape={shape} cls={colourClass(n.state, n.marked)} />
-            {n.marked === true && <Marker mode={mode} bottomLineY={bottom} shape={shape} />}
+            {i === markerAt && <Marker mode={mode} bottomLineY={bottom} shape={shape} />}
           </g>
         );
       })}
@@ -294,7 +296,7 @@ function Row({ mode, score, firstBox, count, showTime, width }: RowProps) {
               x={bx - BAR_WIDTH / 2}
               y={mode === 'rhythm' ? stave.bottomLineY - 2 * S : yOf(stave.bottomLineY, 8)}
               width={BAR_WIDTH}
-              height={mode === 'rhythm' ? 4 * S : 4 * S}
+              height={4 * S}
             />
           ))}
           {(score.staffs[si]?.boxes ?? []).slice(firstBox, firstBox + count).map((events, bi) => {
@@ -347,7 +349,8 @@ function defaultLabel(score: MusicScore, mode: MusicMode): string {
     ),
   );
   const what = mode === 'rhythm' ? 'Rhythm' : 'Music';
-  const boxText = boxes === 1 ? 'one box' : `${String(boxes)} boxes`;
+  const words = ['no', 'one', 'two', 'three', 'four'];
+  const boxText = boxes === 1 ? 'one box' : `${words[boxes] ?? String(boxes)} boxes`;
   return `${what} with ${boxText}${marked ? ', one note marked' : ''}`;
 }
 

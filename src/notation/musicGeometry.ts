@@ -11,7 +11,8 @@ export type MusicMode = 'treble' | 'bass' | 'grand' | 'rhythm';
 
 export const STAFF_HEIGHT = 100;
 export const GRAND_HEIGHT = 220;
-export const RHYTHM_HEIGHT = 70;
+/** 80, not the 70 of SPEC 8.4 as first written: a bottom time digit 1.5 S below the line needs it. */
+export const RHYTHM_HEIGHT = 80;
 /** The single line of the rhythm staff. */
 export const RHYTHM_LINE_Y = 50;
 const SINGLE_BOTTOM = 70;
@@ -319,7 +320,8 @@ export function markerShape(
 } {
   const topLine = yOf(bottomLineY, 8);
   let apexY: number;
-  if (mode === 'rhythm') apexY = (stemTop ?? headY) - 0.3 * S;
+  // A stemless head (a whole note) is 1 S tall, so its marker starts a full S above its centre.
+  if (mode === 'rhythm') apexY = stemTop === null ? headY - S : stemTop - 0.3 * S;
   else apexY = Math.min(topLine - 1.5 * S, headY - S);
   return {
     apex: { x, y: apexY },

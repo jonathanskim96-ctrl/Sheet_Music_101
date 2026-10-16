@@ -1,4 +1,12 @@
-import type { Dur, HomeSign, Melody, RestDur, RhythmToken, Time } from '../domain/music';
+import {
+  beatsOf,
+  type Dur,
+  type HomeSign,
+  type Melody,
+  type RestDur,
+  type RhythmToken,
+  type Time,
+} from '../domain/music';
 import type { Clef, Note, Sign } from '../domain/notes';
 
 // What the Music component draws: a plain description of boxes, events and notes. The adapters
@@ -75,9 +83,18 @@ export function rhythmScore(tokens: readonly RhythmToken[], time: Time): MusicSc
 
 /** The beats an event takes up (an empty slot takes the beats it stands for). */
 export function drawBeats(e: DrawEvent): number {
-  if (e.kind === 'empty') return e.beats;
-  if (e.dur === 'q' || e.dur === 'ee' || e.dur === 'Q') return 1;
-  if (e.dur === 'h' || e.dur === 'H') return 2;
-  if (e.dur === 'h.') return 3;
-  return 4;
+  return e.kind === 'empty' ? e.beats : beatsOf(e.dur);
+}
+
+/** Which note of an event carries the marker: a marked stack gets one, over its highest marked note; -1 for none. */
+export function markerIndex(
+  notes: readonly DrawNote[],
+  positionOf: (n: DrawNote) => number,
+): number {
+  let at = -1;
+  notes.forEach((n, i) => {
+    const top = notes[at];
+    if (n.marked === true && (top === undefined || positionOf(n) > positionOf(top))) at = i;
+  });
+  return at;
 }

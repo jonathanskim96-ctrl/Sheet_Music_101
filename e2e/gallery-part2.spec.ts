@@ -36,7 +36,7 @@ test('the marker, the empty slot and the states are drawn', async ({ page }) => 
   await expect(marks.locator('[data-note-state="wrong"]').first()).toBeVisible();
   // the label never reveals which note is marked
   await expect(
-    marks.getByRole('img', { name: 'Music with 2 boxes, one note marked' }).first(),
+    marks.getByRole('img', { name: 'Music with two boxes, one note marked' }).first(),
   ).toBeVisible();
 });
 

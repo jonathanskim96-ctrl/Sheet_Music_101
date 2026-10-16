@@ -920,7 +920,7 @@ scale `k` as §7.3. Update `glyphs.test.ts` (each glyph present, bounds sane).
 
 Layout (all in staff spaces `S`, same `y(p)` as §7.3):
 - **Modes:** `treble`, `bass`, `grand` (as §7.3) and **`rhythm`**: one horizontal line at
-  `y = 50` in a viewBox of height 70 (no clef); every note sits on the line, stems up.
+  `y = 50` in a viewBox of height 80 (no clef; 70 until the M9 review, which clipped the bottom time digit); every note sits on the line, stems up.
 - **Header:** clef (as §7.3) → home sign → time numbers. Home-sign positions (p): treble F♯ 8,
   C♯ 5, B♭ 4, E♭ 7; bass F♯ 6, C♯ 3, B♭ 2, E♭ 5; each sign 1.0 S apart, in that order. Time:
   top digit centred on p = 6, bottom digit "4" on p = 2 (rhythm mode: top digit above the line,

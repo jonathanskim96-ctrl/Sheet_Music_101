@@ -5,6 +5,8 @@ import { yOf, K, S } from './geometry';
 import { GLYPHS } from './glyphs';
 import {
   BEAM_HEIGHT,
+  RHYTHM_HEIGHT,
+  RHYTHM_LINE_Y,
   STEM_LENGTH,
   STEM_WIDTH,
   beamBetween,
@@ -87,9 +89,9 @@ describe('header', () => {
     expect(timeDigitYs('bass', 70)).toEqual({ top: 40, bottom: 60 });
     expect(timeDigitYs('rhythm', 50)).toEqual({ top: 35, bottom: 65 });
   });
-  it('has a rhythm staff of height 70 with the line at y = 50 and no clef', () => {
+  it('has a rhythm staff of height 80 with the line at y = 50 and no clef', () => {
     const l = layoutMusic(base({ mode: 'rhythm' }));
-    expect(l.height).toBe(70);
+    expect(l.height).toBe(80);
     expect(l.staves).toEqual([{ clef: null, bottomLineY: 50 }]);
   });
   it('uses the part-1 staff heights and positions', () => {
@@ -259,6 +261,16 @@ describe('marker', () => {
     const m = markerShape('rhythm', 50, 80, 50, 15);
     expect(m.apex.y).toBeLessThan(15);
     expect(m.left.y).toBeGreaterThanOrEqual(0);
+  });
+  it('clears the head of a stemless note on the rhythm staff', () => {
+    const m = markerShape('rhythm', 50, 80, 50, null);
+    expect(m.apex.y).toBeLessThan(50 - GLYPHS.noteheadWhole.bounds[3] * K);
+  });
+  it('keeps both time digits inside the rhythm picture', () => {
+    const ys = timeDigitYs('rhythm', RHYTHM_LINE_Y);
+    const g = GLYPHS.timeSig4;
+    expect(ys.top - g.bounds[3] * K).toBeGreaterThanOrEqual(0);
+    expect(ys.bottom - g.bounds[1] * K).toBeLessThanOrEqual(RHYTHM_HEIGHT);
   });
 });
 
