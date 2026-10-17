@@ -14,7 +14,24 @@ from fontTools.ttLib import TTFont
 from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.pens.boundsPen import BoundsPen
 
-WANT = [('gClef', 0xE050), ('fClef', 0xE062), ('brace', 0xE000), ('noteheadWhole', 0xE0A2)]
+WANT = [
+    ('gClef', 0xE050),
+    ('fClef', 0xE062),
+    ('brace', 0xE000),
+    ('noteheadWhole', 0xE0A2),
+    ('noteheadHalf', 0xE0A3),
+    ('noteheadBlack', 0xE0A4),
+    ('augmentationDot', 0xE1E7),
+    ('accidentalFlat', 0xE260),
+    ('accidentalNatural', 0xE261),
+    ('accidentalSharp', 0xE262),
+    ('restWhole', 0xE4E3),
+    ('restHalf', 0xE4E4),
+    ('restQuarter', 0xE4E5),
+    ('timeSig2', 0xE082),
+    ('timeSig3', 0xE083),
+    ('timeSig4', 0xE084),
+]
 
 
 def num(v):

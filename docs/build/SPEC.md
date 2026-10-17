@@ -920,14 +920,14 @@ scale `k` as §7.3. Update `glyphs.test.ts` (each glyph present, bounds sane).
 
 Layout (all in staff spaces `S`, same `y(p)` as §7.3):
 - **Modes:** `treble`, `bass`, `grand` (as §7.3) and **`rhythm`**: one horizontal line at
-  `y = 50` in a viewBox of height 70 (no clef); every note sits on the line, stems up.
+  `y = 50` in a viewBox of height 80 (no clef; 70 until the M9 review, which clipped the bottom time digit); every note sits on the line, stems up.
 - **Header:** clef (as §7.3) → home sign → time numbers. Home-sign positions (p): treble F♯ 8,
   C♯ 5, B♭ 4, E♭ 7; bass F♯ 6, C♯ 3, B♭ 2, E♭ 5; each sign 1.0 S apart, in that order. Time:
   top digit centred on p = 6, bottom digit "4" on p = 2 (rhythm mode: top digit above the line,
   bottom below). A header element is omitted when not used (no time numbers on a lone
   single-note question).
-- **Time grid:** `x(box, beat) = boxStart + 1.2 S + beat × 2.6 S`; box width
-  `1.2 S + time × 2.6 S + 0.6 S`; a bar line (width 0.13 S, staff height) at each box end, a
+- **Time grid:** `x(box, beat) = boxStart + 1.2 S + beat × 3.0 S`; box width
+  `1.2 S + time × 3.0 S + 0.6 S`; a bar line (width 0.13 S, staff height) at each box end, a
   thicker double line at the last box end is **not** drawn (plain look). Grand: both staves share
   the grid, so notes played together line up exactly.
 - **Notes:** heads by duration (`w` whole, `h`/`h.` half, `q`/`ee` black). Stems (width 0.12 S,
@@ -942,7 +942,7 @@ Layout (all in staff spaces `S`, same `y(p)` as §7.3):
   1.5 S above the top line (or above the head if higher). Colour is not the only signal.
 - **Highlight states** for feedback: `correct` / `wrong` colour the head as in §7.3.
 - **Empty slot** (finish-box): a dashed rounded rectangle 2 S × 4 S at the missing beat.
-- Width = header + boxes; render with `width: 100%`. On a 320 px phone a two-box melody must
+- Width = header + boxes; render with `width: 100%`. A picture with a single box is never wider than a two-box 4-beat picture would be on the same screen (M9 review item 2; `widthFraction`), centred, so one-box rhythm pictures are not drawn about three times larger than tunes. On a 320 px phone a two-box melody must
   keep a staff space ≥ 9 CSS px (checked in the visual QA screenshots; if not, the music view may
   break after the first box onto a second line, same header repeated without time numbers).
 - `aria-label`s never reveal the answer ("Music with two boxes, one note marked").

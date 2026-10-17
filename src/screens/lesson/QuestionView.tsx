@@ -8,7 +8,7 @@ import {
   type ChoiceValue,
   type Question,
 } from '../../domain/questions';
-import { Keyboard, whiteKeys, type KeyState } from '../../notation/Keyboard';
+import { Keyboard, pressedNote, whiteKeys, type KeyState } from '../../notation/Keyboard';
 import { Staff, type NoteState } from '../../notation/Staff';
 import { ChoiceButtons } from './questions/ChoiceButtons';
 import { FindKey } from './questions/FindKey';
@@ -117,7 +117,7 @@ export function QuestionView({ question: q, answered, onAnswer }: QuestionViewPr
           states={states}
           disabled={locked}
           onPress={(key) => {
-            send({ kind: 'key', note: key });
+            send({ kind: 'key', note: pressedNote(key) });
           }}
         />
       );

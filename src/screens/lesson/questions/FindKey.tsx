@@ -1,7 +1,7 @@
 import { parseCardId } from '../../../domain/cards';
 import { keyboardWindow } from '../../../domain/keyboardWindow';
 import type { Note } from '../../../domain/notes';
-import { Keyboard, type KeyState } from '../../../notation/Keyboard';
+import { Keyboard, pressedNote, type KeyState } from '../../../notation/Keyboard';
 import { Staff } from '../../../notation/Staff';
 import type { KindProps } from './types';
 
@@ -39,7 +39,7 @@ export function FindKey({ q, answered, send }: KindProps<'find-key-letter' | 'fi
         states={states}
         disabled={answered !== null}
         onPress={(key) => {
-          send({ kind: 'key', note: key });
+          send({ kind: 'key', note: pressedNote(key) });
         }}
       />
     </>

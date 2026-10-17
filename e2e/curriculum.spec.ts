@@ -109,7 +109,10 @@ test.describe('find the key', () => {
     q = await reachQuestion(page, 'find-key-letter');
     const right2 = await answerOf(q);
     if (right2.kind !== 'key' || right2.note === 'black') throw new Error('expected a key answer');
-    await q.getByRole('button', { name: 'Black key' }).first().click();
+    await q
+      .getByRole('button', { name: /\u266F \/ / })
+      .first()
+      .click();
     await expect(feedback).toHaveAttribute('data-correct', 'false');
     await expect(feedback).toContainText(`Any ${right2.note.charAt(0)} key works.`);
     await expect(q.locator(`[data-note="${right2.note}"]`)).toHaveAttribute(

@@ -28,6 +28,25 @@ const SECTIONS = [
   'confetti',
 ];
 
+// M9: the Gallery's "Part 2" blocks (music in boxes), photographed at two phone widths.
+const PART2_BLOCKS = [
+  'part-2-glyphs',
+  'part-2-headers',
+  'part-2-rhythm-ra',
+  'part-2-rhythm-rd',
+  'part-2-rhythm-rr',
+  'part-2-rhythm-re',
+  'part-2-melodies-treble',
+  'part-2-melodies-signs',
+  'part-2-melodies-bass',
+  'part-2-melodies-home',
+  'part-2-melodies-natural',
+  'part-2-melodies-grand',
+  'part-2-stacks',
+  'part-2-marks',
+  'part-2-keyboard',
+];
+
 // Screenshots for visual QA (STANDARDS §5/§7). Phone project only.
 test.skip(({ isMobile }) => !isMobile, 'screenshots are taken on the phone project only');
 
@@ -44,6 +63,21 @@ for (const scheme of ['light', 'dark'] as const) {
   });
 
   for (const width of [390, 320]) {
+    test(`gallery part 2 blocks at ${String(width)}px, ${scheme} mode`, async ({ page }) => {
+      test.slow();
+      await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto('./#/gallery');
+      await expect(page.getByRole('heading', { name: 'Gallery' })).toBeVisible();
+      for (const name of PART2_BLOCKS) {
+        const block = page.locator(`[data-section="${name}"]`);
+        await block.scrollIntoViewIfNeeded();
+        await block.screenshot({
+          path: `test-results/screens/gallery-${name}-${String(width)}-${scheme}.png`,
+        });
+      }
+    });
+
     test(`no horizontal overflow at ${String(width)}px, ${scheme} mode`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
       await page.setViewportSize({ width, height: 800 });
