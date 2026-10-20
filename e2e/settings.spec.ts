@@ -194,22 +194,29 @@ test('Progress shows the totals, the mastery chart and level stars', async ({ pa
   await expect(page.getByTestId('total-accuracy')).toHaveText(`${String(accuracy)}%`);
 
   // 34 notes, each tappable with its own description
-  const notes = page.locator('[data-card]');
+  const chart = page.locator('[aria-labelledby="mastery-title"]');
+  const notes = chart.locator('[data-card]');
   await expect(notes).toHaveCount(34);
   const g4 = p.cards['treble-G4'];
   expect(g4).toBeDefined();
-  await page.locator('[data-card="treble-G4"]').click();
+  await chart.locator('[data-card="treble-G4"]').click();
   await expect(page.getByTestId('mastery-tooltip')).toHaveText(
     new RegExp(
       `^Treble G · (Learning|Almost|Known) · ${String(g4?.correct)}/${String(g4?.seen)} correct$`,
     ),
   );
-  await page.locator('[data-card="bass-C2"]').click();
+  await chart.locator('[data-card="bass-C2"]').click();
   await expect(page.getByTestId('mastery-tooltip')).toHaveText('Low C · New');
   for (const word of ['New', 'Learning', 'Almost', 'Known']) {
     await expect(page.getByRole('list', { name: 'Legend' }).getByText(word)).toBeVisible();
   }
-  await expect(page.getByTestId('level-stars')).toHaveCount(11);
+  // the second chart holds the 12 sharp/flat cards under their own ids
+  const signs = page.locator('[aria-labelledby="signs-title"] [data-card]');
+  await expect(signs).toHaveCount(12);
+  await signs.first().click();
+  await expect(page.getByTestId('mastery-tooltip-signs')).toHaveText('Treble F♯ · New');
+  await expect(page.locator('[data-card="treble-G#4"]')).toHaveCount(1);
+  await expect(page.getByTestId('level-stars')).toHaveCount(15);
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - window.innerWidth,
   );

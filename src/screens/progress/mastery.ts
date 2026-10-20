@@ -1,5 +1,5 @@
-import { NATURAL_CARDS, parseCardId, type CardId } from '../../domain/cards';
-import { pitchName, type Clef, type Note } from '../../domain/notes';
+import { NATURAL_CARDS, SIGN_CARDS, parseCardId, type CardId } from '../../domain/cards';
+import { pitchName, type Clef, type Note, type Sign } from '../../domain/notes';
 import { NICKNAMES } from '../../domain/content';
 import type { Progress } from '../../domain/progress';
 import { masteryOf } from '../../domain/srs';
@@ -18,6 +18,8 @@ export interface ChartNote {
   clef: Clef;
   note: Note;
   column: number;
+  /** The sign printed before the head (the sharp/flat chart only). */
+  sign?: Sign;
   mastery: Mastery;
   /** "Treble G · Known · 12/13 correct" (SPEC 7.2). */
   label: string;
@@ -49,6 +51,25 @@ export function chartNotes(p: Progress): ChartNote[] {
     const parts = [chartName(card), MASTERY_WORDS[mastery]];
     if (state) parts.push(`${String(state.correct)}/${String(state.seen)} correct`);
     return [{ card, clef, note, column, mastery, label: parts.join(' · ') }];
+  });
+}
+
+/**
+ * The 12 sharp/flat cards for the second chart: 6 columns, each staff in pitch order, the sign
+ * drawn before the head (SPEC 8.11).
+ */
+export function signChartNotes(p: Progress): ChartNote[] {
+  const perClef = { treble: 0, bass: 0 };
+  return SIGN_CARDS.flatMap((card) => {
+    const parsed = parseCardId(card);
+    if (!parsed) return [];
+    const { clef, note, sign } = parsed;
+    const column = perClef[clef]++;
+    const state = Object.hasOwn(p.cards, card) ? p.cards[card] : undefined;
+    const mastery = masteryOf(state);
+    const parts = [chartName(card), MASTERY_WORDS[mastery]];
+    if (state) parts.push(`${String(state.correct)}/${String(state.seen)} correct`);
+    return [{ card, clef, note, column, sign, mastery, label: parts.join(' · ') }];
   });
 }
 

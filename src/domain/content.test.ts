@@ -47,7 +47,7 @@ describe('concept cards match CURRICULUM.md section 3 exactly', () => {
 
   it('parses all 24 rows', () => {
     expect(rows).toHaveLength(24);
-    expect(rows.map((r) => r.id)).toEqual([...CONCEPT_CARD_IDS]);
+    expect(rows.map((r) => r.id)).toEqual(CONCEPT_CARD_IDS.slice(0, 24));
   });
   it.each(rows)('$id', ({ id, title, body }) => {
     const card = (CONCEPT_CARDS as Record<string, { title: string; body: string } | undefined>)[id];
@@ -67,6 +67,159 @@ describe('concept cards match CURRICULUM.md section 3 exactly', () => {
       'B4',
       'C5',
     ]);
+  });
+});
+
+describe('part-2 concept cards match CURRICULUM.md section 11 exactly (the ones built so far)', () => {
+  const rows = section(11)
+    .split('\n')
+    .filter((l) => /^\| c-/.test(l))
+    .map((l) => l.split('|').map((c) => c.trim()))
+    .map((cells) => ({ id: cells[1] ?? '', title: cells[2] ?? '', body: cells[3] ?? '' }));
+  const built = rows.filter((r) => (CONCEPT_CARD_IDS as readonly string[]).includes(r.id));
+
+  it('M10 built the seven sign cards, in the order of the table', () => {
+    expect(built.map((r) => r.id)).toEqual([
+      'c-sharp',
+      'c-sharp-staff',
+      'c-flat',
+      'c-two-names',
+      'c-bass-signs',
+      'c-natural',
+      'c-signs-grand',
+    ]);
+    expect(CONCEPT_CARD_IDS.slice(24)).toEqual(built.map((r) => r.id));
+  });
+  it.each(built)('$id', ({ id, title, body }) => {
+    const card = (CONCEPT_CARDS as Record<string, { title: string; body: string } | undefined>)[id];
+    expect(card?.title).toBe(title);
+    expect(card?.body).toBe(body);
+  });
+});
+
+describe('every quoted text in CURRICULUM.md section 12 exists in content.ts (as the milestones arrive)', () => {
+  const have = allStrings(content);
+  const quoted = [...new Set([...section(12).matchAll(/"([^"]+)"/g)].map((m) => m[1] ?? ''))];
+  // Texts that belong to a later milestone (M11–M13), and examples/templates that are produced by
+  // helper functions and checked by name below. Each time a milestone builds its texts, it moves
+  // them out of this list so the check covers them (M10 STANDARDS note).
+  const NOT_YET = new Set([
+    'How many beats does this note last?',
+    'How many beats does this rest last?',
+    'How many beats does this pair last?',
+    'Which lasts longer?',
+    'First note',
+    'Second note',
+    'How many beats are in this box?',
+    'Which one finishes the box?',
+    'Which rhythm did you hear?',
+    'Which note is marked?',
+    'How does the marked note move?',
+    'Which tune did you hear?',
+    'How many letters apart are these notes?',
+    'How many letters apart are these two notes?',
+    'Are these notes played together?',
+    'Together',
+    'One after the other',
+    'Is this a note stack?',
+    'Yes, a stack',
+    'No',
+    'Which stack is this?',
+    'Name its bottom note.',
+    '1 beat',
+    '2 beats',
+    '3 beats',
+    '4 beats',
+    '2 letters',
+    '3 letters',
+    '4 letters',
+    '5 letters',
+    'Top rhythm',
+    'Middle rhythm',
+    'Bottom rhythm',
+    'Top tune',
+    'Middle tune',
+    'Bottom tune',
+    '1-beat note',
+    '2-beat rest',
+    'Play again',
+    '2-beat note',
+    '3-beat note',
+    '4-beat note',
+    'half-beat pair',
+    '1-beat rest',
+    '4-beat rest',
+    'the first note',
+    'a 2-beat note',
+    'a 1-beat rest',
+    'a',
+    'the top one',
+    'the middle one',
+    'the bottom one',
+    'step up',
+    '3 letters apart',
+    'together',
+    'one after the other',
+    'a stack',
+    'not a stack',
+    'the {Letter} stack',
+    'The ♯ earlier in this box still counts.',
+    'The ♭ earlier in this box still counts.',
+    'The ♮ earlier in this box still counts.',
+    'The home sign makes every {Letter} a {Letter}♯.',
+    'New box: the sign from the last box is gone.',
+    '1 + 1 + 2 = 4 beats.',
+    'C-D-E: 3 letters apart.',
+    'C-E-G: the C stack.',
+    'Tap Play again to hear it once more.',
+    'Turn on sound to hear this.',
+    'Turn on sound',
+    "You've finished the whole course! Keep your reading sharp with Practise.",
+    // examples and templates of M10, covered by the named tests below
+    'F♯',
+    'B♭',
+    'F',
+    'Treble F♯',
+    'Bass B♭',
+    '♯: one key to the right of {Letter}.',
+    '♭: one key to the left of {Letter}.',
+    '♮: the plain {Letter} key.',
+    'That key is also called {other name}.',
+    'F♯/G♭',
+    'C♯/D♭',
+    'G♯/A♭',
+    'A♯/B♭',
+    'D♯/E♭',
+    'That key is also called A♭.',
+  ]);
+  it('the list of pending texts only names strings that really are in section 12', () => {
+    for (const s of NOT_YET) expect(quoted, s).toContain(s);
+  });
+  it.each(quoted.filter((s) => !NOT_YET.has(s)))('%s', (s) => {
+    expect(have.has(s)).toBe(true);
+  });
+  it('sign lines and chart names are produced exactly as written', () => {
+    expect(content.signLine('treble-F#4', false)).toBe('♯: one key to the right of F.');
+    expect(content.signLine('bass-Bb2', false)).toBe('♭: one key to the left of B.');
+    expect(content.signLine('treble-F4', true)).toBe('♮: the plain F key.');
+    expect(content.signLine('treble-F4', false)).toBeNull();
+    expect(content.pitchNameOfCard('treble-F#4')).toBe('F♯');
+    expect(content.pitchNameOfCard('bass-Bb2')).toBe('B♭');
+    expect(content.pitchNameOfCard('treble-C4')).toBe('C'); // never the nickname "Middle C"
+  });
+  it('"also called" names the other name of each black key', () => {
+    expect(content.alsoCalled('treble-Ab4')).toBe('That key is also called G♯.');
+    expect(content.alsoCalled('treble-G#4')).toBe('That key is also called A♭.');
+    expect(content.alsoCalled('treble-F#4')).toBe('That key is also called G♭.');
+    expect(content.alsoCalled('treble-C#5')).toBe('That key is also called D♭.');
+    expect(content.alsoCalled('treble-Bb4')).toBe('That key is also called A♯.');
+    expect(content.alsoCalled('treble-Eb5')).toBe('That key is also called D♯.');
+    expect(content.alsoCalled('treble-C4')).toBeNull();
+  });
+  it('the Meet-card tips for sharps and flats match CURRICULUM section 7', () => {
+    const md = section(7);
+    expect(md).toContain(content.SHARP_TIP);
+    expect(md).toContain(content.FLAT_TIP);
   });
 });
 
@@ -178,6 +331,20 @@ describe('promptFor', () => {
     [{ kind: 'line-or-space', position: 3 }, 'Is this note on a line or in a space?'],
     [{ kind: 'higher-lower', first: 'C4', second: 'E4' }, 'Which note is higher?'],
     [{ kind: 'clef-identify', clef: 'bass' }, 'Which clef is this?'],
+    [
+      {
+        kind: 'name-accidental',
+        card: 'treble-F#4',
+        render: 'single',
+        showNatural: false,
+        options: [],
+      },
+      'Which note is this?',
+    ],
+    [
+      { kind: 'find-key-pitch', card: 'treble-F#4', render: 'single' },
+      'Tap this exact key on the piano.',
+    ],
   ];
   it.each(cases)('%j', (q, text) => {
     expect(promptFor(q)).toBe(text);

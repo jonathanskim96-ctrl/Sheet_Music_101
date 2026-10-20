@@ -1,11 +1,13 @@
 import { useEffect, useRef } from 'react';
 import type { CardId } from '../../domain/cards';
 import { parseCardId } from '../../domain/cards';
-import { cardName, TIPS } from '../../domain/content';
+import { cardName, FLAT_TIP, SHARP_TIP, TIPS } from '../../domain/content';
 import { describePosition } from '../../domain/landmarks';
+import { midiNumber } from '../../domain/notes';
+import { cardMidi } from '../../domain/cards';
 import { keyboardWindow } from '../../domain/keyboardWindow';
 import { synth } from '../../audio/synth';
-import { Keyboard } from '../../notation/Keyboard';
+import { Keyboard, whiteKeys } from '../../notation/Keyboard';
 import { Staff } from '../../notation/Staff';
 import { Button } from '../../ui/Button';
 import { Play } from '../../ui/icons';
@@ -15,17 +17,24 @@ import styles from './lesson.module.css';
 export function MeetCard({ card, onGotIt }: { card: CardId; onGotIt: () => void }) {
   const parts = parseCardId(card);
   if (!parts) throw new Error(`Unknown card: ${card}`);
-  const { clef, note } = parts;
-  const tip = TIPS[card];
+  const { clef, note, sign } = parts;
+  const tip = sign === 'sharp' ? SHARP_TIP : sign === 'flat' ? FLAT_TIP : TIPS[card];
   const keys = keyboardWindow(note);
+  // A sharp or flat card sounds a black key; the keyboard names that key by the white key before it.
+  const midi = cardMidi(card);
+  const blackBefore =
+    sign === 'natural'
+      ? undefined
+      : whiteKeys(keys.from, keys.to).find((n) => midiNumber(n) + 1 === midi);
 
   // Plays the note once when the card appears (not again if the page re-renders).
   const played = useRef<CardId | null>(null);
   useEffect(() => {
     if (played.current === card) return;
     played.current = card;
-    synth.playNote(note);
-  }, [card, note]);
+    if (sign === 'natural') synth.playNote(note);
+    else synth.playMidi(midi);
+  }, [card, note, sign, midi]);
 
   return (
     <>
@@ -34,7 +43,7 @@ export function MeetCard({ card, onGotIt }: { card: CardId; onGotIt: () => void 
         <h2 className={styles['cardTitle']}>{cardName(card)}</h2>
         <Staff
           mode={clef}
-          notes={[{ clef, note }]}
+          notes={[{ clef, note, ...(sign !== 'natural' ? { sign } : {}) }]}
           ariaLabel={`Music staff with ${cardName(card)}`}
         />
         <p className={styles['cardBody']}>
@@ -45,7 +54,8 @@ export function MeetCard({ card, onGotIt }: { card: CardId; onGotIt: () => void 
         <Keyboard
           from={keys.from}
           to={keys.to}
-          states={{ [note]: 'highlight' }}
+          states={blackBefore === undefined ? { [note]: 'highlight' } : {}}
+          blackStates={blackBefore === undefined ? {} : { [blackBefore]: 'highlight' }}
           disabled
           ariaLabel={`Piano keyboard with ${cardName(card)} highlighted`}
         />
@@ -53,7 +63,8 @@ export function MeetCard({ card, onGotIt }: { card: CardId; onGotIt: () => void 
         <Button
           variant="secondary"
           onClick={() => {
-            synth.playNote(note);
+            if (sign === 'natural') synth.playNote(note);
+            else synth.playMidi(midi);
           }}
         >
           <Play size={20} aria-hidden="true" /> Play

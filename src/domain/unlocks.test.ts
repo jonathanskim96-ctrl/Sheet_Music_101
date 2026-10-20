@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { CHECKPOINTS, UNITS, allLessonIds, levelLessons, pathLessons } from './curriculum';
+import { buildCheckpoint } from './lessonBuilder';
+import { planCompleteSession } from './planners';
+import { correctAnswerOf } from './questions';
+import { currentQuestion, reduce, resultOf, startSession, type SessionState } from './session';
 import { emptyProgress, type LessonRecord, type Progress } from './progress';
 import type { CardState } from './srs';
 import {
@@ -14,6 +18,21 @@ import {
   unitLevel,
   unitLevelCount,
 } from './unlocks';
+
+function playPerfectly(start: SessionState): SessionState {
+  let s = start;
+  let t = 0;
+  for (let guard = 0; s.phase !== 'complete' && guard < 500; guard++) {
+    t += 1000;
+    if (s.phase === 'concept' || s.phase === 'meet') s = reduce(s, { type: 'next-card', at: t });
+    else if (s.phase === 'question') {
+      const cur = currentQuestion(s);
+      if (!cur) throw new Error('no question');
+      s = reduce(s, { type: 'answer', answer: correctAnswerOf(cur.q), at: t });
+    } else s = reduce(s, { type: 'continue', at: t });
+  }
+  return s;
+}
 
 const rec = (): LessonRecord => ({
   timesCompleted: 1,
@@ -217,10 +236,10 @@ describe('coverage of every id', () => {
     for (const id of allLessonIds()) expect(isAvailable(everything, id), id).toBe(true);
     const nothing = emptyProgress('2026-10-01');
     const open = allLessonIds().filter((id) => isAvailable(nothing, id));
-    expect(open.sort()).toEqual(['cp-a', 'cp-b', 'cp-c', 'u1-l1']);
+    expect(open.sort()).toEqual(['cp-a', 'cp-b', 'cp-c', 'cp-d', 'u1-l1']);
   });
   it('unit list is intact', () => {
-    expect(UNITS).toHaveLength(11);
+    expect(UNITS).toHaveLength(15);
   });
 });
 
@@ -262,7 +281,63 @@ describe('nextLevelLesson', () => {
 });
 
 describe('unitLevelCount', () => {
-  it('is 1 for units 1 and 11 and 3 for the others', () => {
-    expect(UNITS.map((u) => unitLevelCount(u.n))).toEqual([1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1]);
+  it('is 1 for units 1 and 11-15 and 3 for the others', () => {
+    expect(UNITS.map((u) => unitLevelCount(u.n))).toEqual([
+      1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1,
+    ]);
+  });
+});
+
+describe('units 12-15 and cp-d (M10)', () => {
+  it('u12-l1 opens right after u11-l4 and is then the current lesson', () => {
+    const p = done(...upTo('u11-l4'));
+    expect(isAvailable(p, 'u12-l1')).toBe(true);
+    expect(isAvailable(p, 'u12-l2')).toBe(false);
+    expect(currentLesson(p)?.id).toBe('u12-l1');
+    expect(isAvailable(done(...upTo('u11-l3')), 'u12-l1')).toBe(false);
+  });
+  it('the path continues in order through u15-l4, which has no successor yet', () => {
+    const all = pathLessons().map((l) => l.id);
+    expect(all.slice(all.indexOf('u11-l4'), all.indexOf('u11-l4') + 3)).toEqual([
+      'u11-l4',
+      'u12-l1',
+      'u12-l2',
+    ]);
+    expect(all.at(-1)).toBe('u15-l4');
+    expect(currentLesson(done(...upTo('u15-l4')))).toBeNull();
+  });
+  it('cp-d is always open (a jump ahead) and "reached" once unit 15 is done', () => {
+    const cp = CHECKPOINTS.find((c) => c.id === 'cp-d') as (typeof CHECKPOINTS)[number];
+    expect(isAvailable(emptyProgress('2026-10-01'), 'cp-d')).toBe(true);
+    expect(checkpointReached(done(...upTo('u15-l3')), cp)).toBe(false);
+    expect(checkpointReached(done(...upTo('u15-l4')), cp)).toBe(true);
+  });
+  it('units 12-15 have one level: done means one star out of one', () => {
+    const p = done(...upTo('u15-l4'));
+    for (const n of [12, 13, 14, 15]) {
+      expect(unitLevel(p, n)).toBe(1);
+      expect(unitLevelCount(n)).toBe(1);
+      expect(isLevelAvailable(p, n, 2)).toBe(false);
+    }
+    expect(unitLevel(done(...upTo('u12-l3')), 12)).toBe(0);
+  });
+  it('passing cp-d from fresh progress completes units 12-15 only', () => {
+    const cp = CHECKPOINTS.find((c) => c.id === 'cp-d') as (typeof CHECKPOINTS)[number];
+    const plan = buildCheckpoint(cp, 3);
+    const after = planCompleteSession(
+      emptyProgress('2026-10-01'),
+      resultOf(playPerfectly(startSession(plan, 0))),
+      new Date(2026, 9, 12, 10, 0),
+    );
+    const ids = Object.keys(after.lessons).sort();
+    expect(ids).toEqual(
+      [
+        ...pathLessons()
+          .filter((l) => l.unit >= 12)
+          .map((l) => l.id),
+        'cp-d',
+      ].sort(),
+    );
+    expect(currentLesson(after)?.id).toBe('u1-l1'); // earlier units are still to do
   });
 });

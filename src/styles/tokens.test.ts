@@ -49,12 +49,12 @@ const pairs: [string, string][] = [
   ['on-primary', 'primary'],
   ['correct-text', 'correct-bg'],
   ['wrong-text', 'wrong-bg'],
-  ...Array.from({ length: 11 }, (_, i): [string, string] => ['white', `unit-${String(i + 1)}`]),
+  ...Array.from({ length: 25 }, (_, i): [string, string] => ['white', `unit-${String(i + 1)}`]),
 ];
 
 describe('colour tokens', () => {
   it('parses both palettes completely', () => {
-    expect(Object.keys(light)).toHaveLength(32);
+    expect(Object.keys(light)).toHaveLength(46);
     expect(dark.bg).toBe('#111827');
     expect(light.bg).toBe('#ffffff');
   });

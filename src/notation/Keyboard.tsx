@@ -32,6 +32,8 @@ export interface KeyboardProps {
   labelAll?: boolean;
   /** Writes both names on every black key ("F♯" over "G♭"; concept cards). */
   blackLabels?: boolean;
+  /** An arrow under the black keys from a white key to the black key beside it (concept cards). */
+  arrow?: { from: Note; to: 'right' | 'left' };
   /** Called with the white key's note, or the black key's MIDI number. */
   onPress?: (key: KeyPress) => void;
   /** Ignores presses (while feedback is showing). */
@@ -62,6 +64,7 @@ export function Keyboard({
   blackStates = {},
   labelAll = false,
   blackLabels = false,
+  arrow,
   onPress,
   disabled = false,
   ariaLabel = 'Piano keyboard',
@@ -179,6 +182,28 @@ export function Keyboard({
           </g>
         );
       })}
+      {arrow &&
+        (() => {
+          const at = keys.indexOf(arrow.from);
+          if (at < 0) return null;
+          const dir = arrow.to === 'right' ? 1 : -1;
+          const x1 = at + 0.5;
+          const x2 = at + (dir === 1 ? 1 : 0);
+          const y1 = BLACK_HEIGHT + 0.9;
+          const y2 = BLACK_HEIGHT + 0.15;
+          return (
+            <g className={styles['arrow']} aria-hidden="true" data-testid="keyboard-arrow">
+              <path
+                d={`M ${String(x1)} ${String(y1)} Q ${String(x1)} ${String(y2)} ${String(x2 - dir * 0.12)} ${String(y2)}`}
+                fill="none"
+                strokeWidth={0.08}
+              />
+              <polygon
+                points={`${String(x2)},${String(y2)} ${String(x2 - dir * 0.28)},${String(y2 - 0.2)} ${String(x2 - dir * 0.28)},${String(y2 + 0.2)}`}
+              />
+            </g>
+          );
+        })()}
     </svg>
   );
 }

@@ -1,4 +1,4 @@
-import { parseCardId, type CardId } from './cards';
+import { cardMidi, parseCardId, type CardId } from './cards';
 import {
   LETTERS,
   diatonicIndex,
@@ -8,7 +8,12 @@ import {
   type Clef,
   type Letter,
   type Note,
+  type Sign,
 } from './notes';
+import { shuffle } from './rng';
+
+/** One answer button of a name-accidental question: a letter and its sign ('natural' = plain). */
+export type PitchOption = { letter: Letter; sign: Sign };
 
 export type Question =
   | { kind: 'name-note'; card: CardId; render: 'single' | 'grand' }
@@ -20,7 +25,16 @@ export type Question =
   | { kind: 'keyboard-letter'; letter: Letter }
   | { kind: 'line-or-space'; position: number } // 0..8, drawn on a staff with no clef
   | { kind: 'higher-lower'; first: Note; second: Note } // treble staff; different notes
-  | { kind: 'clef-identify'; clef: Clef };
+  | { kind: 'clef-identify'; clef: Clef }
+  // Course part 2 (SPEC 8.6). `showNatural` draws a natural card with a printed natural sign.
+  | {
+      kind: 'name-accidental';
+      card: CardId;
+      render: 'single' | 'grand';
+      showNatural: boolean;
+      options: PitchOption[];
+    }
+  | { kind: 'find-key-pitch'; card: CardId; render: 'single' | 'grand' }; // the exact key, black keys too
 
 export type ChoiceValue =
   | 'line'
@@ -38,16 +52,65 @@ export type Answer =
   | { kind: 'letter'; letter: Letter }
   | { kind: 'key'; note: Note | 'black' }
   | { kind: 'position'; position: number }
-  | { kind: 'choice'; value: ChoiceValue };
+  | { kind: 'choice'; value: ChoiceValue }
+  | { kind: 'pitch-name'; letter: Letter; sign: Sign }
+  | { kind: 'pitch-key'; midi: number };
 
 function cardParts(card: CardId): { clef: Clef; note: Note } {
   const parts = parseCardId(card);
   if (!parts) throw new Error(`Unknown card: ${card}`);
-  // Sharp/flat cards would silently use the white key. M10 adds their questions (SPEC 8.6).
+  // Part-1 kinds only ever get natural cards (SPEC 8.1); a sign card would silently use the white key.
   if (parts.sign !== 'natural') {
-    throw new Error(`Question not supported for sign card ${card} until M10 (SPEC 8.6)`);
+    throw new Error(`Question not supported for sign card ${card} (part-1 kinds are natural only)`);
   }
   return parts;
+}
+
+/** The letter and sign a card stands for, for the part-2 kinds that accept sign cards. */
+function pitchOfCard(card: CardId): PitchOption {
+  const parts = parseCardId(card);
+  if (!parts) throw new Error(`Unknown card: ${card}`);
+  return { letter: letterOf(parts.note), sign: parts.sign };
+}
+
+/** The 7 plain names and the 6 sharp/flat names the course teaches; nothing else is ever offered. */
+const VALID_NAMES: ReadonlySet<string> = new Set([
+  ...LETTERS.map((l) => `${l}natural`),
+  'Fsharp',
+  'Csharp',
+  'Gsharp',
+  'Bflat',
+  'Eflat',
+  'Aflat',
+]);
+
+/**
+ * The answer buttons of a name-accidental question (SPEC 8.6): candidates in order (same letter
+ * plain, ♯, ♭, the letter above and below with the card's sign), minus the right answer and any
+ * name outside the 13 the course uses; the first 3 plus the right answer, shuffled. Fewer than
+ * 3 candidates survive for some cards (C♯ gets 2 buttons): owner decision 2026-10-20.
+ */
+export function pitchOptions(card: CardId, rand: () => number): PitchOption[] {
+  const right = pitchOfCard(card);
+  const i = LETTERS.indexOf(right.letter);
+  const above = LETTERS[(i + 1) % 7] ?? right.letter;
+  const below = LETTERS[(i + 6) % 7] ?? right.letter;
+  const candidates: PitchOption[] = [
+    { letter: right.letter, sign: 'natural' },
+    { letter: right.letter, sign: 'sharp' },
+    { letter: right.letter, sign: 'flat' },
+    { letter: above, sign: right.sign },
+    { letter: below, sign: right.sign },
+  ];
+  const seen = new Set<string>([`${right.letter}${right.sign}`]);
+  const kept: PitchOption[] = [];
+  for (const c of candidates) {
+    const key = `${c.letter}${c.sign}`;
+    if (seen.has(key) || !VALID_NAMES.has(key)) continue;
+    seen.add(key);
+    kept.push(c);
+  }
+  return shuffle([...kept.slice(0, 3), right], rand);
 }
 
 function assertNever(x: never): never {
@@ -91,6 +154,10 @@ export function correctAnswerOf(q: Question): Answer {
       };
     case 'clef-identify':
       return { kind: 'choice', value: q.clef };
+    case 'name-accidental':
+      return { kind: 'pitch-name', ...pitchOfCard(q.card) };
+    case 'find-key-pitch':
+      return { kind: 'pitch-key', midi: cardMidi(q.card) };
     default:
       return assertNever(q);
   }
@@ -129,6 +196,12 @@ export function checkAnswer(q: Question, a: Answer): boolean {
         a.kind === 'choice' &&
         a.value === (correctAnswerOf(q) as Extract<Answer, { kind: 'choice' }>).value
       );
+    case 'name-accidental': {
+      const right = pitchOfCard(q.card);
+      return a.kind === 'pitch-name' && a.letter === right.letter && a.sign === right.sign;
+    }
+    case 'find-key-pitch':
+      return a.kind === 'pitch-key' && a.midi === cardMidi(q.card);
     default:
       return assertNever(q);
   }
@@ -161,6 +234,8 @@ export function cardOf(q: Question): CardId | null {
     case 'find-key-letter':
     case 'find-key-exact':
     case 'find-on-staff':
+    case 'name-accidental':
+    case 'find-key-pitch':
       return q.card;
     case 'step-skip':
     case 'alphabet-next':

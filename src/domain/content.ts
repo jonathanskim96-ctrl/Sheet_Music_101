@@ -1,6 +1,14 @@
 // Learner-facing text, transcribed exactly from docs/build/CURRICULUM.md §3–§5.
 import { parseCardId, type CardId } from './cards';
-import { letterOf, pitchName, staffPosition, type Clef, type Letter, type Note } from './notes';
+import {
+  letterOf,
+  pitchName,
+  staffPosition,
+  type Clef,
+  type Letter,
+  type Note,
+  type Sign,
+} from './notes';
 import { stepSkipValue, type Answer, type Question } from './questions';
 
 // ---------------------------------------------------------------- concept cards
@@ -30,6 +38,14 @@ export const CONCEPT_CARD_IDS = [
   'c-going-lower',
   'c-read-steps',
   'c-skips',
+  // Course part 2 (CURRICULUM §11); the rhythm, melody and stack cards arrive with M11–M13.
+  'c-sharp',
+  'c-sharp-staff',
+  'c-flat',
+  'c-two-names',
+  'c-bass-signs',
+  'c-natural',
+  'c-signs-grand',
 ] as const;
 export type ConceptCardId = (typeof CONCEPT_CARD_IDS)[number];
 
@@ -37,6 +53,8 @@ export type ConceptCardId = (typeof CONCEPT_CARD_IDS)[number];
 export interface IllustrationNote {
   clef: Clef;
   note: Note;
+  /** A printed sign before the head (course part 2). */
+  sign?: Sign;
 }
 
 /**
@@ -64,6 +82,23 @@ export type Illustration =
       kind: 'staff-and-keyboard';
       staff: { mode: 'grand'; notes: readonly IllustrationNote[] };
       keyboard: { from: Note; to: Note; highlight: Note };
+    }
+  | {
+      // Sharp/flat/natural pictures: a staff and/or a keyboard whose black keys can be lit.
+      kind: 'sign-picture';
+      staff?: { mode: 'treble' | 'bass' | 'grand'; notes: readonly IllustrationNote[] };
+      keyboard?: {
+        from: Note;
+        to: Note;
+        /** White keys to light. */
+        white: readonly Note[];
+        /** Black keys to light, each named by the white key just before it. */
+        black: readonly Note[];
+        /** An arrow from a white key to the black key (or back) it points at. */
+        arrow?: { from: Note; to: 'right' | 'left' };
+        /** Both names written on every black key. */
+        blackLabels?: boolean;
+      };
     };
 
 export interface ConceptCardContent {
@@ -75,6 +110,8 @@ export interface ConceptCardContent {
 
 const t = (...notes: Note[]): IllustrationNote[] => notes.map((note) => ({ clef: 'treble', note }));
 const b = (...notes: Note[]): IllustrationNote[] => notes.map((note) => ({ clef: 'bass', note }));
+const ts = (note: Note, sign: Sign): IllustrationNote => ({ clef: 'treble', note, sign });
+const bs = (note: Note, sign: Sign): IllustrationNote => ({ clef: 'bass', note, sign });
 
 export const CONCEPT_CARDS: Record<ConceptCardId, ConceptCardContent> = {
   'c-alphabet': {
@@ -222,6 +259,76 @@ export const CONCEPT_CARDS: Record<ConceptCardId, ConceptCardContent> = {
     body: 'A skip goes line to line or space to space. You skip one letter: C to E.',
     illustration: { kind: 'staff', mode: 'treble', notes: t('E4', 'G4') },
   },
+  'c-sharp': {
+    title: 'The sharp sign: ♯',
+    body: "♯ means: play the very next key to the right. Usually that's a black key.",
+    illustration: {
+      kind: 'sign-picture',
+      keyboard: {
+        from: 'C4',
+        to: 'B4',
+        white: ['F4'],
+        black: ['F4'],
+        arrow: { from: 'F4', to: 'right' },
+      },
+    },
+  },
+  'c-sharp-staff': {
+    title: 'Where the ♯ goes',
+    body: 'The ♯ is written just before the note, on the same line or space. F♯ sits where F sits.',
+    illustration: {
+      kind: 'sign-picture',
+      staff: { mode: 'treble', notes: [...t('F4'), ts('F4', 'sharp')] },
+    },
+  },
+  'c-flat': {
+    title: 'The flat sign: ♭',
+    body: '♭ means: play the very next key to the left. B♭ is the black key just left of B.',
+    illustration: {
+      kind: 'sign-picture',
+      staff: { mode: 'treble', notes: [ts('B4', 'flat')] },
+      keyboard: {
+        from: 'C4',
+        to: 'B4',
+        white: ['B4'],
+        black: ['A4'],
+        arrow: { from: 'B4', to: 'left' },
+      },
+    },
+  },
+  'c-two-names': {
+    title: 'One key, two names',
+    body: 'Every black key has two names. The key between G and A is G♯ and also A♭. Same key, same sound.',
+    illustration: {
+      kind: 'sign-picture',
+      keyboard: { from: 'C4', to: 'B4', white: [], black: ['G4'], blackLabels: true },
+    },
+  },
+  'c-bass-signs': {
+    title: 'Signs in the bass',
+    body: '♯ and ♭ work the same way in the bass clef: right for ♯, left for ♭.',
+    illustration: {
+      kind: 'sign-picture',
+      staff: { mode: 'bass', notes: [bs('F3', 'sharp'), bs('B2', 'flat')] },
+    },
+  },
+  'c-natural': {
+    title: 'The natural sign: ♮',
+    body: '♮ cancels a ♯ or ♭. It means: play the plain white key.',
+    illustration: {
+      kind: 'sign-picture',
+      staff: { mode: 'treble', notes: [ts('F4', 'sharp'), ts('F4', 'natural')] },
+      keyboard: { from: 'C4', to: 'B4', white: ['F4'], black: [] },
+    },
+  },
+  'c-signs-grand': {
+    title: 'Signs on both staffs',
+    body: 'On the grand staff, signs work the same on top and bottom. Look at the clef first, then the sign.',
+    illustration: {
+      kind: 'sign-picture',
+      staff: { mode: 'grand', notes: [ts('F4', 'sharp'), bs('B2', 'flat')] },
+    },
+  },
 };
 
 // ---------------------------------------------------------------- nicknames and tips
@@ -237,6 +344,10 @@ export const NICKNAMES: Partial<Record<CardId, string>> = {
   'bass-C3': 'Bass C',
   'bass-C2': 'Low C',
 };
+
+/** The Meet-card tip of a sharp or flat card (CURRICULUM §7). */
+export const SHARP_TIP = 'The ♯ in front means: play the very next key to the right.';
+export const FLAT_TIP = 'The ♭ in front means: play the very next key to the left.';
 
 /** Extra sentence on the Meet card for landmark notes. */
 export const TIPS: Partial<Record<CardId, string>> = {
@@ -264,6 +375,9 @@ export const PROMPTS = {
   lineOrSpace: 'Is this note on a line or in a space?',
   higherLower: 'Which note is higher?',
   clefIdentify: 'Which clef is this?',
+  // Course part 2 (CURRICULUM §12)
+  nameAccidental: 'Which note is this?',
+  findKeyPitch: 'Tap this exact key on the piano.',
 } as const;
 
 export const BUTTON_LABELS = {
@@ -313,6 +427,10 @@ export function promptFor(q: Question): string {
       return PROMPTS.higherLower;
     case 'clef-identify':
       return PROMPTS.clefIdentify;
+    case 'name-accidental':
+      return PROMPTS.nameAccidental;
+    case 'find-key-pitch':
+      return PROMPTS.findKeyPitch;
     default:
       return assertNever(q);
   }
@@ -344,6 +462,48 @@ function letterOfCard(card: CardId): Letter {
   if (!parts) throw new Error(`Unknown card: ${card}`);
   return letterOf(parts.note);
 }
+
+// ---------------------------------------------------------------- part 2 feedback (CURRICULUM §12)
+
+/** A card's name for sharp/flat questions: the letter and sign only, never a landmark nickname. */
+export function pitchNameOfCard(card: CardId): string {
+  const parts = parseCardId(card);
+  if (!parts) throw new Error(`Unknown card: ${card}`);
+  return pitchName({ note: parts.note, sign: parts.sign });
+}
+
+/**
+ * The extra line under name-accidental / find-key-pitch feedback: where a sharp or flat sits
+ * relative to its plain key, or what a natural sign means. Null for a plain card with no ♮ shown.
+ */
+export function signLine(card: CardId, showNatural: boolean): string | null {
+  const parts = parseCardId(card);
+  if (!parts) return null;
+  const letter = letterOf(parts.note);
+  if (parts.sign === 'sharp') return `♯: one key to the right of ${letter}.`;
+  if (parts.sign === 'flat') return `♭: one key to the left of ${letter}.`;
+  return showNatural ? `♮: the plain ${letter} key.` : null;
+}
+
+/** The other name of a black key ("A♭" for G♯), or null for a plain card. */
+export function otherKeyName(card: CardId): string | null {
+  const parts = parseCardId(card);
+  if (!parts || parts.sign === 'natural') return null;
+  const letters: readonly Letter[] = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+  const i = letters.indexOf(letterOf(parts.note));
+  const next = letters[(i + 1) % 7] ?? 'C';
+  const prev = letters[(i + 6) % 7] ?? 'B';
+  return parts.sign === 'sharp' ? `${next}♭` : `${prev}♯`;
+}
+
+/** "That key is also called A♭." (shown after a right black-key answer). */
+export function alsoCalled(card: CardId): string | null {
+  const other = otherKeyName(card);
+  return other === null ? null : `That key is also called ${other}.`;
+}
+
+/** Heading of the second Progress chart (CURRICULUM §12). */
+export const SIGN_CHART_TITLE = 'Sharps and flats';
 
 export const CORRECT_PHRASES: readonly string[] = [
   'Nice!',

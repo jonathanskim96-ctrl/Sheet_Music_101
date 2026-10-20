@@ -51,7 +51,7 @@ test.describe('whole curriculum', () => {
       );
       played += 1;
     }
-    expect(played).toBe(43);
+    expect(played).toBe(pathLessons().length);
 
     // levels 2 and 3, unit by unit (level 3 opens once both level-2 lessons are done)
     for (const unit of UNITS) {
@@ -64,16 +64,16 @@ test.describe('whole curriculum', () => {
         }
       }
     }
-    expect(played).toBe(43 + 36);
+    expect(played).toBe(pathLessons().length + 36);
 
-    for (const id of ['cp-a', 'cp-b', 'cp-c']) {
+    for (const id of ['cp-a', 'cp-b', 'cp-c', 'cp-d']) {
       await go(page, `#/checkpoint/${id}`);
       await playLesson(page);
       await expect(page.getByRole('heading', { name: 'Checkpoint passed!' })).toBeVisible();
       await finish(page);
       played += 1;
     }
-    expect(played).toBe(43 + 36 + 3);
+    expect(played).toBe(pathLessons().length + 36 + 4);
   });
 });
 

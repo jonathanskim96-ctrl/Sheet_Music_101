@@ -223,7 +223,7 @@ for (const scheme of ['light', 'dark'] as const) {
 
     await page.goto('./#/progress');
     await expect(page.getByTestId('total-xp')).toBeVisible();
-    await page.locator('[data-card="treble-G4"]').click();
+    await page.locator('[aria-labelledby="mastery-title"] [data-card="treble-G4"]').click();
     await shot('progress', true);
     await page.setViewportSize({ width: 320, height: 640 });
     await shot('progress-320', true);
@@ -422,4 +422,73 @@ for (const scheme of ['light', 'dark'] as const) {
     await playLesson(page, 4);
     await shot('checkpoint-failed');
   });
+}
+
+// M10 (sharps, flats, naturals): concept cards, Meet cards, the two new question views, the Path
+// around checkpoint D and the second Progress chart, at two phone widths in both colour schemes.
+for (const scheme of ['light', 'dark'] as const) {
+  for (const width of [390, 320]) {
+    test(`M10 screens at ${String(width)}px, ${scheme} mode`, async ({ page }) => {
+      test.setTimeout(240_000);
+      test.slow();
+      const tag = `${String(width)}-${scheme}`;
+      const shot = (name: string) =>
+        page.screenshot({ path: `test-results/screens/m10-${name}-${tag}.png` });
+      await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
+      await page.setViewportSize({ width, height: 844 });
+      await page.clock.setFixedTime(new Date('2026-10-13T10:00:00'));
+      await seedProgress(page, everythingDone());
+
+      // every concept card and one Meet card of each kind of sign card, in lesson order
+      for (const id of ['u12-l1', 'u13-l1', 'u13-l4', 'u14-l1', 'u15-l1', 'u15-l2']) {
+        await go(page, `#/lesson/${id}`);
+        for (let guard = 0; guard < 6; guard++) {
+          const card = page.locator('[data-testid=concept-card],[data-testid=meet-card]').first();
+          if (!(await card.isVisible({ timeout: 1000 }).catch(() => false))) break;
+          const name =
+            (await card.getAttribute('data-card')) ?? (await card.getAttribute('data-testid'));
+          await shot(`card-${id}-${name ?? 'x'}`);
+          await page.getByRole('button', { name: 'Got it' }).click();
+        }
+      }
+      // the two new question views, unanswered, then wrong
+      for (const lesson of ['u12-l4', 'u14-l5']) {
+        for (const kind of ['name-accidental', 'find-key-pitch']) {
+          await go(page, `#/lesson/${lesson}`);
+          await reachQuestion(page, kind);
+          await shot(`${kind}-${lesson}`);
+          await answerQuestion(page, false);
+          await expect(page.getByTestId('feedback')).toBeVisible();
+          await shot(`${kind}-${lesson}-wrong`);
+        }
+      }
+      // unit 15's natural signs and the grand layout
+      await go(page, '#/lesson/u15-l1');
+      await reachQuestion(page, 'name-accidental');
+      await shot('natural-u15-l1');
+      await go(page, '#/lesson/u15-l2');
+      await reachQuestion(page, 'name-accidental');
+      await shot('grand-u15-l2');
+
+      // the Path around cp-d and the Progress charts
+      await go(page, '#/');
+      await page.getByTestId('checkpoint-cp-d').scrollIntoViewIfNeeded();
+      await shot('path-cp-d');
+      await go(page, '#/progress');
+      await expect(page.getByTestId('mastery-tooltip-signs')).toBeVisible();
+      await shot('progress-top');
+      await page.getByTestId('mastery-tooltip-signs').scrollIntoViewIfNeeded();
+      await shot('progress-signs');
+      await page
+        .getByRole('button', { name: /^Treble F♯/ })
+        .first()
+        .click();
+      await expect(page.getByTestId('mastery-tooltip-signs')).toContainText('Treble F♯');
+      await shot('progress-signs-tapped');
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - window.innerWidth,
+      );
+      expect(overflow).toBeLessThanOrEqual(0);
+    });
+  }
 }

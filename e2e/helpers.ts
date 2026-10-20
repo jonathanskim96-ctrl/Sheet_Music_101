@@ -174,6 +174,41 @@ export async function answerQuestion(page: Page, correct: boolean): Promise<Answ
       ? note.charAt(0)
       : (LETTERS[(LETTERS.indexOf(note.charAt(0) as (typeof LETTERS)[number]) + 1) % 7] ?? 'D');
     await q.locator(`[data-note="${letter}${note.charAt(1)}"]`).click();
+  } else if (right.kind === 'pitch-name') {
+    // name-accidental: the button text is the name ("F♯"); a wrong answer is the first other button.
+    const name = (a: { letter: string; sign: string }) =>
+      a.letter + (a.sign === 'sharp' ? '♯' : a.sign === 'flat' ? '♭' : '');
+    const group = q.getByRole('group', { name: 'Choose an answer' });
+    if (correct) await group.getByRole('button', { name: name(right), exact: true }).click();
+    else {
+      const names = await group.getByRole('button').allTextContents();
+      const other = names.find((n) => n !== name(right));
+      if (other === undefined) throw new Error('No wrong option to tap');
+      await group.getByRole('button', { name: other, exact: true }).click();
+    }
+  } else if (right.kind === 'pitch-key') {
+    // find-key-pitch: a white key is found by its note name, a black key by its MIDI number.
+    const WHITE: Partial<Record<number, string>> = {
+      0: 'C',
+      2: 'D',
+      4: 'E',
+      5: 'F',
+      7: 'G',
+      9: 'A',
+      11: 'B',
+    };
+    const keyAt = (midi: number) => {
+      const letter = WHITE[midi % 12];
+      return letter === undefined
+        ? q.locator(`[data-black="${String(midi)}"]`)
+        : q.locator(`[data-note="${letter}${String(Math.floor(midi / 12) - 1)}"]`);
+    };
+    let midi = right.midi;
+    if (!correct) {
+      // The nearest other key: below a black key (always white), else the next white key up.
+      midi = WHITE[midi % 12] === undefined ? midi - 1 : midi + (WHITE[(midi + 1) % 12] ? 1 : 2);
+    }
+    await keyAt(midi).click();
   } else {
     // find-on-staff: tap the band, then Check. A wrong answer is the position next to the right one.
     const position = correct ? right.position : right.position + (right.position < 12 ? 1 : -1);

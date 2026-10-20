@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NATURAL_CARDS, isNaturalCard, type CardId } from './cards';
+import { ALL_CARDS, NATURAL_CARDS, SIGN_CARDS, isNaturalCard, type CardId } from './cards';
 import { CONCEPT_CARD_IDS, CONCEPT_CARDS } from './content';
 import {
   CHECKPOINTS,
@@ -15,19 +15,24 @@ import {
 } from './curriculum';
 
 const lv1 = pathLessons();
+/** Course part 1 (units 1–11): natural cards only, the SPEC 8.1 self-check applies to these. */
+const part1 = lv1.filter((l) => l.unit <= 11);
+const part1Checkpoints = CHECKPOINTS.filter((c) => c.afterUnit <= 10);
 
 describe('curriculum counts', () => {
-  it('has 11 units, 43 level-1 lessons, 36 level-2/3 lessons and 3 checkpoints', () => {
-    expect(UNITS.map((u) => u.n)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
-    expect(lv1).toHaveLength(43);
+  it('has 15 units (M10), 61 level-1 lessons, 36 level-2/3 lessons and 4 checkpoints', () => {
+    expect(UNITS.map((u) => u.n)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
+    expect(lv1).toHaveLength(43 + 18);
     const levels = UNITS.flatMap((u) => [...levelLessons(u.n, 2), ...levelLessons(u.n, 3)]);
     expect(levels).toHaveLength(36);
-    expect(CHECKPOINTS.map((c) => c.id)).toEqual(['cp-a', 'cp-b', 'cp-c']);
-    expect(allLessonIds()).toHaveLength(43 + 36 + 3);
+    expect(CHECKPOINTS.map((c) => c.id)).toEqual(['cp-a', 'cp-b', 'cp-c', 'cp-d']);
+    expect(allLessonIds()).toHaveLength(61 + 36 + 4);
   });
 
   it('lessons per unit match CURRICULUM.md', () => {
-    expect(UNITS.map((u) => u.lessons.length)).toEqual([4, 3, 4, 5, 3, 4, 4, 3, 4, 5, 4]);
+    expect(UNITS.map((u) => u.lessons.length)).toEqual([
+      4, 3, 4, 5, 3, 4, 4, 3, 4, 5, 4, 4, 5, 5, 4,
+    ]);
   });
 });
 
@@ -50,22 +55,29 @@ describe('curriculum self-check (SPEC 4.9)', () => {
   it('every pool card is a real card and pools have no duplicates', () => {
     for (const l of everyLesson) {
       expect(new Set(l.pool).size).toBe(l.pool.length);
-      for (const c of l.pool) expect(NATURAL_CARDS).toContain(c);
+      for (const c of l.pool) expect(ALL_CARDS).toContain(c);
     }
-    for (const cp of CHECKPOINTS) for (const c of cp.pool) expect(NATURAL_CARDS).toContain(c);
+    for (const cp of CHECKPOINTS) for (const c of cp.pool) expect(ALL_CARDS).toContain(c);
   });
   it('SPEC 8.1 self-check: every part-1 pool, newCards list and checkpoint pool is natural cards only', () => {
-    for (const l of everyLesson) {
+    for (const l of [...part1, ...everyLesson.filter((x) => x.level > 1)]) {
       for (const c of [...l.pool, ...l.newCards])
         expect(isNaturalCard(c), `${l.id} ${c}`).toBe(true);
     }
-    for (const cp of CHECKPOINTS)
+    for (const cp of part1Checkpoints)
       for (const c of cp.pool) expect(isNaturalCard(c), cp.id).toBe(true);
   });
-  it('a card is new at most once on the whole level-1 path, and all 34 are introduced', () => {
+  it('a card is new at most once on the whole level-1 path, and all 46 are introduced', () => {
     const seen: CardId[] = lv1.flatMap((l) => l.newCards);
     expect(new Set(seen).size).toBe(seen.length);
-    expect([...seen].sort()).toEqual([...NATURAL_CARDS].sort());
+    expect([...seen].sort()).toEqual([...ALL_CARDS].sort());
+    // units 12-15 introduce exactly the 12 sign cards, and nothing before them does
+    expect(
+      lv1
+        .filter((l) => l.unit >= 12)
+        .flatMap((l) => l.newCards)
+        .sort(),
+    ).toEqual([...SIGN_CARDS].sort());
   });
   it('every pool card was introduced in the same or an earlier lesson', () => {
     const introduced = new Set<CardId>();
@@ -123,10 +135,41 @@ describe('curriculum self-check (SPEC 4.9)', () => {
     }
   });
   it('question counts, renders and levels are right', () => {
-    for (const l of lv1) {
+    for (const l of part1) {
       expect(l.level).toBe(1);
       expect(l.questionCount, l.id).toBe(l.unit === 1 ? 8 : 10);
       expect(l.render, l.id).toBe(l.unit === 8 || l.unit === 9 ? 'grand' : 'single');
+    }
+    for (const l of lv1.filter((x) => x.unit >= 12)) {
+      expect(l.level).toBe(1);
+      expect(l.questionCount, l.id).toBe(10);
+    }
+  });
+  it('units 12-15 follow CURRICULUM section 10 (renders, mixes, showNaturals)', () => {
+    const grand = ['u15-l2', 'u15-l4'];
+    const naturals = ['u15-l1', 'u15-l3'];
+    for (const l of lv1.filter((x) => x.unit >= 12)) {
+      expect(l.render, l.id).toBe(grand.includes(l.id) ? 'grand' : 'single');
+      expect(l.material?.showNaturals === true, l.id).toBe(naturals.includes(l.id));
+      const expected =
+        l.id === 'u13-l4'
+          ? MIXES.PKeys
+          : l.id === 'u15-l1'
+            ? MIXES.PName
+            : l.id === 'u15-l3'
+              ? MIXES.PBoth
+              : MIXES.P1;
+      expect(l.mix, l.id).toEqual(expected);
+    }
+    expect(MIXES.P1).toEqual({ 'name-accidental': 60, 'find-key-pitch': 40 });
+    expect(MIXES.PKeys).toEqual({ 'find-key-pitch': 70, 'name-accidental': 30 });
+    expect(MIXES.PBoth).toEqual({ 'name-accidental': 50, 'find-key-pitch': 50 });
+    expect(MIXES.PName).toEqual({ 'name-accidental': 100 });
+  });
+  it('units 12-25 have no levels 2-3', () => {
+    for (let n = 12; n <= 25; n++) {
+      expect(levelLessons(n, 2)).toHaveLength(0);
+      expect(levelLessons(n, 3)).toHaveLength(0);
     }
   });
   it('unit 1 and 11 lessons use the special mixes and have no pool', () => {
@@ -153,7 +196,11 @@ describe('curriculum self-check (SPEC 4.9)', () => {
     for (const id of used) expect(CONCEPT_CARD_IDS).toContain(id);
     for (const id of CONCEPT_CARD_IDS) expect(used, id).toContain(id);
     expect(Object.keys(CONCEPT_CARDS).sort()).toEqual([...CONCEPT_CARD_IDS].sort());
-    expect(CONCEPT_CARD_IDS).toHaveLength(24);
+    expect(CONCEPT_CARD_IDS).toHaveLength(24 + 7);
+  });
+  it('a checkpoint with a mix really carries it (cp-d is all name-accidental)', () => {
+    expect(findCheckpoint('cp-d')?.mix).toEqual({ 'name-accidental': 100 });
+    for (const cp of part1Checkpoints) expect(cp.mix).toBeUndefined();
   });
   it('unit colours are the unit tokens', () => {
     for (const u of UNITS) expect(u.color).toBe(`--unit-${String(u.n)}`);
@@ -206,8 +253,26 @@ describe('curriculum transcription (spot checks against CURRICULUM.md)', () => {
     ['u11-l2', 'Skips', [], 0],
     ['u11-l3', 'Bass steps and skips', [], 0],
     ['u11-l4', 'Both clefs', [], 0],
+    ['u12-l1', 'F♯', ['treble-F#4'], 3],
+    ['u12-l2', 'C♯', ['treble-C#5'], 4],
+    ['u12-l3', 'G♯', ['treble-G#4'], 5],
+    ['u12-l4', 'Sharps review', [], 6],
+    ['u13-l1', 'B♭', ['treble-Bb4'], 3],
+    ['u13-l2', 'E♭', ['treble-Eb5'], 4],
+    ['u13-l3', 'A♭', ['treble-Ab4'], 5],
+    ['u13-l4', 'One key, two names', [], 6],
+    ['u13-l5', 'Sharps and flats review', [], 9],
+    ['u14-l1', 'F♯ and C♯', ['bass-F#3', 'bass-C#3'], 4],
+    ['u14-l2', 'G♯', ['bass-G#3'], 4],
+    ['u14-l3', 'B♭ and E♭', ['bass-Bb2', 'bass-Eb3'], 4],
+    ['u14-l4', 'A♭', ['bass-Ab2'], 5],
+    ['u14-l5', 'Bass review', [], 8],
+    ['u15-l1', 'The natural sign', [], 6],
+    ['u15-l2', 'Both clefs', [], 12],
+    ['u15-l3', 'Plain or not?', [], 8],
+    ['u15-l4', 'Signs review', [], 18],
   ];
-  it('lists every level-1 lesson in order (the 4 + 39 rows)', () => {
+  it('lists every level-1 lesson in order (the 4 + 39 + 18 rows)', () => {
     expect(rows.map((r) => r[0])).toEqual(lv1.map((l) => l.id));
   });
   it.each(rows)('%s "%s"', (id, title, newCards, poolSize) => {
@@ -239,6 +304,12 @@ describe('curriculum transcription (spot checks against CURRICULUM.md)', () => {
       'u10-l3': ['c-going-lower'],
       'u11-l1': ['c-read-steps'],
       'u11-l2': ['c-skips'],
+      'u12-l1': ['c-sharp', 'c-sharp-staff'],
+      'u13-l1': ['c-flat'],
+      'u13-l4': ['c-two-names'],
+      'u14-l1': ['c-bass-signs'],
+      'u15-l1': ['c-natural'],
+      'u15-l2': ['c-signs-grand'],
     });
   });
   it('unit titles and subtitles match', () => {
@@ -254,6 +325,10 @@ describe('curriculum transcription (spot checks against CURRICULUM.md)', () => {
       ['Ledger lines near Middle C', 'Notes between the staves'],
       ['High and low', 'Ledger lines on the outside'],
       ['Steps and skips', 'Read by distance'],
+      ['Sharps', 'One key to the right'],
+      ['Flats', 'One key to the left'],
+      ['Bass sharps and flats', 'The same signs, lower down'],
+      ['The natural sign', 'Back to the plain key'],
     ]);
   });
   it('checkpoints match', () => {
@@ -263,6 +338,7 @@ describe('curriculum transcription (spot checks against CURRICULUM.md)', () => {
       ['cp-a', 'Treble checkpoint', 4, [1, 2, 3, 4], 11],
       ['cp-b', 'Bass checkpoint', 7, [5, 6, 7], 11],
       ['cp-c', 'Grand checkpoint', 10, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 34],
+      ['cp-d', 'Sharps and flats checkpoint', 15, [12, 13, 14, 15], 12],
     ]);
     expect(findCheckpoint('cp-a')?.pool[0]).toBe('treble-C4');
     expect(findCheckpoint('cp-b')?.pool[0]).toBe('bass-G2');
@@ -280,6 +356,7 @@ describe('lookups', () => {
     expect(findCheckpoint('cp-b')?.afterUnit).toBe(7);
     expect(findCheckpoint('cp-z')).toBeUndefined();
     expect(unitOf(3)?.title).toBe('Treble neighbours');
-    expect(unitOf(12)).toBeUndefined();
+    expect(unitOf(12)?.title).toBe('Sharps');
+    expect(unitOf(16)).toBeUndefined();
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NATURAL_CARDS } from './cards';
+import { ALL_CARDS } from './cards';
 import { CHECKPOINTS, allLessonIds, findLesson, pathLessons, type LessonDef } from './curriculum';
 import { buildCheckpoint, buildLesson, buildReview } from './lessonBuilder';
 import { planCompleteSession } from './planners';
@@ -29,7 +29,7 @@ function finished(): Progress {
       lastCompletedDay: '2026-10-01',
     };
   }
-  for (const c of NATURAL_CARDS) {
+  for (const c of ALL_CARDS) {
     p.cards[c] = {
       box: 5,
       lastSeenDay: '2026-10-01',
