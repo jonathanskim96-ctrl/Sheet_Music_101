@@ -964,7 +964,7 @@ states: normal / highlight / wrong (as white keys). A keyboard illustration may 
 ```ts
 export type Question = /* the 10 part-1 kinds */
   | { kind: 'name-accidental'; card: CardId; render: 'single' | 'grand'; showNatural: boolean; options: PitchOption[] } // 4 options
-  | { kind: 'find-key-pitch'; card: CardId; render: 'single' | 'grand' }
+  | { kind: 'find-key-pitch'; card: CardId; render: 'single' | 'grand'; showNatural: boolean } // showNatural added in the M10 review (u15-l3)
   | { kind: 'beats-of'; token: RhythmToken }
   | { kind: 'which-longer'; first: Dur; second: Dur }                 // beats differ
   | { kind: 'count-box'; box: RhythmToken[] }                          // no time numbers shown
@@ -1007,7 +1007,9 @@ sign — drop the right answer and any candidate that isn't one of the 7 natural
 names (F♯ C♯ G♯ B♭ E♭ A♭), take the first 3, add the right answer, shuffle with the lesson seed.
 Buttons show `pitchName` ("F♯"); 2 × 2 grid like step-skip. **Owner decision 2026-10-20 (M10):**
 the rule is followed exactly, so a question has 2 to 4 buttons: F♯, G♯, A♭, B♭ get 3; C♯ and E♭ get
-2 (the plain letter and the answer); a natural card gets 4. Not chosen: always filling up to 4.
+2 (the plain letter and the answer); a natural card gets 4, except D, which gets 3 (D♯ and D♭ are
+not names the course uses; corrected in the M10 review). Not chosen: always filling up to 4.
+`showNatural` (both kinds) is true for a natural card in a lesson with `showNaturals` (§8.8).
 
 **Sound off:** `hear-rhythm` and `hear-melody` need sound. In `buildLesson`, if
 `p.settings.soundOn` is false their weights are removed from the mix (the rest is renormalised;
@@ -1084,7 +1086,7 @@ Then: no two identical questions in a row (repair as §4.12 step 4); first slots
 no immediate repeats, retries off, pass ≥ 13.
 `buildReview`: pool = all met cards; for a sign card the kind is `name-accidental` (70 %) or
 `find-key-pitch` (30 %, only if `keyboardUnlocked`); natural cards as before. `reviewAvailable`
-counts every card met (three sign cards alone open Practise), as M10 built it.
+counts every card met (three sign cards alone open Practise; M10, confirmed in the M10 review).
 Property tests (STANDARDS §3) extend to every new lesson × 200 seeds: question count exact, each
 question answerable by `correctAnswerOf`, finish-box has exactly one right option, hear options
 distinct, no listening question when sound is off.

@@ -34,7 +34,8 @@ export type Question =
       showNatural: boolean;
       options: PitchOption[];
     }
-  | { kind: 'find-key-pitch'; card: CardId; render: 'single' | 'grand' }; // the exact key, black keys too
+  // the exact key, black keys too; `showNatural` as above (unit 15 prints a natural sign on plain cards)
+  | { kind: 'find-key-pitch'; card: CardId; render: 'single' | 'grand'; showNatural: boolean };
 
 export type ChoiceValue =
   | 'line'
