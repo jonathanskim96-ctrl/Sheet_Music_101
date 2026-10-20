@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { letterOf, noteAtPosition } from '../domain/notes';
 import { synth } from '../audio/synth';
-import { Keyboard } from '../notation/Keyboard';
+import { Keyboard, pressedNote } from '../notation/Keyboard';
 import { Staff } from '../notation/Staff';
 import { Button } from '../ui/Button';
 import { Confetti } from '../ui/Confetti';
@@ -10,6 +10,7 @@ import { Check } from '../ui/icons';
 import { Mascot } from '../ui/Mascot';
 import { ProgressBar } from '../ui/ProgressBar';
 import { Sheet } from '../ui/Sheet';
+import { GalleryPart2 } from './GalleryPart2';
 import { CardGrid, MOODS, NOTE_STATES, Section, VARIANTS, one } from './GalleryParts';
 import styles from './GalleryScreen.module.css';
 
@@ -105,7 +106,7 @@ export function GalleryScreen() {
             to="B4"
             ariaLabel="Keyboard C3 to B4"
             onPress={(k) => {
-              setLastKey(k);
+              setLastKey(pressedNote(k));
             }}
           />
           <p className={styles['muted']} data-testid="last-key">
@@ -296,6 +297,8 @@ export function GalleryScreen() {
         </Button>
         {confettiRun > 0 && <Confetti key={confettiRun} />}
       </Section>
+
+      <GalleryPart2 />
     </main>
   );
 }
