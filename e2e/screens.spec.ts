@@ -223,7 +223,7 @@ for (const scheme of ['light', 'dark'] as const) {
 
     await page.goto('./#/progress');
     await expect(page.getByTestId('total-xp')).toBeVisible();
-    await page.locator('[data-card="treble-G4"]').click();
+    await page.locator('[aria-labelledby="mastery-title"] [data-card="treble-G4"]').click();
     await shot('progress', true);
     await page.setViewportSize({ width: 320, height: 640 });
     await shot('progress-320', true);

@@ -61,6 +61,12 @@ export interface StaffProps {
   noteTaps?: { labels: readonly string[]; onTap: (index: number) => void; selected: number | null };
 }
 
+/** The card id a tappable note stands for: a sharp or flat sits under its own id ('treble-F#4'). */
+function cardIdOf(n: StaffNote): string {
+  const mark = n.sign === 'sharp' ? '#' : n.sign === 'flat' ? 'b' : '';
+  return `${n.clef}-${n.note.charAt(0)}${mark}${n.note.slice(1)}`;
+}
+
 /** Space between a printed sign and its head (SPEC 8.4: 0.3 staff spaces). */
 const SIGN_GAP = 0.3 * S;
 
@@ -250,7 +256,7 @@ export function Staff({
                 tabIndex={0}
                 aria-label={noteTaps.labels[i] ?? ''}
                 aria-pressed={noteTaps.selected === i}
-                data-card={`${n.clef}-${n.note}`}
+                data-card={cardIdOf(n)}
                 onClick={() => {
                   noteTaps.onTap(i);
                 }}
