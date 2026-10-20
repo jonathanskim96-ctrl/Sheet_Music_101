@@ -12,3 +12,4 @@ Bravura.otf
 sheet-music-101-backup-*.json
 sheet-music-101-saved-data-*.json
 .DS_Store
+*.tsbuildinfo
