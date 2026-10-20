@@ -12,7 +12,9 @@ import { Keyboard, pressedNote, whiteKeys, type KeyState } from '../../notation/
 import { Staff, type NoteState } from '../../notation/Staff';
 import { ChoiceButtons } from './questions/ChoiceButtons';
 import { FindKey } from './questions/FindKey';
+import { FindKeyPitch } from './questions/FindKeyPitch';
 import { FindOnStaff } from './questions/FindOnStaff';
+import { NameAccidental } from './questions/NameAccidental';
 import { StepSkip } from './questions/StepSkip';
 import { LetterPad, type ResultState } from './questions/LetterPad';
 import styles from './lesson.module.css';
@@ -203,6 +205,12 @@ export function QuestionView({ question: q, answered, onAnswer }: QuestionViewPr
           noteState={noteState}
         />
       );
+      break;
+    case 'name-accidental':
+      body = <NameAccidental q={q} answered={answered} send={send} />;
+      break;
+    case 'find-key-pitch':
+      body = <FindKeyPitch q={q} answered={answered} send={send} />;
       break;
     default: {
       const never: never = q;

@@ -6,7 +6,7 @@ import {
   type CheckpointDef,
   type LessonDef,
 } from './curriculum';
-import { isCardId, isNaturalCard } from './cards';
+import { isCardId } from './cards';
 import type { Progress } from './progress';
 
 /** True when the lesson (or checkpoint) has a record. Own keys only: 'constructor' is not "done". */
@@ -73,9 +73,9 @@ export function checkpointReached(p: Progress, cp: CheckpointDef): boolean {
   return allCompleted(p, level1Of(cp.afterUnit));
 }
 
-/** Review needs at least three cards the learner has met. */
+/** Review needs at least three cards the learner has met (sharp and flat cards count, SPEC 8.9). */
 export function reviewAvailable(p: Progress): boolean {
-  return Object.keys(p.cards).filter((id) => isCardId(id) && isNaturalCard(id)).length >= 3;
+  return Object.keys(p.cards).filter((id) => isCardId(id)).length >= 3;
 }
 
 /** The next level-1 lesson to do: the first one that is available but not completed, or null. */

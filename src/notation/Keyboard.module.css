@@ -80,3 +80,17 @@
 .wrong .blackLabel {
   fill: var(--ink);
 }
+
+.arrow {
+  pointer-events: none;
+  stroke: var(--ink);
+  fill: var(--ink);
+}
+
+.arrow path {
+  fill: none;
+}
+
+.arrow polygon {
+  stroke: none;
+}

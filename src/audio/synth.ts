@@ -1,6 +1,13 @@
 import { useSyncExternalStore } from 'react';
 import { frequency, type Note } from '../domain/notes';
-import { CORRECT_PLAN, FANFARE_PLAN, WRONG_PLAN, notePlan, type TonePlan } from './tonePlans';
+import {
+  CORRECT_PLAN,
+  FANFARE_PLAN,
+  WRONG_PLAN,
+  midiPlan,
+  notePlan,
+  type TonePlan,
+} from './tonePlans';
 
 // Just the parts of the Web Audio API we use, so tests can pass a fake context.
 interface ParamLike {
@@ -44,6 +51,8 @@ const SILENCE = 0.0001;
 
 export interface Synth {
   playNote: (note: Note, delay?: number, dur?: number) => void;
+  /** Like playNote for any key by MIDI number (the black keys of the sharp/flat cards). */
+  playMidi: (midi: number, delay?: number, dur?: number) => void;
   playCorrect: () => void;
   playWrong: () => void;
   playFanfare: () => void;
@@ -200,6 +209,13 @@ export function createSynth(
       guarded(() => {
         const { ctx: c, out } = ready();
         for (const p of notePlan(note, c.currentTime + LEAD + delay, dur))
+          voice(c, out, 'sine', p.frequency, p.peak, p.start, p.end);
+      });
+    },
+    playMidi(midi, delay = 0, dur = 1.2) {
+      guarded(() => {
+        const { ctx: c, out } = ready();
+        for (const p of midiPlan(midi, c.currentTime + LEAD + delay, dur))
           voice(c, out, 'sine', p.frequency, p.peak, p.start, p.end);
       });
     },

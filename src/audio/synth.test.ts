@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { frequency } from '../domain/notes';
 import { createSynth, setAudioErrorHandler, synth, type AudioContextLike } from './synth';
-import { CORRECT_PLAN, FANFARE_PLAN, WRONG_PLAN, notePlan } from './tonePlans';
+import { CORRECT_PLAN, FANFARE_PLAN, WRONG_PLAN, midiPlan, notePlan } from './tonePlans';
 import { installUnlock, type UnlockTarget } from './unlock';
 
 type Call = [name: string, value: number, time: number];
@@ -102,6 +102,12 @@ describe('notePlan', () => {
   it('uses A4 = 440 Hz', () => {
     expect(notePlan('A4', 0, 1)[0]?.frequency).toBeCloseTo(440);
   });
+
+  it('midiPlan is the same sound for any key: a white key matches notePlan, a black key is a semitone up', () => {
+    expect(midiPlan(69, 3, 1.2)).toEqual(notePlan('A4', 3, 1.2));
+    expect(midiPlan(61, 0, 1)[0]?.frequency).toBeCloseTo(frequency('C4') * 2 ** (1 / 12)); // C♯4
+    expect(midiPlan(66, 0, 1)[0]?.frequency).toBeCloseTo(frequency('F4') * 2 ** (1 / 12)); // F♯4
+  });
 });
 
 describe('tone plans match SPEC 7.7', () => {
@@ -155,6 +161,15 @@ describe('createSynth', () => {
     expect(f.oscillators[0]?.start).toBeCloseTo(10.27);
     expect(f.oscillators[0]?.freq).toBeCloseTo(frequency('G4'));
     expect(f.oscillators[0]?.stop).toBeCloseTo(10.27 + 1.2 + 0.05);
+  });
+
+  it('playMidi sounds a black key: four oscillators at the key frequency, 20 ms ahead', () => {
+    const f = fakeContext();
+    const s = createSynth(() => f.ctx);
+    s.playMidi(66, 0.25); // F♯4
+    expect(f.oscillators).toHaveLength(4);
+    expect(f.oscillators[0]?.freq).toBeCloseTo(frequency('F4') * 2 ** (1 / 12));
+    expect(f.oscillators[0]?.start).toBeCloseTo(10.27);
   });
 
   it('shapes each voice: 0, then the peak after 8 ms, then a decay to 0.0001', () => {

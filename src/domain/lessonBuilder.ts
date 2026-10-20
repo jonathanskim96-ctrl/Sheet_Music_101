@@ -1,10 +1,10 @@
-import { isCardId, isNaturalCard, type CardId } from './cards';
+import { isCardId, isNaturalCard, isSignCard, type CardId } from './cards';
 import { type ConceptCardId } from './content';
 import type { CheckpointDef, LessonDef, LessonId, QuestionKind } from './curriculum';
 import type { DayKey } from './days';
 import { LETTERS, noteAtPosition, noteFromDiatonic } from './notes';
 import type { Progress } from './progress';
-import type { Question } from './questions';
+import { pitchOptions, type Question } from './questions';
 import { mulberry32, pickWeighted, shuffle } from './rng';
 import { orderWithoutRepeats } from './cardOrder';
 import { isDue } from './srs';
@@ -37,6 +37,8 @@ const KIND_ORDER: readonly QuestionKind[] = [
   'line-or-space',
   'higher-lower',
   'clef-identify',
+  'name-accidental',
+  'find-key-pitch',
 ];
 
 function pickKind(mix: LessonDef['mix'], rand: () => number): QuestionKind {
@@ -50,8 +52,25 @@ function pickKind(mix: LessonDef['mix'], rand: () => number): QuestionKind {
 
 // ---------------------------------------------------------------- note lessons
 
-function noteQuestion(kind: QuestionKind, card: CardId, render: 'single' | 'grand'): Question {
+function noteQuestion(
+  kind: QuestionKind,
+  card: CardId,
+  render: 'single' | 'grand',
+  rand: () => number,
+  showNaturals = false,
+): Question {
   switch (kind) {
+    case 'find-key-pitch':
+      return { kind, card, render };
+    case 'name-accidental':
+      // A plain card gets a printed natural sign only in the lessons that teach it (unit 15).
+      return {
+        kind,
+        card,
+        render,
+        showNatural: showNaturals && isNaturalCard(card),
+        options: pitchOptions(card, rand),
+      };
     case 'name-note':
     case 'find-key-letter':
     case 'find-key-exact':
@@ -102,8 +121,10 @@ function buildNoteLesson(
   return ordered.map((card) => {
     const first = !seen.has(card);
     seen.add(card);
-    const kind = def.level === 1 && first ? 'name-note' : pickKind(def.mix, rand);
-    return noteQuestion(kind, card, render);
+    // Units 12–15 introduce a sign card with name-accidental (SPEC 8.9); earlier units with name-note.
+    const firstKind = def.unit >= 12 ? 'name-accidental' : 'name-note';
+    const kind = def.level === 1 && first ? firstKind : pickKind(def.mix, rand);
+    return noteQuestion(kind, card, render, rand, def.material?.showNaturals === true);
   });
 }
 
@@ -205,9 +226,8 @@ export function buildLesson(def: LessonDef, p: Progress, today: DayKey, seed: nu
 /** Builds a 10-question review of cards the learner has met, weakest and most overdue first. */
 export function buildReview(p: Progress, today: DayKey, seed: number): LessonPlan {
   const rand = mulberry32(seed);
-  // Course part 1 reviews only natural cards; sign cards join in with the part-2 mixes (SPEC 8.9).
   const known = Object.entries(p.cards).flatMap(([id, state]) =>
-    isCardId(id) && isNaturalCard(id) ? [{ id, state }] : [],
+    isCardId(id) ? [{ id, state }] : [],
   );
   if (known.length < 3) throw new Error('Review needs at least 3 cards');
 
@@ -236,9 +256,12 @@ export function buildReview(p: Progress, today: DayKey, seed: number): LessonPla
   const mix: LessonDef['mix'] = withKeys
     ? { 'name-note': 70, 'find-key-letter': 30 }
     : { 'name-note': 100 };
-  const questions = orderWithoutRepeats(slots, rand).map((card) =>
-    noteQuestion(pickKind(mix, rand), card, 'single'),
-  );
+  const questions = orderWithoutRepeats(slots, rand).map((card) => {
+    if (!isSignCard(card)) return noteQuestion(pickKind(mix, rand), card, 'single', rand);
+    // A sharp or flat card: naming 70 %, the exact key 30 % (only once the keyboard is unlocked).
+    const kind = withKeys && rand() >= 0.7 ? 'find-key-pitch' : 'name-accidental';
+    return noteQuestion(kind, card, 'single', rand);
+  });
   return {
     context: { kind: 'review' },
     conceptCards: [],
@@ -248,7 +271,10 @@ export function buildReview(p: Progress, today: DayKey, seed: number): LessonPla
   };
 }
 
-/** Builds a 15-question name-the-note test over a checkpoint's pool, with no retries. */
+/**
+ * Builds a 15-question test over a checkpoint's pool, with no retries: name-the-note for the
+ * part-1 checkpoints, else the checkpoint's own `mix` (cp-d is all name-accidental).
+ */
 export function buildCheckpoint(cp: CheckpointDef, seed: number): LessonPlan {
   const rand = mulberry32(seed);
   const shuffled = shuffle(cp.pool, rand);
@@ -258,7 +284,7 @@ export function buildCheckpoint(cp: CheckpointDef, seed: number): LessonPlan {
   }
   // Each card is used at most twice here (pools are 11+ cards), so a repeat-free order exists.
   const questions = orderWithoutRepeats(slots, rand).map((card) =>
-    noteQuestion('name-note', card, 'single'),
+    noteQuestion(cp.mix ? pickKind(cp.mix, rand) : 'name-note', card, 'single', rand),
   );
   return {
     context: { kind: 'checkpoint', id: cp.id },

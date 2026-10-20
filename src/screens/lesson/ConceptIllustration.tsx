@@ -87,6 +87,40 @@ export function ConceptIllustration({ id }: { id: ConceptCardId }) {
           />
         </div>
       );
+    case 'sign-picture': {
+      const kb = ill.keyboard;
+      const white: Partial<Record<Note, KeyState>> = {};
+      const black: Partial<Record<Note, KeyState>> = {};
+      for (const n of kb?.white ?? []) white[n] = 'highlight';
+      for (const n of kb?.black ?? []) black[n] = 'highlight';
+      return (
+        <div className={styles['stack']}>
+          {ill.staff && (
+            <Staff
+              mode={ill.staff.mode}
+              notes={ill.staff.notes.map((n) => ({
+                clef: n.clef,
+                note: n.note,
+                ...(n.sign !== undefined ? { sign: n.sign } : {}),
+              }))}
+              ariaLabel="Music staff"
+            />
+          )}
+          {kb && (
+            <Keyboard
+              from={kb.from}
+              to={kb.to}
+              states={white}
+              blackStates={black}
+              blackLabels={kb.blackLabels === true}
+              {...(kb.arrow ? { arrow: kb.arrow } : {})}
+              disabled
+              ariaLabel="Piano keyboard"
+            />
+          )}
+        </div>
+      );
+    }
     default: {
       const never: never = ill;
       return never;

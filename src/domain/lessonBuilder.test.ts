@@ -86,7 +86,8 @@ describe('buildLesson: properties over EVERY lesson × 200 seeds × random progr
           // every card in the pool, never null for note lessons
           for (const c of cards) expect(def.pool, label).toContain(c);
           // SPEC 8.1 self-check: part-1 question kinds only ever receive natural cards
-          for (const c of cards) expect(isNaturalCard(c), `${label} natural ${c}`).toBe(true);
+          if (def.unit <= 11)
+            for (const c of cards) expect(isNaturalCard(c), `${label} natural ${c}`).toBe(true);
           // spec cap and new cards at least 3 times
           const count = (c: CardId): number => cards.filter((x) => x === c).length;
           for (const c of def.pool)
@@ -96,12 +97,30 @@ describe('buildLesson: properties over EVERY lesson × 200 seeds × random progr
           // no consecutive duplicates (pools always have >= 2 cards)
           for (let i = 1; i < cards.length; i++)
             expect(cards[i], `${label} @${String(i)}`).not.toBe(cards[i - 1]);
-          // first slot of each new card is name-note at level 1
+          // first slot of each new card is name-note at level 1 (name-accidental in units 12-15)
           if (def.level === 1) {
             for (const c of def.newCards) {
               const first = plan.questions.find((x) => cardOf(x) === c);
-              expect(first?.kind, `${label} first ${c}`).toBe('name-note');
+              expect(first?.kind, `${label} first ${c}`).toBe(
+                def.unit >= 12 ? 'name-accidental' : 'name-note',
+              );
             }
+          }
+          // name-accidental: options hold the right answer once, only valid names, 2-4 buttons;
+          // a natural sign is printed only where the lesson teaches it
+          for (const question of plan.questions) {
+            if (question.kind !== 'name-accidental') continue;
+            expect(question.options.length, label).toBeGreaterThanOrEqual(2);
+            expect(question.options.length, label).toBeLessThanOrEqual(4);
+            expect(question.showNatural, label).toBe(
+              def.material?.showNaturals === true && isNaturalCard(question.card),
+            );
+            const right = correctAnswerOf(question);
+            const hits = question.options.filter(
+              (o) =>
+                right.kind === 'pitch-name' && o.letter === right.letter && o.sign === right.sign,
+            );
+            expect(hits, label).toHaveLength(1);
           }
           // render rules
           for (const question of plan.questions) {
@@ -311,8 +330,7 @@ describe('buildReview', () => {
   it('property: 10 questions, only learned cards, no neighbours equal, answerable, retries on', () => {
     for (const seed of SEEDS) {
       for (const p of RANDOM_PROGRESS) {
-        if (Object.keys(p.cards).filter((id) => isCardId(id) && isNaturalCard(id)).length < 3)
-          continue; // part 1 reviews natural cards only
+        if (Object.keys(p.cards).filter((id) => isCardId(id)).length < 3) continue;
         const plan = buildReview(p, TODAY, seed);
         expect(plan.context).toEqual({ kind: 'review' });
         expect(plan.retries).toBe(true);
@@ -321,12 +339,16 @@ describe('buildReview', () => {
         expect(plan.questions).toHaveLength(10);
         const cards = noteCards(plan) as CardId[];
         for (const c of cards) expect(Object.hasOwn(p.cards, c)).toBe(true);
-        for (const c of cards) expect(isNaturalCard(c)).toBe(true);
         for (let i = 1; i < cards.length; i++) expect(cards[i]).not.toBe(cards[i - 1]);
         for (const q of plan.questions) {
           expect(checkAnswer(q, correctAnswerOf(q))).toBe(true);
-          if (q.kind !== 'name-note' && q.kind !== 'find-key-letter') throw new Error(q.kind);
-          expect(q.render).toBe('single');
+          const card = cardOf(q) as CardId;
+          // natural cards keep the part-1 kinds; sign cards get the sign kinds (SPEC 8.9)
+          const allowed = isNaturalCard(card)
+            ? ['name-note', 'find-key-letter']
+            : ['name-accidental', 'find-key-pitch'];
+          expect(allowed).toContain(q.kind);
+          if ('render' in q) expect(q.render).toBe('single');
         }
       }
     }
@@ -419,7 +441,7 @@ describe('buildReview', () => {
 
 describe('buildCheckpoint', () => {
   for (const cp of CHECKPOINTS) {
-    it(`${cp.id}: 15 name-note questions over its pool, no retries, no neighbours equal`, () => {
+    it(`${cp.id}: 15 questions of its mix over its pool, no retries, no neighbours equal`, () => {
       for (const seed of SEEDS) {
         const plan = buildCheckpoint(cp, seed);
         expect(plan.context).toEqual({ kind: 'checkpoint', id: cp.id });
@@ -429,7 +451,7 @@ describe('buildCheckpoint', () => {
         expect(plan.questions).toHaveLength(15);
         const cards = noteCards(plan) as CardId[];
         for (const q of plan.questions) {
-          expect(q.kind).toBe('name-note');
+          expect(q.kind).toBe(cp.mix ? 'name-accidental' : 'name-note');
           expect(checkAnswer(q, correctAnswerOf(q))).toBe(true);
         }
         for (const c of cards) expect(cp.pool).toContain(c);
@@ -511,30 +533,122 @@ describe('coverage of ids', () => {
   });
 });
 
-describe('sign cards in saved progress are left alone by part-1 review (M8 review)', () => {
-  const withSigns = (): Progress => {
-    const p = JSON.parse(JSON.stringify(v2Fixture)) as Progress;
-    return p;
-  };
-  it('the v2 fixture has sign cards, and buildReview never turns one into its natural note', () => {
+describe('sign cards in review and checkpoints (M10, SPEC 8.9)', () => {
+  const withSigns = (): Progress => JSON.parse(JSON.stringify(v2Fixture)) as Progress;
+
+  it('the v2 fixture has sign cards, and a review turns them into sign questions, never the natural note', () => {
     const p = withSigns();
-    expect(Object.keys(p.cards).filter((id) => !isNaturalCard(id as CardId))).toHaveLength(3);
+    const signs = Object.keys(p.cards).filter((id) => !isNaturalCard(id as CardId));
+    expect(signs).toHaveLength(3);
+    const seen = new Set<string>();
     for (const seed of SEEDS) {
-      const plan = buildReview(p, TODAY, seed);
-      for (const c of noteCards(plan) as CardId[]) expect(isNaturalCard(c)).toBe(true);
+      for (const q of buildReview(p, TODAY, seed).questions) {
+        const c = cardOf(q) as CardId;
+        if (!isNaturalCard(c)) {
+          expect(['name-accidental', 'find-key-pitch']).toContain(q.kind);
+          seen.add(q.kind);
+        } else expect(['name-note', 'find-key-letter']).toContain(q.kind);
+      }
+    }
+    expect(seen.size).toBeGreaterThan(0);
+  });
+  it('three sign cards alone open Review (the pool is every card met)', () => {
+    const onlySigns = progressWith({
+      'treble-F#4': state(1, TODAY),
+      'treble-Bb4': state(2, TODAY),
+      'bass-C#3': state(1, TODAY),
+    });
+    expect(reviewAvailable(onlySigns)).toBe(true);
+    const plan = buildReview(onlySigns, TODAY, 3);
+    expect(plan.questions).toHaveLength(10);
+    for (const q of plan.questions) expect(checkAnswer(q, correctAnswerOf(q))).toBe(true);
+    expect(() => buildReview(progressWith({ 'treble-F#4': state(1, TODAY) }), TODAY, 1)).toThrow(
+      'at least 3 cards',
+    );
+  });
+  it('sign cards: about 70 % name-accidental / 30 % find-key-pitch once the keyboard is unlocked, only naming before', () => {
+    const cards = {
+      'treble-F#4': state(1, TODAY),
+      'treble-Bb4': state(1, TODAY),
+      'bass-C#3': state(1, TODAY),
+    } as const;
+    const locked = progressWith(cards);
+    const unlocked = progressWith(cards, ['u4-l5']);
+    let pitch = 0;
+    let total = 0;
+    for (const seed of SEEDS) {
+      for (const q of buildReview(locked, TODAY, seed).questions)
+        expect(q.kind).toBe('name-accidental');
+      for (const q of buildReview(unlocked, TODAY, seed).questions) {
+        total += 1;
+        if (q.kind === 'find-key-pitch') pitch += 1;
+      }
+    }
+    expect(pitch / total).toBeGreaterThan(0.2);
+    expect(pitch / total).toBeLessThan(0.4);
+  });
+});
+
+describe('checkpoints use their mix (M10 step 9)', () => {
+  it('cp-d builds only name-accidental questions over the 12 sign cards', () => {
+    const cpD = CHECKPOINTS.find((c) => c.id === 'cp-d') as (typeof CHECKPOINTS)[number];
+    for (const seed of SEEDS) {
+      const plan = buildCheckpoint(cpD, seed);
+      for (const q of plan.questions) {
+        expect(q.kind).toBe('name-accidental');
+        expect(isNaturalCard(cardOf(q) as CardId)).toBe(false);
+      }
     }
   });
-  it('reviewAvailable counts natural cards only: three sign cards alone do not open Review', () => {
-    const p = withSigns();
-    expect(reviewAvailable(p)).toBe(true);
-    const onlySigns = {
-      ...p,
-      cards: Object.fromEntries(
-        Object.entries(p.cards).filter(([id]) => !isNaturalCard(id as CardId)),
-      ),
+  it('a checkpoint with another mix really builds that mix (not a silent name-the-note test)', () => {
+    const custom = {
+      ...(CHECKPOINTS.find((c) => c.id === 'cp-d') as (typeof CHECKPOINTS)[number]),
+      mix: { 'find-key-pitch': 100 },
     };
-    expect(Object.keys(onlySigns.cards)).toHaveLength(3);
-    expect(reviewAvailable(onlySigns)).toBe(false);
-    expect(() => buildReview(onlySigns, TODAY, 1)).toThrow('at least 3 cards');
+    for (const seed of SEEDS.slice(0, 40)) {
+      for (const q of buildCheckpoint(custom, seed).questions)
+        expect(q.kind).toBe('find-key-pitch');
+    }
+    const mixed = { ...custom, mix: { 'find-key-pitch': 50, 'name-accidental': 50 } };
+    const kinds = new Set(
+      SEEDS.slice(0, 40).flatMap((seed) =>
+        buildCheckpoint(mixed, seed).questions.map((q) => q.kind),
+      ),
+    );
+    expect(kinds).toEqual(new Set(['find-key-pitch', 'name-accidental']));
+  });
+});
+
+describe('units 12-15 lesson rules', () => {
+  it('u15-l1 and u15-l3 print natural signs on plain cards; others do not', () => {
+    const find = (id: string) => findLesson(id) as LessonDef;
+    for (const id of ['u15-l1', 'u15-l3']) {
+      const plain = SEEDS.slice(0, 30)
+        .flatMap(
+          (seed) => buildLesson(find(id), emptyProgress('2026-09-01'), TODAY, seed).questions,
+        )
+        .filter((q) => q.kind === 'name-accidental' && isNaturalCard(q.card));
+      expect(plain.length, id).toBeGreaterThan(0);
+      for (const q of plain) expect(q.kind === 'name-accidental' && q.showNatural, id).toBe(true);
+    }
+    const none = SEEDS.slice(0, 30)
+      .flatMap(
+        (seed) => buildLesson(find('u12-l1'), emptyProgress('2026-09-01'), TODAY, seed).questions,
+      )
+      .filter((q) => q.kind === 'name-accidental');
+    expect(none.length).toBeGreaterThan(0);
+    for (const q of none) expect(q.showNatural).toBe(false);
+  });
+  it('a card lesson in unit 12 asks the new card 3+ times, first as name-accidental', () => {
+    const plan = buildLesson(
+      findLesson('u12-l1') as LessonDef,
+      emptyProgress('2026-09-01'),
+      TODAY,
+      5,
+    );
+    const fs = plan.questions.filter((q) => cardOf(q) === 'treble-F#4');
+    expect(fs.length).toBeGreaterThanOrEqual(3);
+    expect(fs[0]?.kind).toBe('name-accidental');
+    expect(plan.meetCards).toEqual(['treble-F#4']);
   });
 });

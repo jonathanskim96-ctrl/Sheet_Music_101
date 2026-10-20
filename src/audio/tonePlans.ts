@@ -1,5 +1,5 @@
 // What the synth plays: the partials of a note and the three short tunes (SPEC 7.7).
-import { frequency, type Note } from '../domain/notes';
+import { midiNumber, type Note } from '../domain/notes';
 
 /** Partial multiples and their relative loudness for a piano-ish note (SPEC 7.7). */
 export const PARTIALS: readonly { multiple: number; amp: number }[] = [
@@ -16,9 +16,19 @@ export interface PartialPlan {
   end: number;
 }
 
+/** Equal-temperament frequency of a MIDI number (A4 = 69 = 440 Hz); black keys have no Note name. */
+export function midiFrequency(midi: number): number {
+  return 440 * 2 ** ((midi - 69) / 12);
+}
+
 /** When and how loud each of the four partials of a note is. */
 export function notePlan(note: Note, start: number, dur: number): PartialPlan[] {
-  const f = frequency(note);
+  return midiPlan(midiNumber(note), start, dur);
+}
+
+/** The same piano-ish sound for any key, black ones included (SPEC 8.7 "playNote by midi"). */
+export function midiPlan(midi: number, start: number, dur: number): PartialPlan[] {
+  const f = midiFrequency(midi);
   return PARTIALS.map((p) => ({
     frequency: f * p.multiple,
     peak: 0.25 * p.amp,

@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import { navigate } from '../app/router';
-import { parseCardId } from '../domain/cards';
+import { cardMidi, parseCardId } from '../domain/cards';
 import { LEAVE_LESSON, SILENT_HINT } from '../domain/content';
 import type { CheckpointDef, LessonDef } from '../domain/curriculum';
 import { dayKeyOf, type DayKey } from '../domain/days';
@@ -104,7 +104,11 @@ export function LessonScreen({ source }: { source: LessonSource }) {
     else synth.playWrong();
     const card = cardOf(current.q);
     const parts = card === null ? null : parseCardId(card);
-    if (parts) synth.playNote(parts.note, 0.25);
+    // The sound of the card itself, 250 ms after the right/wrong chime (a sharp or flat sounds its black key).
+    if (card !== null && parts) {
+      if (parts.sign === 'natural') synth.playNote(parts.note, 0.25);
+      else synth.playMidi(cardMidi(card), 0.25);
+    }
     dispatch({ type: 'answer', answer: a, at: performance.now() });
   };
 

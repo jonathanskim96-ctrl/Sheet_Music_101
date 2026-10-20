@@ -15,7 +15,10 @@ export type QuestionKind =
   | 'keyboard-letter'
   | 'line-or-space'
   | 'higher-lower'
-  | 'clef-identify';
+  | 'clef-identify'
+  // Course part 2, built so far: sharp/flat/natural notes (M10). Rhythm, tune and stack kinds follow.
+  | 'name-accidental'
+  | 'find-key-pitch';
 
 /** Rhythm and stack set ids used by course part 2 (SPEC 8.8); the sets themselves arrive in M11/M13. */
 export type RhythmSetId = 'RA' | 'RD' | 'RR' | 'RE' | 'RR-Q';
@@ -81,6 +84,11 @@ export const MIXES = {
   U1Staff: { 'line-or-space': 60, 'higher-lower': 40 },
   U1Clefs: { 'clef-identify': 60, 'higher-lower': 40 },
   U11: { 'step-skip': 100 },
+  // Course part 2 (CURRICULUM §8)
+  P1: { 'name-accidental': 60, 'find-key-pitch': 40 },
+  PKeys: { 'find-key-pitch': 70, 'name-accidental': 30 },
+  PBoth: { 'name-accidental': 50, 'find-key-pitch': 50 },
+  PName: { 'name-accidental': 100 },
 } as const satisfies Record<string, Mix>;
 
 // ------------------------------------------------------------------ card list helpers
@@ -90,6 +98,22 @@ const bc = (...notes: Note[]): CardId[] => notes.map((n) => cardId('bass', n));
 
 const TREBLE_11 = tc('C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5', 'F5');
 const BASS_11 = bc('G2', 'A2', 'B2', 'C3', 'D3', 'E3', 'F3', 'G3', 'A3', 'B3', 'C4');
+// The 12 sharp/flat cards by short name (CURRICULUM §7); each is typed as a real SignCardId.
+const FS4 = 'treble-F#4';
+const GS4 = 'treble-G#4';
+const AB4 = 'treble-Ab4';
+const BB4 = 'treble-Bb4';
+const CS5 = 'treble-C#5';
+const EB5 = 'treble-Eb5';
+const AB2 = 'bass-Ab2';
+const BB2 = 'bass-Bb2';
+const CS3 = 'bass-C#3';
+const EB3 = 'bass-Eb3';
+const FS3 = 'bass-F#3';
+const GS3 = 'bass-G#3';
+const TREBLE_SIGNS: CardId[] = [FS4, GS4, AB4, BB4, CS5, EB5];
+const BASS_SIGNS: CardId[] = [AB2, BB2, CS3, EB3, FS3, GS3];
+
 const MIDDLE_TREBLE = tc('A3', 'B3', 'C4', 'D4', 'E4');
 const MIDDLE_BASS = bc('A3', 'B3', 'C4', 'D4', 'E4');
 
@@ -124,6 +148,41 @@ function noteUnit(
       mix: MIXES.L1,
       questionCount: 10,
       render,
+    })),
+  };
+}
+
+interface SignLessonSpec extends LessonSpec {
+  mix: Mix;
+  render?: 'single' | 'grand';
+  showNaturals?: boolean;
+}
+
+/** Units 12–15: one lesson per spec, each with its own question mix (CURRICULUM §10). */
+function signUnit(
+  n: number,
+  title: string,
+  subtitle: string,
+  render: 'single' | 'grand',
+  specs: SignLessonSpec[],
+): UnitDef {
+  return {
+    n,
+    title,
+    subtitle,
+    color: `--unit-${String(n)}`,
+    lessons: specs.map((sp) => ({
+      id: sp.id,
+      unit: n,
+      level: 1,
+      title: sp.title,
+      conceptCards: sp.concept ?? [],
+      newCards: sp.newCards ?? [],
+      pool: sp.pool,
+      mix: sp.mix,
+      questionCount: 10,
+      render: sp.render ?? render,
+      ...(sp.showNaturals === true ? { material: { showNaturals: true } } : {}),
     })),
   };
 }
@@ -403,6 +462,142 @@ export const UNITS: readonly UnitDef[] = [
       }),
     ],
   },
+  signUnit(12, 'Sharps', 'One key to the right', 'single', [
+    {
+      id: 'u12-l1',
+      title: 'F♯',
+      concept: ['c-sharp', 'c-sharp-staff'],
+      newCards: [FS4],
+      pool: [...tc('F4', 'G4'), FS4],
+      mix: MIXES.P1,
+    },
+    {
+      id: 'u12-l2',
+      title: 'C♯',
+      newCards: [CS5],
+      pool: [...tc('C5', 'D5'), CS5, FS4],
+      mix: MIXES.P1,
+    },
+    {
+      id: 'u12-l3',
+      title: 'G♯',
+      newCards: [GS4],
+      pool: [...tc('G4', 'A4'), GS4, FS4, CS5],
+      mix: MIXES.P1,
+    },
+    {
+      id: 'u12-l4',
+      title: 'Sharps review',
+      pool: [...tc('F4', 'G4', 'C5'), FS4, GS4, CS5],
+      mix: MIXES.P1,
+    },
+  ]),
+  signUnit(13, 'Flats', 'One key to the left', 'single', [
+    {
+      id: 'u13-l1',
+      title: 'B♭',
+      concept: ['c-flat'],
+      newCards: [BB4],
+      pool: [...tc('B4', 'A4'), BB4],
+      mix: MIXES.P1,
+    },
+    {
+      id: 'u13-l2',
+      title: 'E♭',
+      newCards: [EB5],
+      pool: [...tc('E5', 'D5'), EB5, BB4],
+      mix: MIXES.P1,
+    },
+    {
+      id: 'u13-l3',
+      title: 'A♭',
+      newCards: [AB4],
+      pool: [...tc('A4', 'G4'), AB4, BB4, EB5],
+      mix: MIXES.P1,
+    },
+    {
+      id: 'u13-l4',
+      title: 'One key, two names',
+      concept: ['c-two-names'],
+      pool: [...TREBLE_SIGNS],
+      mix: MIXES.PKeys,
+    },
+    {
+      id: 'u13-l5',
+      title: 'Sharps and flats review',
+      pool: [...TREBLE_SIGNS, ...tc('F4', 'B4', 'E5')],
+      mix: MIXES.P1,
+    },
+  ]),
+  signUnit(14, 'Bass sharps and flats', 'The same signs, lower down', 'single', [
+    {
+      id: 'u14-l1',
+      title: 'F♯ and C♯',
+      concept: ['c-bass-signs'],
+      newCards: [FS3, CS3],
+      pool: [...bc('F3', 'C3'), FS3, CS3],
+      mix: MIXES.P1,
+    },
+    {
+      id: 'u14-l2',
+      title: 'G♯',
+      newCards: [GS3],
+      pool: [...bc('G3'), FS3, CS3, GS3],
+      mix: MIXES.P1,
+    },
+    {
+      id: 'u14-l3',
+      title: 'B♭ and E♭',
+      newCards: [BB2, EB3],
+      pool: [...bc('B2', 'E3'), BB2, EB3],
+      mix: MIXES.P1,
+    },
+    {
+      id: 'u14-l4',
+      title: 'A♭',
+      newCards: [AB2],
+      pool: [...bc('A2'), AB2, BB2, EB3, GS3],
+      mix: MIXES.P1,
+    },
+    {
+      id: 'u14-l5',
+      title: 'Bass review',
+      pool: [...BASS_SIGNS, ...bc('F3', 'B2')],
+      mix: MIXES.P1,
+    },
+  ]),
+  signUnit(15, 'The natural sign', 'Back to the plain key', 'single', [
+    {
+      id: 'u15-l1',
+      title: 'The natural sign',
+      concept: ['c-natural'],
+      pool: [...tc('F4', 'B4', 'C5'), FS4, BB4, CS5],
+      mix: MIXES.PName,
+      showNaturals: true,
+    },
+    {
+      id: 'u15-l2',
+      title: 'Both clefs',
+      concept: ['c-signs-grand'],
+      pool: [...TREBLE_SIGNS, ...BASS_SIGNS],
+      mix: MIXES.P1,
+      render: 'grand',
+    },
+    {
+      id: 'u15-l3',
+      title: 'Plain or not?',
+      pool: [...tc('F4', 'B4'), FS4, BB4, ...bc('F3', 'B2'), FS3, BB2],
+      mix: MIXES.PBoth,
+      showNaturals: true,
+    },
+    {
+      id: 'u15-l4',
+      title: 'Signs review',
+      pool: [...TREBLE_SIGNS, ...BASS_SIGNS, ...tc('F4', 'B4', 'C5'), ...bc('F3', 'B2', 'C3')],
+      mix: MIXES.P1,
+      render: 'grand',
+    },
+  ]),
 ];
 
 export const CHECKPOINTS: readonly CheckpointDef[] = [
@@ -420,6 +615,14 @@ export const CHECKPOINTS: readonly CheckpointDef[] = [
     afterUnit: 10,
     completesUnits: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     pool: [...NATURAL_CARDS],
+  },
+  {
+    id: 'cp-d',
+    title: 'Sharps and flats checkpoint',
+    afterUnit: 15,
+    completesUnits: [12, 13, 14, 15],
+    pool: [...TREBLE_SIGNS, ...BASS_SIGNS],
+    mix: MIXES.PName,
   },
 ];
 

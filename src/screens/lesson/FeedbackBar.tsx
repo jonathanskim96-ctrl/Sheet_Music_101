@@ -7,7 +7,10 @@ import {
   WRONG_PHRASES,
   anyKeyWorks,
   stepSkipExplanation,
+  alsoCalled,
   cardName,
+  pitchNameOfCard,
+  signLine,
   fillWrongPhrase,
 } from '../../domain/content';
 import { describePosition, hintFor } from '../../domain/landmarks';
@@ -39,6 +42,9 @@ const pick = <T,>(items: readonly T[]): T =>
 /** The right answer as words, for "It's {X}." (`card` is the note the feedback shows.) */
 function answerText(q: Question, card: CardId | null): string {
   const a = correctAnswerOf(q);
+  // Sharp/flat questions name the letter and sign, never a landmark nickname (CURRICULUM §12).
+  if (card !== null && (q.kind === 'name-accidental' || q.kind === 'find-key-pitch'))
+    return pitchNameOfCard(card);
   if (card !== null) return cardName(card);
   if (a.kind === 'letter') return a.letter;
   if (a.kind === 'choice') return CHOICE_TEXT[a.value];
@@ -102,6 +108,14 @@ export function FeedbackBar({ question, result, progress, combo, onContinue }: F
           {question.kind === 'step-skip' && (
             <p className={styles['feedbackLine']}>{stepSkipExplanation(question)}</p>
           )}
+          {(question.kind === 'name-accidental' || question.kind === 'find-key-pitch') &&
+            card !== null && (
+              <SignLines
+                card={card}
+                showNatural={question.kind === 'name-accidental' && question.showNatural}
+                alsoCalled={question.kind === 'find-key-pitch' && result.correct}
+              />
+            )}
           {question.kind === 'find-key-letter' && parts && (
             <p className={styles['feedbackLine']}>{anyKeyWorks(letterOf(parts.note))}</p>
           )}
@@ -111,6 +125,26 @@ export function FeedbackBar({ question, result, progress, combo, onContinue }: F
         Continue
       </Button>
     </div>
+  );
+}
+
+/** The ♯/♭/♮ line, and "That key is also called …" after a right black-key answer. */
+function SignLines({
+  card,
+  showNatural,
+  alsoCalled: showAlso,
+}: {
+  card: CardId;
+  showNatural: boolean;
+  alsoCalled: boolean;
+}) {
+  const sign = signLine(card, showNatural);
+  const also = showAlso ? alsoCalled(card) : null;
+  return (
+    <>
+      {sign !== null && <p className={styles['feedbackLine']}>{sign}</p>}
+      {also !== null && <p className={styles['feedbackLine']}>{also}</p>}
+    </>
   );
 }
 

@@ -1,5 +1,5 @@
 import type { KeyboardEvent } from 'react';
-import type { Clef, Note } from '../domain/notes';
+import type { Clef, Note, Sign } from '../domain/notes';
 import { staffPosition } from '../domain/notes';
 import { GLYPHS } from './glyphs';
 import {
@@ -18,6 +18,7 @@ import {
   yOf,
   type StaffMode,
 } from './geometry';
+import { signGlyphName } from './musicGeometry';
 import styles from './Staff.module.css';
 
 export type NoteState =
@@ -34,6 +35,8 @@ export interface StaffNote {
   clef: Clef;
   note: Note;
   state?: NoteState;
+  /** A sign printed just before the head (sharp, flat or natural; course part 2). */
+  sign?: Sign;
   /** Column for the note (default: its index). Notes on different staves may share one. */
   column?: number;
 }
@@ -57,6 +60,9 @@ export interface StaffProps {
   /** Makes each note tappable (mastery chart); the labels name each note for screen readers. */
   noteTaps?: { labels: readonly string[]; onTap: (index: number) => void; selected: number | null };
 }
+
+/** Space between a printed sign and its head (SPEC 8.4: 0.3 staff spaces). */
+const SIGN_GAP = 0.3 * S;
 
 const STATE_CLASS: Record<NoteState, string> = {
   normal: styles['ink'] ?? '',
@@ -203,6 +209,14 @@ export function Staff({
                 >
                   {noteLabels[i]}
                 </text>
+              )}
+              {n.sign !== undefined && (
+                <path
+                  strokeWidth={0}
+                  data-sign={n.sign}
+                  d={GLYPHS[signGlyphName(n.sign)].d}
+                  transform={`translate(${String(x - NOTE_WIDTH / 2 - SIGN_GAP - GLYPHS[signGlyphName(n.sign)].advance * K)} ${String(y)}) scale(${String(K)} ${String(-K)})`}
+                />
               )}
               <path
                 strokeWidth={0}

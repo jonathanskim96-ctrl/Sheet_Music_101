@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { navigate } from '../app/router';
+import { SIGN_CHART_TITLE } from '../domain/content';
 import { CHECKPOINTS, UNITS } from '../domain/curriculum';
 import { unitLevel, unitLevelCount } from '../domain/unlocks';
 import { useLoadedProgress } from '../data/ProgressContext';
@@ -7,7 +8,14 @@ import { Staff } from '../notation/Staff';
 import { CalendarDays, Circle, CircleCheck, Sprout, Star, Trophy, TrendingUp } from '../ui/icons';
 import { LevelStars } from '../ui/LevelStars';
 import { ScreenHeader } from '../ui/ScreenHeader';
-import { MASTERY_WORDS, chartNotes, overallAccuracy, type Mastery } from './progress/mastery';
+import {
+  MASTERY_WORDS,
+  chartNotes,
+  overallAccuracy,
+  signChartNotes,
+  type ChartNote,
+  type Mastery,
+} from './progress/mastery';
 import styles from './ProgressScreen.module.css';
 
 const LEGEND: readonly { mastery: Mastery; Icon: typeof Circle }[] = [
@@ -17,18 +25,61 @@ const LEGEND: readonly { mastery: Mastery; Icon: typeof Circle }[] = [
   { mastery: 'known', Icon: CircleCheck },
 ];
 
+const CHART_HINT = 'Tap a note to see how well you know it.';
+
+/** One mastery chart on a grand staff: tap a note to read how well it is known. */
+function MasteryChart({
+  notes,
+  columns,
+  ariaLabel,
+  tooltipId,
+}: {
+  notes: readonly ChartNote[];
+  columns: number;
+  ariaLabel: string;
+  tooltipId: string;
+}) {
+  const [selected, setSelected] = useState<number | null>(null);
+  const chosen = selected === null ? undefined : notes[selected];
+  return (
+    <>
+      <Staff
+        mode="grand"
+        columns={columns}
+        ariaLabel={ariaLabel}
+        notes={notes.map((n) => ({
+          clef: n.clef,
+          note: n.note,
+          column: n.column,
+          ...(n.sign !== undefined ? { sign: n.sign } : {}),
+          state: `mastery-${n.mastery}` as const,
+        }))}
+        noteTaps={{
+          labels: notes.map((n) => n.label),
+          selected,
+          onTap: (i) => {
+            setSelected((s) => (s === i ? null : i));
+          },
+        }}
+      />
+      <p className={styles['tooltip']} role="status" data-testid={tooltipId}>
+        {chosen?.label ?? CHART_HINT}
+      </p>
+    </>
+  );
+}
+
 const CHECKPOINT_IDS: readonly string[] = CHECKPOINTS.map((c) => c.id);
 
 /** Mastery chart, totals and level stars (SPEC 7.2). */
 export function ProgressScreen() {
   const progress = useLoadedProgress();
-  const [selected, setSelected] = useState<number | null>(null);
   const notes = chartNotes(progress);
+  const signNotes = signChartNotes(progress);
   const accuracy = overallAccuracy(progress);
   const lessonsCompleted = Object.keys(progress.lessons).filter(
     (id) => !CHECKPOINT_IDS.includes(id),
   ).length;
-  const chosen = selected === null ? undefined : notes[selected];
 
   return (
     <div className={styles['page']}>
@@ -41,27 +92,12 @@ export function ProgressScreen() {
       <main>
         <section aria-labelledby="mastery-title" className={styles['section']}>
           <h2 id="mastery-title">Notes you know</h2>
-          <Staff
-            mode="grand"
+          <MasteryChart
+            notes={notes}
             columns={17}
             ariaLabel="Grand staff with every note of the course"
-            notes={notes.map((n) => ({
-              clef: n.clef,
-              note: n.note,
-              column: n.column,
-              state: `mastery-${n.mastery}` as const,
-            }))}
-            noteTaps={{
-              labels: notes.map((n) => n.label),
-              selected,
-              onTap: (i) => {
-                setSelected((s) => (s === i ? null : i));
-              },
-            }}
+            tooltipId="mastery-tooltip"
           />
-          <p className={styles['tooltip']} role="status" data-testid="mastery-tooltip">
-            {chosen?.label ?? 'Tap a note to see how well you know it.'}
-          </p>
           <ul className={styles['legend']} aria-label="Legend">
             {LEGEND.map(({ mastery, Icon }) => (
               <li key={mastery} className={styles['legendItem']}>
@@ -70,6 +106,16 @@ export function ProgressScreen() {
               </li>
             ))}
           </ul>
+        </section>
+
+        <section aria-labelledby="signs-title" className={styles['section']}>
+          <h2 id="signs-title">{SIGN_CHART_TITLE}</h2>
+          <MasteryChart
+            notes={signNotes}
+            columns={6}
+            ariaLabel="Grand staff with the sharp and flat notes"
+            tooltipId="mastery-tooltip-signs"
+          />
         </section>
 
         <section aria-label="Totals" className={styles['tiles']}>

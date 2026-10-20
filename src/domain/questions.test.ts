@@ -1,20 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { NATURAL_CARDS, parseCardId, type CardId } from './cards';
+import { ALL_CARDS, NATURAL_CARDS, SIGN_CARDS, cardMidi, parseCardId, type CardId } from './cards';
 import {
   LETTERS,
   diatonicIndex,
   letterOf,
   noteAtPosition,
   noteFromDiatonic,
+  pitchName,
   type Clef,
   type Note,
+  type Sign,
 } from './notes';
+import { mulberry32 } from './rng';
 import {
   cardOf,
   checkAnswer,
   correctAnswerOf,
   nearestCorrectPosition,
+  pitchOptions,
   stepSkipValue,
   type Answer,
   type ChoiceValue,
@@ -84,7 +88,28 @@ const anyQuestion: fc.Arbitrary<Question> = fc.oneof(
       second: noteFromDiatonic(b) as Note,
     })),
   fc.record({ kind: fc.constant('clef-identify' as const), clef }),
+  fc
+    .record({
+      card: fc.constantFrom(...ALL_CARDS),
+      render,
+      showNatural: fc.boolean(),
+      seed: fc.integer({ min: 0, max: 2 ** 31 }),
+    })
+    .map(({ card: c, render: r, showNatural, seed }) => ({
+      kind: 'name-accidental' as const,
+      card: c,
+      render: r,
+      showNatural,
+      options: pitchOptions(c, mulberry32(seed)),
+    })),
+  fc.record({
+    kind: fc.constant('find-key-pitch' as const),
+    card: fc.constantFrom(...ALL_CARDS),
+    render,
+  }),
 );
+
+const SIGNS: Sign[] = ['natural', 'sharp', 'flat'];
 
 /** Every answer of the type the question expects, covering the whole answer space. */
 function sameTypeAnswers(q: Question): Answer[] {
@@ -101,6 +126,12 @@ function sameTypeAnswers(q: Question): Answer[] {
       ];
     case 'find-on-staff':
       return Array.from({ length: 31 }, (_, i): Answer => ({ kind: 'position', position: i - 12 }));
+    case 'name-accidental':
+      return LETTERS.flatMap((l) =>
+        SIGNS.map((sg): Answer => ({ kind: 'pitch-name', letter: l, sign: sg })),
+      );
+    case 'find-key-pitch':
+      return Array.from({ length: 80 }, (_, i): Answer => ({ kind: 'pitch-key', midi: 20 + i }));
     default:
       return CHOICES.map((value) => ({ kind: 'choice', value }));
   }
@@ -154,6 +185,23 @@ function expectedRight(q: Question, a: Answer): boolean {
       );
     case 'clef-identify':
       return a.kind === 'choice' && a.value === q.clef;
+    case 'name-accidental': {
+      const c = parseCardId(q.card);
+      return (
+        a.kind === 'pitch-name' && c !== null && a.letter === c.note.charAt(0) && a.sign === c.sign
+      );
+    }
+    case 'find-key-pitch': {
+      // the white key's number plus one for a sharp, minus one for a flat
+      const c = parseCardId(q.card);
+      if (c === null || a.kind !== 'pitch-key') return false;
+      const white =
+        [0, 2, 4, 5, 7, 9, 11][LETTERS.indexOf(c.note.charAt(0) as (typeof LETTERS)[number])] ?? 0;
+      const octave = Number(c.note.charAt(1));
+      return (
+        a.midi === (octave + 1) * 12 + white + (c.sign === 'sharp' ? 1 : c.sign === 'flat' ? -1 : 0)
+      );
+    }
   }
 }
 
@@ -201,6 +249,8 @@ describe('checkAnswer ∘ correctAnswerOf (property over every question kind)', 
       { kind: 'key', note: 'black' },
       { kind: 'position', position: 0 },
       { kind: 'choice', value: 'line' },
+      { kind: 'pitch-name', letter: 'C', sign: 'natural' },
+      { kind: 'pitch-key', midi: 60 },
     ];
     fc.assert(
       fc.property(anyQuestion, (q) => {
@@ -216,6 +266,8 @@ describe('checkAnswer ∘ correctAnswerOf (property over every question kind)', 
         if (a.kind === 'letter') return LETTERS.includes(a.letter);
         if (a.kind === 'key') return a.note !== 'black' && WHITE_KEYS.includes(a.note);
         if (a.kind === 'position') return Number.isInteger(a.position);
+        if (a.kind === 'pitch-name') return LETTERS.includes(a.letter) && SIGNS.includes(a.sign);
+        if (a.kind === 'pitch-key') return Number.isInteger(a.midi) && a.midi >= 24 && a.midi <= 96;
         return CHOICES.includes(a.value);
       }),
     );
@@ -406,7 +458,7 @@ describe('nearestCorrectPosition', () => {
   });
 });
 
-describe('sign cards (course part 2 questions arrive in M10, SPEC 8.6)', () => {
+describe('sign cards (part-1 kinds stay natural only, SPEC 8.1)', () => {
   const sign: CardId = 'treble-F#4';
   const refused = /sign card/i;
 
@@ -426,5 +478,115 @@ describe('sign cards (course part 2 questions arrive in M10, SPEC 8.6)', () => {
       expect(() => checkAnswer(question, answer), kind).toThrow(refused);
     }
     expect(() => nearestCorrectPosition(sign, 3)).toThrow(refused);
+  });
+});
+
+describe('name-accidental and find-key-pitch (SPEC 8.6)', () => {
+  const ask = (card: CardId): Question => ({
+    kind: 'name-accidental',
+    card,
+    render: 'single',
+    showNatural: false,
+    options: pitchOptions(card, mulberry32(1)),
+  });
+  const names = (card: CardId, seed = 1): string[] =>
+    pitchOptions(card, mulberry32(seed)).map((o) =>
+      pitchName({ note: `${o.letter}4`, sign: o.sign }),
+    );
+
+  it('answers need both the letter and the sign', () => {
+    const q = ask('treble-F#4');
+    expect(checkAnswer(q, { kind: 'pitch-name', letter: 'F', sign: 'sharp' })).toBe(true);
+    expect(checkAnswer(q, { kind: 'pitch-name', letter: 'F', sign: 'natural' })).toBe(false);
+    expect(checkAnswer(q, { kind: 'pitch-name', letter: 'G', sign: 'flat' })).toBe(false);
+    expect(checkAnswer(q, { kind: 'pitch-name', letter: 'F', sign: 'flat' })).toBe(false);
+    // the same black key under its other name is a different answer to this question
+    expect(checkAnswer(ask('treble-Ab4'), { kind: 'pitch-name', letter: 'G', sign: 'sharp' })).toBe(
+      false,
+    );
+  });
+  it('a natural card is answered with sign natural, and a letter answer is not accepted', () => {
+    const q = ask('treble-F4');
+    expect(correctAnswerOf(q)).toEqual({ kind: 'pitch-name', letter: 'F', sign: 'natural' });
+    expect(checkAnswer(q, { kind: 'pitch-name', letter: 'F', sign: 'natural' })).toBe(true);
+    expect(checkAnswer(q, { kind: 'letter', letter: 'F' })).toBe(false);
+  });
+  it('find-key-pitch wants the exact key: another octave or the neighbouring key is wrong', () => {
+    const q: Question = { kind: 'find-key-pitch', card: 'treble-F#4', render: 'single' };
+    expect(correctAnswerOf(q)).toEqual({ kind: 'pitch-key', midi: 66 });
+    expect(checkAnswer(q, { kind: 'pitch-key', midi: 66 })).toBe(true);
+    expect(checkAnswer(q, { kind: 'pitch-key', midi: 54 })).toBe(false); // F♯ an octave lower
+    expect(checkAnswer(q, { kind: 'pitch-key', midi: 65 })).toBe(false); // plain F
+    expect(checkAnswer(q, { kind: 'key', note: 'F4' })).toBe(false);
+    const flat: Question = { kind: 'find-key-pitch', card: 'bass-Bb2', render: 'single' };
+    expect(correctAnswerOf(flat)).toEqual({ kind: 'pitch-key', midi: cardMidi('bass-Bb2') });
+    expect(cardMidi('bass-Bb2')).toBe(46); // one below B2 (47)
+  });
+  it('cardOf names the card', () => {
+    expect(cardOf(ask('bass-C#3'))).toBe('bass-C#3');
+    expect(cardOf({ kind: 'find-key-pitch', card: 'bass-C#3', render: 'single' })).toBe('bass-C#3');
+  });
+
+  describe('pitchOptions: the options rule, including every candidate it drops', () => {
+    it('F♯ drops F♭ and E♯ (not names the course uses): F, G♯ remain, plus the answer', () => {
+      expect(names('treble-F#4').sort()).toEqual(['F', 'F♯', 'G♯']);
+    });
+    it('C♯ drops C♭, B♯ and D♯: only C and the answer remain', () => {
+      expect(names('treble-C#5').sort()).toEqual(['C', 'C♯']);
+    });
+    it('G♯ drops G♭: G, A♯ is not a name either, F♯ remains', () => {
+      expect(names('treble-G#4').sort()).toEqual(['F♯', 'G', 'G♯']);
+    });
+    it('A♭ keeps A, G♭ is dropped, B♭ is kept (letter above with the flat sign)', () => {
+      expect(names('treble-Ab4').sort()).toEqual(['A', 'A♭', 'B♭']);
+    });
+    it('B♭ keeps B and A♭ (letter below), drops B♯ and C♭', () => {
+      expect(names('treble-Bb4').sort()).toEqual(['A♭', 'B', 'B♭']);
+    });
+    it('E♭ drops E♯, F♭ and D♭: only E and the answer remain', () => {
+      expect(names('treble-Eb5').sort()).toEqual(['E', 'E♭']);
+    });
+    it('a natural card: its own sign candidate is dropped, ♯ kept, ♭ dropped, neighbours plain', () => {
+      expect(names('treble-F4').sort()).toEqual(['E', 'F', 'F♯', 'G']);
+      expect(names('treble-B4').sort()).toEqual(['A', 'B', 'C', 'B♭'].sort()); // B♯ dropped, B♭ kept
+    });
+    it('the right answer is always present exactly once, options are distinct and valid', () => {
+      fc.assert(
+        fc.property(
+          fc.constantFrom(...ALL_CARDS),
+          fc.integer({ min: 0, max: 2 ** 31 }),
+          (c, seed) => {
+            const opts = pitchOptions(c, mulberry32(seed));
+            const right = correctAnswerOf(ask(c));
+            if (right.kind !== 'pitch-name') return false;
+            const keys = opts.map((o) => `${o.letter}${o.sign}`);
+            return (
+              new Set(keys).size === keys.length &&
+              keys.filter((k) => k === `${right.letter}${right.sign}`).length === 1 &&
+              opts.length >= 2 &&
+              opts.length <= 4
+            );
+          },
+        ),
+      );
+    });
+    it('is deterministic for a seed, shuffles differently for other seeds', () => {
+      expect(pitchOptions('treble-F#4', mulberry32(5))).toEqual(
+        pitchOptions('treble-F#4', mulberry32(5)),
+      );
+      const orders = new Set(
+        Array.from({ length: 30 }, (_, i) =>
+          JSON.stringify(pitchOptions('treble-F4', mulberry32(i))),
+        ),
+      );
+      expect(orders.size).toBeGreaterThan(1);
+    });
+    it('all 12 sign cards get at least 2 and at most 4 buttons', () => {
+      for (const c of SIGN_CARDS) {
+        const n = pitchOptions(c, mulberry32(3)).length;
+        expect(n, c).toBeGreaterThanOrEqual(2);
+        expect(n, c).toBeLessThanOrEqual(4);
+      }
+    });
   });
 });
