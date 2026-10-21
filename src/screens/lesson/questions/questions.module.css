@@ -77,3 +77,81 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
 }
+
+/* Picture answers (finish-box, hear-rhythm): full-width buttons with the music inside on paper. */
+.pictures {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pictureRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.picture {
+  display: block;
+  width: 100%;
+  min-height: 52px;
+  padding: 4px;
+  font-family: inherit;
+  background: var(--card);
+  border: 3px solid var(--border);
+  border-bottom: 5px solid var(--text-muted);
+  border-radius: var(--radius);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.picture:active:not(:disabled) {
+  transform: translateY(2px);
+}
+
+.picture[data-state='correct'] {
+  border-color: var(--correct-ink);
+  outline: 3px solid var(--correct-ink);
+  outline-offset: 1px;
+}
+
+.picture[data-state='wrong'] {
+  border-color: var(--wrong-ink);
+  outline: 3px solid var(--wrong-ink);
+  outline-offset: 1px;
+}
+
+.pair {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.caption {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+
+.soundOff {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  text-align: center;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.replay {
+  display: flex;
+  justify-content: center;
+}
+
+/* Keeps three stacked listening pictures short enough to leave room for the feedback bar on a small phone. */
+.pictureInner {
+  max-width: 220px;
+  margin: 0 auto;
+}

@@ -10,12 +10,17 @@ import {
 } from '../../domain/questions';
 import { Keyboard, pressedNote, whiteKeys, type KeyState } from '../../notation/Keyboard';
 import { Staff, type NoteState } from '../../notation/Staff';
+import { BeatsOf } from './questions/BeatsOf';
 import { ChoiceButtons } from './questions/ChoiceButtons';
+import { CountBox } from './questions/CountBox';
+import { FinishBox } from './questions/FinishBox';
 import { FindKey } from './questions/FindKey';
 import { FindKeyPitch } from './questions/FindKeyPitch';
 import { FindOnStaff } from './questions/FindOnStaff';
+import { HearChoice } from './questions/HearChoice';
 import { NameAccidental } from './questions/NameAccidental';
 import { StepSkip } from './questions/StepSkip';
+import { WhichLonger } from './questions/WhichLonger';
 import { LetterPad, type ResultState } from './questions/LetterPad';
 import styles from './lesson.module.css';
 import qStyles from './questions/questions.module.css';
@@ -211,6 +216,21 @@ export function QuestionView({ question: q, answered, onAnswer }: QuestionViewPr
       break;
     case 'find-key-pitch':
       body = <FindKeyPitch q={q} answered={answered} send={send} />;
+      break;
+    case 'beats-of':
+      body = <BeatsOf q={q} answered={answered} send={send} states={choiceStates()} />;
+      break;
+    case 'which-longer':
+      body = <WhichLonger q={q} answered={answered} send={send} states={choiceStates()} />;
+      break;
+    case 'count-box':
+      body = <CountBox q={q} answered={answered} send={send} states={choiceStates()} />;
+      break;
+    case 'finish-box':
+      body = <FinishBox q={q} answered={answered} send={send} />;
+      break;
+    case 'hear-rhythm':
+      body = <HearChoice q={q} answered={answered} send={send} />;
       break;
     default: {
       const never: never = q;

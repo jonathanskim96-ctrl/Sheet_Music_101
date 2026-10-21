@@ -3,6 +3,8 @@ import { cardId, parseCardId, type CardId } from '../../domain/cards';
 import {
   CHOICE_TEXT,
   COMBO_MILESTONES,
+  HEAR_AGAIN_LINE,
+  OPTION_TEXT,
   CORRECT_PHRASES,
   WRONG_PHRASES,
   anyKeyWorks,
@@ -12,6 +14,9 @@ import {
   pitchNameOfCard,
   signLine,
   fillWrongPhrase,
+  beatSumLine,
+  finishedBox,
+  withArticle,
 } from '../../domain/content';
 import { describePosition, hintFor } from '../../domain/landmarks';
 import { letterOf, noteAtPosition } from '../../domain/notes';
@@ -46,6 +51,8 @@ function answerText(q: Question, card: CardId | null): string {
   if (card !== null && (q.kind === 'name-accidental' || q.kind === 'find-key-pitch'))
     return pitchNameOfCard(card);
   if (card !== null) return cardName(card);
+  if (a.kind === 'option')
+    return q.kind === 'finish-box' ? withArticle(q.options[a.index] ?? 'q') : OPTION_TEXT[a.index];
   if (a.kind === 'letter') return a.letter;
   if (a.kind === 'choice') return CHOICE_TEXT[a.value];
   if (a.kind === 'key') return a.note === 'black' ? 'a black key' : a.note.charAt(0);
@@ -107,6 +114,15 @@ export function FeedbackBar({ question, result, progress, combo, onContinue }: F
           )}
           {question.kind === 'step-skip' && (
             <p className={styles['feedbackLine']}>{stepSkipExplanation(question)}</p>
+          )}
+          {question.kind === 'count-box' && (
+            <p className={styles['feedbackLine']}>{beatSumLine(question.box)}</p>
+          )}
+          {question.kind === 'finish-box' && (
+            <p className={styles['feedbackLine']}>{beatSumLine(finishedBox(question))}</p>
+          )}
+          {question.kind === 'hear-rhythm' && (
+            <p className={styles['feedbackLine']}>{HEAR_AGAIN_LINE}</p>
           )}
           {(question.kind === 'name-accidental' || question.kind === 'find-key-pitch') &&
             card !== null && (
