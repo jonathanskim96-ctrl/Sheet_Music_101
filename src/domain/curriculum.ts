@@ -16,11 +16,16 @@ export type QuestionKind =
   | 'line-or-space'
   | 'higher-lower'
   | 'clef-identify'
-  // Course part 2, built so far: sharp/flat/natural notes (M10). Rhythm, tune and stack kinds follow.
+  // Course part 2, built so far: sharp/flat/natural notes (M10) and rhythm (M11). Tune and stack kinds follow.
   | 'name-accidental'
-  | 'find-key-pitch';
+  | 'find-key-pitch'
+  | 'beats-of'
+  | 'which-longer'
+  | 'count-box'
+  | 'finish-box'
+  | 'hear-rhythm';
 
-/** Rhythm and stack set ids used by course part 2 (SPEC 8.8); the sets themselves arrive in M11/M13. */
+/** Rhythm and stack set ids used by course part 2 (SPEC 8.8); the stack sets arrive in M13. */
 export type RhythmSetId = 'RA' | 'RD' | 'RR' | 'RE' | 'RR-Q';
 export type StackSetId = 'ST' | 'SB' | 'SCFG' | 'SH';
 
@@ -89,6 +94,21 @@ export const MIXES = {
   PKeys: { 'find-key-pitch': 70, 'name-accidental': 30 },
   PBoth: { 'name-accidental': 50, 'find-key-pitch': 50 },
   PName: { 'name-accidental': 100 },
+  R1: { 'beats-of': 100 },
+  R2: { 'beats-of': 60, 'which-longer': 40 },
+  R3: { 'hear-rhythm': 60, 'beats-of': 40 },
+  R4: { 'which-longer': 50, 'hear-rhythm': 50 },
+  R5: { 'beats-of': 40, 'which-longer': 30, 'hear-rhythm': 30 },
+  B1: { 'finish-box': 60, 'beats-of': 40 },
+  B2: { 'finish-box': 70, 'beats-of': 30 },
+  B3: { 'count-box': 50, 'finish-box': 50 },
+  B4: { 'count-box': 30, 'finish-box': 40, 'hear-rhythm': 30 },
+  Q1: { 'beats-of': 50, 'finish-box': 50 },
+  Q2: { 'beats-of': 50, 'count-box': 50 },
+  Q3: { 'hear-rhythm': 60, 'finish-box': 40 },
+  Q4: { 'beats-of': 25, 'count-box': 25, 'finish-box': 25, 'hear-rhythm': 25 },
+  H1: { 'beats-of': 50, 'which-longer': 50 },
+  H2: { 'hear-rhythm': 70, 'beats-of': 30 },
 } as const satisfies Record<string, Mix>;
 
 // ------------------------------------------------------------------ card list helpers
@@ -183,6 +203,46 @@ function signUnit(
       questionCount: 10,
       render: sp.render ?? render,
       ...(sp.showNaturals === true ? { material: { showNaturals: true } } : {}),
+    })),
+  };
+}
+
+interface RhythmLessonSpec {
+  id: LessonId;
+  title: string;
+  concept?: ConceptCardId[];
+  patterns?: RhythmSetId[];
+  events: RhythmSetId[];
+  mix: Mix;
+}
+
+/** Units 16–19: lessons that draw their questions from rhythm patterns and single events (CURRICULUM §10). */
+function rhythmUnit(
+  n: number,
+  title: string,
+  subtitle: string,
+  specs: RhythmLessonSpec[],
+): UnitDef {
+  return {
+    n,
+    title,
+    subtitle,
+    color: `--unit-${String(n)}`,
+    lessons: specs.map((sp) => ({
+      id: sp.id,
+      unit: n,
+      level: 1,
+      title: sp.title,
+      conceptCards: sp.concept ?? [],
+      newCards: [],
+      pool: [],
+      mix: sp.mix,
+      questionCount: 10,
+      render: 'rhythm',
+      material: {
+        ...(sp.patterns ? { rhythmPatterns: sp.patterns } : {}),
+        rhythmEvents: sp.events,
+      },
     })),
   };
 }
@@ -598,6 +658,133 @@ export const UNITS: readonly UnitDef[] = [
       render: 'grand',
     },
   ]),
+  rhythmUnit(16, 'How long is a note?', 'Counting beats', [
+    {
+      id: 'u16-l1',
+      title: 'The beat',
+      concept: ['c-beat', 'c-one-beat'],
+      events: ['RA'],
+      mix: MIXES.R1,
+    },
+    {
+      id: 'u16-l2',
+      title: '2-beat notes',
+      concept: ['c-two-beat'],
+      events: ['RA'],
+      mix: MIXES.R2,
+    },
+    {
+      id: 'u16-l3',
+      title: 'Listen to the beat',
+      concept: ['c-listen'],
+      patterns: ['RA'],
+      events: ['RA'],
+      mix: MIXES.R3,
+    },
+    { id: 'u16-l4', title: 'Long and short', patterns: ['RA'], events: ['RA'], mix: MIXES.R4 },
+    { id: 'u16-l5', title: 'Beats review', patterns: ['RA'], events: ['RA'], mix: MIXES.R5 },
+  ]),
+  rhythmUnit(17, 'Beats in a box', 'Boxes of 4, 3 and 2', [
+    {
+      id: 'u17-l1',
+      title: 'Boxes of 4',
+      concept: ['c-box', 'c-top-number'],
+      patterns: ['RA'],
+      events: ['RA'],
+      mix: MIXES.B1,
+    },
+    {
+      id: 'u17-l2',
+      title: 'Finish the box',
+      patterns: ['RA'],
+      events: ['RA'],
+      mix: MIXES.B2,
+    },
+    {
+      id: 'u17-l3',
+      title: '3-beat notes',
+      concept: ['c-three-beat'],
+      patterns: ['RA', 'RD'],
+      events: ['RA', 'RD'],
+      mix: MIXES.B1,
+    },
+    {
+      id: 'u17-l4',
+      title: 'Boxes of 3 and 2',
+      patterns: ['RD'],
+      events: ['RA', 'RD'],
+      mix: MIXES.B3,
+    },
+    {
+      id: 'u17-l5',
+      title: 'Boxes review',
+      patterns: ['RA', 'RD'],
+      events: ['RA', 'RD'],
+      mix: MIXES.B4,
+    },
+  ]),
+  rhythmUnit(18, 'Rests', 'Quiet beats count too', [
+    {
+      id: 'u18-l1',
+      title: '1-beat rests',
+      concept: ['c-rest'],
+      patterns: ['RR-Q'],
+      events: ['RA', 'RR'],
+      mix: MIXES.Q1,
+    },
+    {
+      id: 'u18-l2',
+      title: 'Longer rests',
+      concept: ['c-long-rests'],
+      patterns: ['RR'],
+      events: ['RA', 'RD', 'RR'],
+      mix: MIXES.Q2,
+    },
+    {
+      id: 'u18-l3',
+      title: 'Hear the quiet',
+      patterns: ['RR'],
+      events: ['RR'],
+      mix: MIXES.Q3,
+    },
+    {
+      id: 'u18-l4',
+      title: 'Rests review',
+      patterns: ['RA', 'RD', 'RR'],
+      events: ['RA', 'RD', 'RR'],
+      mix: MIXES.Q4,
+    },
+  ]),
+  rhythmUnit(19, 'Half beats', 'Two notes in one beat', [
+    {
+      id: 'u19-l1',
+      title: 'Half-beat pairs',
+      concept: ['c-half-beats'],
+      events: ['RA', 'RE'],
+      mix: MIXES.H1,
+    },
+    {
+      id: 'u19-l2',
+      title: 'Counting with pairs',
+      patterns: ['RE'],
+      events: ['RA', 'RE'],
+      mix: MIXES.B3,
+    },
+    {
+      id: 'u19-l3',
+      title: 'Listen for pairs',
+      patterns: ['RE'],
+      events: ['RA', 'RE'],
+      mix: MIXES.H2,
+    },
+    {
+      id: 'u19-l4',
+      title: 'Rhythm review',
+      patterns: ['RA', 'RD', 'RR', 'RE'],
+      events: ['RA', 'RD', 'RR', 'RE'],
+      mix: MIXES.Q4,
+    },
+  ]),
 ];
 
 export const CHECKPOINTS: readonly CheckpointDef[] = [
@@ -623,6 +810,18 @@ export const CHECKPOINTS: readonly CheckpointDef[] = [
     completesUnits: [12, 13, 14, 15],
     pool: [...TREBLE_SIGNS, ...BASS_SIGNS],
     mix: MIXES.PName,
+  },
+  {
+    id: 'cp-e',
+    title: 'Rhythm checkpoint',
+    afterUnit: 19,
+    completesUnits: [16, 17, 18, 19],
+    pool: [],
+    mix: { 'beats-of': 30, 'count-box': 35, 'finish-box': 35 }, // no listening questions in checkpoints
+    material: {
+      rhythmPatterns: ['RA', 'RD', 'RR', 'RE'],
+      rhythmEvents: ['RA', 'RD', 'RR', 'RE'],
+    },
   },
 ];
 

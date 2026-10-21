@@ -5,6 +5,7 @@ import type { DayKey } from './days';
 import { LETTERS, noteAtPosition, noteFromDiatonic } from './notes';
 import type { Progress } from './progress';
 import { pitchOptions, type Question } from './questions';
+import { materialQuestions, withoutListening } from './materialLesson';
 import { mulberry32, pickWeighted, shuffle } from './rng';
 import { orderWithoutRepeats } from './cardOrder';
 import { isDue } from './srs';
@@ -82,15 +83,30 @@ function noteQuestion(
   }
 }
 
+function assertNever(x: never): never {
+  throw new Error(`Unexpected value: ${JSON.stringify(x)}`);
+}
+
+/** The picture a card lesson draws; a rhythm lesson has no cards, so it never gets here. */
+function cardRender(def: LessonDef): 'single' | 'grand' {
+  switch (def.render) {
+    case 'single':
+    case 'grand':
+      return def.render;
+    case 'rhythm':
+      throw new Error(`${def.id}: a rhythm lesson is built from material, not cards`);
+    default:
+      return assertNever(def.render);
+  }
+}
+
 function buildNoteLesson(
   def: LessonDef,
   p: Progress,
   today: DayKey,
   rand: () => number,
 ): Question[] {
-  // No lesson uses 'rhythm' yet; the part-2 builder (M11) will own those.
-  const render = def.render;
-  if (render === 'rhythm') throw new Error(`${def.id}: rhythm lessons are not built yet`);
+  const render = cardRender(def);
   const q = def.questionCount;
   const pool = def.pool;
   // The spec cap, tightened to half the slots so a repeat-free order always exists.
@@ -213,6 +229,11 @@ export function buildLesson(def: LessonDef, p: Progress, today: DayKey, seed: nu
   else if (def.unit === 11) {
     const options = stepSkipOptions(def);
     questions = buildFromOptions(def, rand, () => options);
+  } else if (def.unit >= 16 || def.render === 'rhythm') {
+    // Material lessons (units 16–25, SPEC 8.9). Listening questions need sound, so they are
+    // dropped from the mix when sound is off.
+    const mix = p.settings.soundOn ? def.mix : withoutListening(def.mix);
+    questions = materialQuestions(mix, def.questionCount, def.material ?? {}, rand);
   } else questions = buildNoteLesson(def, p, today, rand);
   return {
     context: { kind: 'lesson', lessonId: def.id },
@@ -272,11 +293,22 @@ export function buildReview(p: Progress, today: DayKey, seed: number): LessonPla
 }
 
 /**
- * Builds a 15-question test over a checkpoint's pool, with no retries: name-the-note for the
- * part-1 checkpoints, else the checkpoint's own `mix` (cp-d is all name-accidental).
+ * Builds a 15-question test with no retries: over the checkpoint's pool (name-the-note for the
+ * part-1 checkpoints, else its own `mix`: cp-d is all name-accidental), or, for a checkpoint with
+ * `material` (cp-e), from that material.
  */
 export function buildCheckpoint(cp: CheckpointDef, seed: number): LessonPlan {
   const rand = mulberry32(seed);
+  if (cp.material !== undefined && cp.mix !== undefined) {
+    // A checkpoint with its own material (cp-e on): no cards, never a listening question.
+    return {
+      context: { kind: 'checkpoint', id: cp.id },
+      conceptCards: [],
+      meetCards: [],
+      questions: materialQuestions(withoutListening(cp.mix), CHECKPOINT_COUNT, cp.material, rand),
+      retries: false,
+    };
+  }
   const shuffled = shuffle(cp.pool, rand);
   const slots: CardId[] = shuffled.slice(0, CHECKPOINT_COUNT);
   for (let i = 0; slots.length < CHECKPOINT_COUNT; i++) {

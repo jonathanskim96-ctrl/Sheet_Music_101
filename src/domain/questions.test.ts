@@ -12,6 +12,8 @@ import {
   type Note,
   type Sign,
 } from './notes';
+import { EVENT_SETS, RHYTHM_PATTERNS } from './library';
+import { beatsOf, type Dur, type RhythmToken, type Time } from './music';
 import { mulberry32 } from './rng';
 import {
   cardOf,
@@ -37,6 +39,10 @@ const CHOICES: ChoiceValue[] = [
   'step-down',
   'skip-up',
   'skip-down',
+  'beats-1',
+  'beats-2',
+  'beats-3',
+  'beats-4',
 ];
 
 const card = fc.constantFrom(...NATURAL_CARDS);
@@ -62,6 +68,56 @@ const stepSkipQ: fc.Arbitrary<Question> = fc
       buttons,
     };
   });
+
+const ALL_TOKENS: RhythmToken[] = [...EVENT_SETS.RE];
+const NOTE_TOKENS: Dur[] = ['q', 'h', 'h.', 'w', 'ee'];
+const PATTERNS = [...RHYTHM_PATTERNS];
+
+/** The rhythm kinds of M11, built with their own simple rules (not the lesson builder). */
+function rhythmQuestions(): fc.Arbitrary<Question>[] {
+  const finishBox = fc
+    .record({
+      pattern: fc.constantFrom(...PATTERNS.filter((p) => p.tokens.length >= 2)),
+      extras: fc.shuffledSubarray(ALL_TOKENS, { minLength: 8, maxLength: 8 }),
+    })
+    .map(({ pattern, extras }): Question => {
+      const missing = pattern.tokens[pattern.tokens.length - 1] as RhythmToken;
+      const a = extras.find((t) => beatsOf(t) !== beatsOf(missing)) as RhythmToken;
+      const b = extras.find(
+        (t) => beatsOf(t) !== beatsOf(missing) && beatsOf(t) !== beatsOf(a),
+      ) as RhythmToken;
+      return {
+        kind: 'finish-box',
+        time: pattern.time,
+        box: pattern.tokens.slice(0, -1),
+        options: [a, missing, b],
+      };
+    });
+  const hear = fc
+    .tuple(
+      fc.shuffledSubarray(
+        PATTERNS.filter((p) => p.time === 4),
+        { minLength: 3, maxLength: 3 },
+      ),
+      fc.constantFrom<0 | 1 | 2>(0, 1, 2),
+    )
+    .map(([three, answer]): Question => ({
+      kind: 'hear-rhythm',
+      time: 4 as Time,
+      options: three.map((p) => [...p.tokens]),
+      answer,
+    }));
+  return [
+    fc.constantFrom(...ALL_TOKENS).map((token): Question => ({ kind: 'beats-of', token })),
+    fc
+      .tuple(fc.constantFrom(...NOTE_TOKENS), fc.constantFrom(...NOTE_TOKENS))
+      .filter(([a, b]) => beatsOf(a) !== beatsOf(b))
+      .map(([first, second]): Question => ({ kind: 'which-longer', first, second })),
+    fc.constantFrom(...PATTERNS).map((p): Question => ({ kind: 'count-box', box: [...p.tokens] })),
+    finishBox,
+    hear,
+  ];
+}
 
 const anyQuestion: fc.Arbitrary<Question> = fc.oneof(
   fc.record({ kind: fc.constant('name-note' as const), card, render }),
@@ -108,6 +164,7 @@ const anyQuestion: fc.Arbitrary<Question> = fc.oneof(
     render,
     showNatural: fc.boolean(),
   }),
+  ...rhythmQuestions(),
 );
 
 const SIGNS: Sign[] = ['natural', 'sharp', 'flat'];
@@ -133,6 +190,9 @@ function sameTypeAnswers(q: Question): Answer[] {
       );
     case 'find-key-pitch':
       return Array.from({ length: 80 }, (_, i): Answer => ({ kind: 'pitch-key', midi: 20 + i }));
+    case 'finish-box':
+    case 'hear-rhythm':
+      return ([0, 1, 2] as const).map((index): Answer => ({ kind: 'option', index }));
     default:
       return CHOICES.map((value) => ({ kind: 'choice', value }));
   }
@@ -192,6 +252,28 @@ function expectedRight(q: Question, a: Answer): boolean {
         a.kind === 'pitch-name' && c !== null && a.letter === c.note.charAt(0) && a.sign === c.sign
       );
     }
+    case 'beats-of': {
+      const beats = { q: 1, h: 2, 'h.': 3, w: 4, ee: 1, Q: 1, H: 2, W: 4 }[q.token];
+      return a.kind === 'choice' && a.value === `beats-${String(beats)}`;
+    }
+    case 'which-longer': {
+      const len = { q: 1, h: 2, 'h.': 3, w: 4, ee: 1 };
+      return a.kind === 'choice' && a.value === (len[q.first] > len[q.second] ? 'first' : 'second');
+    }
+    case 'count-box': {
+      const len = { q: 1, h: 2, 'h.': 3, w: 4, ee: 1, Q: 1, H: 2, W: 4 };
+      const sum = q.box.reduce((n, t) => n + len[t], 0);
+      return a.kind === 'choice' && a.value === `beats-${String(sum)}`;
+    }
+    case 'finish-box': {
+      // the one option that makes the box add up to its time
+      const len = { q: 1, h: 2, 'h.': 3, w: 4, ee: 1, Q: 1, H: 2, W: 4 };
+      const have = q.box.reduce((n, t) => n + len[t], 0);
+      const fits = q.options.map((t) => have + len[t] === q.time);
+      return a.kind === 'option' && fits[a.index] === true;
+    }
+    case 'hear-rhythm':
+      return a.kind === 'option' && a.index === q.answer;
     case 'find-key-pitch': {
       // the white key's number plus one for a sharp, minus one for a flat
       const c = parseCardId(q.card);
@@ -252,6 +334,7 @@ describe('checkAnswer ∘ correctAnswerOf (property over every question kind)', 
       { kind: 'choice', value: 'line' },
       { kind: 'pitch-name', letter: 'C', sign: 'natural' },
       { kind: 'pitch-key', midi: 60 },
+      { kind: 'option', index: 0 },
     ];
     fc.assert(
       fc.property(anyQuestion, (q) => {
@@ -269,6 +352,7 @@ describe('checkAnswer ∘ correctAnswerOf (property over every question kind)', 
         if (a.kind === 'position') return Number.isInteger(a.position);
         if (a.kind === 'pitch-name') return LETTERS.includes(a.letter) && SIGNS.includes(a.sign);
         if (a.kind === 'pitch-key') return Number.isInteger(a.midi) && a.midi >= 24 && a.midi <= 96;
+        if (a.kind === 'option') return [0, 1, 2].includes(a.index);
         return CHOICES.includes(a.value);
       }),
     );

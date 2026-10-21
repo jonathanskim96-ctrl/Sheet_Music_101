@@ -12,11 +12,11 @@ describe('ids.lock.json', () => {
   it('is a sorted array of unique strings', () => {
     expect(lock).toEqual([...new Set(lock)].sort());
   });
-  it('holds 101 lesson ids (+ 4 checkpoints) and 46 card ids', () => {
+  it('holds 115 lesson ids (+ 5 checkpoints) and 46 card ids', () => {
     expect(lock.filter((id) => id.startsWith('treble-') || id.startsWith('bass-'))).toHaveLength(
       46,
     );
-    expect(lock).toHaveLength(61 + 36 + 4 + 46);
+    expect(lock).toHaveLength(79 + 36 + 5 + 46);
   });
   it('every locked id still exists in the curriculum (nothing removed or renamed)', () => {
     const missing = [...locked].filter((id) => !current.has(id));

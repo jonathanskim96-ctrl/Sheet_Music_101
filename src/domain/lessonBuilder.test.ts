@@ -13,6 +13,8 @@ import {
 import { diatonicIndex, staffPosition } from './notes';
 import { buildCheckpoint, buildLesson, buildReview, type LessonPlan } from './lessonBuilder';
 import { orderWithoutRepeats } from './cardOrder';
+import { soundOf } from './materialLesson';
+import { beatsOf, type RhythmToken } from './music';
 import { emptyProgress, type Progress } from './progress';
 import { checkAnswer, correctAnswerOf, cardOf, type Question } from './questions';
 import { mulberry32 } from './rng';
@@ -22,6 +24,7 @@ import { reviewAvailable } from './unlocks';
 import v2Fixture from '../../tests/fixtures/progress-v2.json';
 
 const TODAY = '2026-10-12';
+const boxBeatsOf = (box: readonly RhythmToken[]): number => box.reduce((n, t) => n + beatsOf(t), 0);
 const SEEDS = Array.from({ length: 200 }, (_, i) => i * 7919 + 13);
 
 const state = (box: Box, lastSeenDay: string): CardState => ({
@@ -81,7 +84,8 @@ describe('buildLesson: properties over EVERY lesson × 200 seeds × random progr
         expect(plan.conceptCards).toEqual(def.conceptCards);
         expect(plan.meetCards).toEqual(def.newCards.filter((c) => !Object.hasOwn(p.cards, c)));
 
-        if (def.unit !== 1 && def.unit !== 11) {
+        // units 16 and up have no cards: they are covered by 'rhythm lessons (M11)' below
+        if (def.unit !== 1 && def.unit !== 11 && def.unit < 16) {
           const cards = noteCards(plan) as CardId[];
           // every card in the pool, never null for note lessons
           for (const c of cards) expect(def.pool, label).toContain(c);
@@ -440,7 +444,7 @@ describe('buildReview', () => {
 });
 
 describe('buildCheckpoint', () => {
-  for (const cp of CHECKPOINTS) {
+  for (const cp of CHECKPOINTS.filter((c) => c.material === undefined)) {
     it(`${cp.id}: 15 questions of its mix over its pool, no retries, no neighbours equal`, () => {
       for (const seed of SEEDS) {
         const plan = buildCheckpoint(cp, seed);
@@ -661,5 +665,150 @@ describe('units 12-15 lesson rules', () => {
     expect(fs.length).toBeGreaterThanOrEqual(3);
     expect(fs[0]?.kind).toBe('name-accidental');
     expect(plan.meetCards).toEqual(['treble-F#4']);
+  });
+});
+
+describe('rhythm lessons (M11): units 16-19 × 200 seeds × sound on and off', () => {
+  const RHYTHM_LESSONS = pathLessons().filter((l) => l.unit >= 16 && l.unit <= 19);
+  const LISTENING = ['hear-rhythm'];
+  const withSound = (on: boolean): Progress => {
+    const p = emptyProgress('2026-09-01');
+    p.settings.soundOn = on;
+    return p;
+  };
+
+  it('there are 18 rhythm lessons, all drawn on the rhythm staff with no cards', () => {
+    expect(RHYTHM_LESSONS).toHaveLength(18);
+    for (const l of RHYTHM_LESSONS) {
+      expect(l.render, l.id).toBe('rhythm');
+      expect(l.pool, l.id).toEqual([]);
+      expect(l.newCards, l.id).toEqual([]);
+    }
+  });
+
+  for (const def of RHYTHM_LESSONS) {
+    it(`${def.id}: exact count, answerable, kinds from the mix, no repeat in a row`, () => {
+      for (const soundOn of [true, false]) {
+        for (const seed of SEEDS) {
+          const plan = buildLesson(def, withSound(soundOn), TODAY, seed);
+          const label = `${def.id} sound ${String(soundOn)} seed ${String(seed)}`;
+          expect(plan.questions, label).toHaveLength(def.questionCount);
+          expect(plan.retries).toBe(true);
+          expect(plan.meetCards).toEqual([]);
+          expect(plan.conceptCards).toEqual(def.conceptCards);
+          plan.questions.forEach((q, i) => {
+            expect(checkAnswer(q, correctAnswerOf(q)), label).toBe(true);
+            expect(cardOf(q), label).toBeNull();
+            expect(Object.keys(def.mix), label).toContain(q.kind);
+            if (!soundOn) expect(LISTENING, label).not.toContain(q.kind);
+            if (i > 0)
+              expect(JSON.stringify(q), `${label} @${String(i)}`).not.toBe(
+                JSON.stringify(plan.questions[i - 1]),
+              );
+            if (q.kind === 'finish-box') {
+              // exactly one option fills the box, the box is never already full
+              const need = q.time - boxBeatsOf(q.box);
+              expect(need, label).toBeGreaterThan(0);
+              expect(
+                q.options.filter((t) => beatsOf(t) === need),
+                label,
+              ).toHaveLength(1);
+              expect(new Set(q.options.map(beatsOf)).size, label).toBe(3);
+            }
+            if (q.kind === 'hear-rhythm') {
+              // three different pictures that also sound different
+              expect(new Set(q.options.map((o) => o.join(' '))).size, label).toBe(3);
+              expect(new Set(q.options.map((o) => soundOf(o))).size, label).toBe(3);
+              for (const o of q.options) expect(boxBeatsOf(o), label).toBe(q.time);
+            }
+            if (q.kind === 'which-longer') expect(beatsOf(q.first)).not.toBe(beatsOf(q.second));
+            if (q.kind === 'count-box') expect(boxBeatsOf(q.box), label).toBeLessThanOrEqual(4);
+          });
+        }
+      }
+    });
+  }
+
+  it('a lesson started with sound off has no listening question, with sound on it can have one', () => {
+    const lesson = findLesson('u16-l3') as LessonDef;
+    const kindsOff = new Set<string>();
+    const kindsOn = new Set<string>();
+    for (const seed of SEEDS) {
+      for (const q of buildLesson(lesson, withSound(false), TODAY, seed).questions)
+        kindsOff.add(q.kind);
+      for (const q of buildLesson(lesson, withSound(true), TODAY, seed).questions)
+        kindsOn.add(q.kind);
+    }
+    expect([...kindsOff]).toEqual(['beats-of']);
+    expect([...kindsOn].sort()).toEqual(['beats-of', 'hear-rhythm']);
+  });
+
+  it('every rhythm lesson still has questions when sound is off (the mix never becomes empty)', () => {
+    for (const def of RHYTHM_LESSONS) {
+      const quiet = Object.keys(def.mix).filter((k) => !LISTENING.includes(k));
+      expect(quiet.length, def.id).toBeGreaterThan(0);
+    }
+  });
+
+  it('u18-l1 only asks about patterns with a 1-beat rest', () => {
+    const lesson = findLesson('u18-l1') as LessonDef;
+    for (const seed of SEEDS) {
+      for (const q of buildLesson(lesson, withSound(true), TODAY, seed).questions) {
+        if (q.kind === 'count-box') expect(q.box).toContain('Q');
+        if (q.kind === 'finish-box') expect([...q.box, ...q.options]).toContain('Q');
+      }
+    }
+  });
+
+  it('half-beat pairs appear in unit 19 and not before', () => {
+    const seen = (id: string): boolean => {
+      const lesson = findLesson(id) as LessonDef;
+      return SEEDS.some((seed) =>
+        buildLesson(lesson, withSound(true), TODAY, seed).questions.some((q) =>
+          JSON.stringify(q).includes('"ee"'),
+        ),
+      );
+    };
+    expect(seen('u19-l1')).toBe(true);
+    expect(seen('u16-l5')).toBe(false);
+    expect(seen('u18-l4')).toBe(false);
+  });
+
+  it('is deterministic for a seed and does not mutate frozen inputs', () => {
+    const lesson = findLesson('u17-l5') as LessonDef;
+    const p = deepFreeze(withSound(true));
+    const a = buildLesson(deepFreeze(structuredClone(lesson)), p, TODAY, 77);
+    expect(buildLesson(lesson, p, TODAY, 77)).toEqual(a);
+    expect(buildLesson(lesson, p, TODAY, 78)).not.toEqual(a);
+  });
+
+  it('cp-e: 15 questions from its material, no retries, no listening, no cards, no repeat in a row', () => {
+    const cp = CHECKPOINTS.find((c) => c.id === 'cp-e') as (typeof CHECKPOINTS)[number];
+    const kinds = new Set<string>();
+    for (const seed of SEEDS) {
+      const plan = buildCheckpoint(cp, seed);
+      expect(plan.context).toEqual({ kind: 'checkpoint', id: 'cp-e' });
+      expect(plan.retries).toBe(false);
+      expect(plan.conceptCards).toEqual([]);
+      expect(plan.meetCards).toEqual([]);
+      expect(plan.questions).toHaveLength(15);
+      plan.questions.forEach((q, i) => {
+        kinds.add(q.kind);
+        expect(checkAnswer(q, correctAnswerOf(q))).toBe(true);
+        expect(cardOf(q)).toBeNull();
+        if (i > 0) expect(JSON.stringify(q)).not.toBe(JSON.stringify(plan.questions[i - 1]));
+      });
+    }
+    expect([...kinds].sort()).toEqual(['beats-of', 'count-box', 'finish-box']);
+  });
+
+  it('a listening kind is stripped from a checkpoint mix even if one is written in it', () => {
+    const cp = {
+      ...(CHECKPOINTS.find((c) => c.id === 'cp-e') as (typeof CHECKPOINTS)[number]),
+      mix: { 'beats-of': 50, 'hear-rhythm': 50 },
+    };
+    for (const seed of SEEDS.slice(0, 40)) {
+      for (const q of buildCheckpoint(cp, seed).questions) expect(q.kind).toBe('beats-of');
+    }
   });
 });

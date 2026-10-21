@@ -20,18 +20,20 @@ const part1 = lv1.filter((l) => l.unit <= 11);
 const part1Checkpoints = CHECKPOINTS.filter((c) => c.afterUnit <= 10);
 
 describe('curriculum counts', () => {
-  it('has 15 units (M10), 61 level-1 lessons, 36 level-2/3 lessons and 4 checkpoints', () => {
-    expect(UNITS.map((u) => u.n)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
-    expect(lv1).toHaveLength(43 + 18);
+  it('has 19 units (M11), 79 level-1 lessons, 36 level-2/3 lessons and 5 checkpoints', () => {
+    expect(UNITS.map((u) => u.n)).toEqual([
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+    ]);
+    expect(lv1).toHaveLength(43 + 18 + 18);
     const levels = UNITS.flatMap((u) => [...levelLessons(u.n, 2), ...levelLessons(u.n, 3)]);
     expect(levels).toHaveLength(36);
-    expect(CHECKPOINTS.map((c) => c.id)).toEqual(['cp-a', 'cp-b', 'cp-c', 'cp-d']);
-    expect(allLessonIds()).toHaveLength(61 + 36 + 4);
+    expect(CHECKPOINTS.map((c) => c.id)).toEqual(['cp-a', 'cp-b', 'cp-c', 'cp-d', 'cp-e']);
+    expect(allLessonIds()).toHaveLength(79 + 36 + 5);
   });
 
   it('lessons per unit match CURRICULUM.md', () => {
     expect(UNITS.map((u) => u.lessons.length)).toEqual([
-      4, 3, 4, 5, 3, 4, 4, 3, 4, 5, 4, 4, 5, 5, 4,
+      4, 3, 4, 5, 3, 4, 4, 3, 4, 5, 4, 4, 5, 5, 4, 5, 5, 4, 4,
     ]);
   });
 });
@@ -148,7 +150,7 @@ describe('curriculum self-check (SPEC 4.9)', () => {
   it('units 12-15 follow CURRICULUM section 10 (renders, mixes, showNaturals)', () => {
     const grand = ['u15-l2', 'u15-l4'];
     const naturals = ['u15-l1', 'u15-l3'];
-    for (const l of lv1.filter((x) => x.unit >= 12)) {
+    for (const l of lv1.filter((x) => x.unit >= 12 && x.unit <= 15)) {
       expect(l.render, l.id).toBe(grand.includes(l.id) ? 'grand' : 'single');
       expect(l.material?.showNaturals === true, l.id).toBe(naturals.includes(l.id));
       const expected =
@@ -165,6 +167,68 @@ describe('curriculum self-check (SPEC 4.9)', () => {
     expect(MIXES.PKeys).toEqual({ 'find-key-pitch': 70, 'name-accidental': 30 });
     expect(MIXES.PBoth).toEqual({ 'name-accidental': 50, 'find-key-pitch': 50 });
     expect(MIXES.PName).toEqual({ 'name-accidental': 100 });
+  });
+  it('units 16-19 and cp-e follow CURRICULUM section 10 (material, mixes, concept cards)', () => {
+    const rhythm = lv1.filter((x) => x.unit >= 16 && x.unit <= 19);
+    // id → [patterns, events, mix name]
+    const table: Record<string, [string[] | undefined, string[], keyof typeof MIXES]> = {
+      'u16-l1': [undefined, ['RA'], 'R1'],
+      'u16-l2': [undefined, ['RA'], 'R2'],
+      'u16-l3': [['RA'], ['RA'], 'R3'],
+      'u16-l4': [['RA'], ['RA'], 'R4'],
+      'u16-l5': [['RA'], ['RA'], 'R5'],
+      'u17-l1': [['RA'], ['RA'], 'B1'],
+      'u17-l2': [['RA'], ['RA'], 'B2'],
+      'u17-l3': [['RA', 'RD'], ['RA', 'RD'], 'B1'],
+      'u17-l4': [['RD'], ['RA', 'RD'], 'B3'],
+      'u17-l5': [['RA', 'RD'], ['RA', 'RD'], 'B4'],
+      'u18-l1': [['RR-Q'], ['RA', 'RR'], 'Q1'],
+      'u18-l2': [['RR'], ['RA', 'RD', 'RR'], 'Q2'],
+      'u18-l3': [['RR'], ['RR'], 'Q3'],
+      'u18-l4': [['RA', 'RD', 'RR'], ['RA', 'RD', 'RR'], 'Q4'],
+      'u19-l1': [undefined, ['RA', 'RE'], 'H1'],
+      'u19-l2': [['RE'], ['RA', 'RE'], 'B3'],
+      'u19-l3': [['RE'], ['RA', 'RE'], 'H2'],
+      'u19-l4': [['RA', 'RD', 'RR', 'RE'], ['RA', 'RD', 'RR', 'RE'], 'Q4'],
+    };
+    expect(rhythm.map((l) => l.id)).toEqual(Object.keys(table));
+    for (const l of rhythm) {
+      const [patterns, events, mix] = table[l.id] ?? [undefined, [], 'R1'];
+      expect(l.render, l.id).toBe('rhythm');
+      expect(l.questionCount, l.id).toBe(10);
+      expect(l.mix, l.id).toEqual(MIXES[mix]);
+      expect(l.material?.rhythmPatterns, l.id).toEqual(patterns);
+      expect(l.material?.rhythmEvents, l.id).toEqual(events);
+    }
+    const cp = findCheckpoint('cp-e');
+    expect(cp?.mix).toEqual({ 'beats-of': 30, 'count-box': 35, 'finish-box': 35 });
+    expect(cp?.material).toEqual({
+      rhythmPatterns: ['RA', 'RD', 'RR', 'RE'],
+      rhythmEvents: ['RA', 'RD', 'RR', 'RE'],
+    });
+    expect(cp?.pool).toEqual([]);
+  });
+  it('the part-2 mixes of CURRICULUM section 8 (rhythm) are transcribed exactly', () => {
+    expect(MIXES.R1).toEqual({ 'beats-of': 100 });
+    expect(MIXES.R2).toEqual({ 'beats-of': 60, 'which-longer': 40 });
+    expect(MIXES.R3).toEqual({ 'hear-rhythm': 60, 'beats-of': 40 });
+    expect(MIXES.R4).toEqual({ 'which-longer': 50, 'hear-rhythm': 50 });
+    expect(MIXES.R5).toEqual({ 'beats-of': 40, 'which-longer': 30, 'hear-rhythm': 30 });
+    expect(MIXES.B1).toEqual({ 'finish-box': 60, 'beats-of': 40 });
+    expect(MIXES.B2).toEqual({ 'finish-box': 70, 'beats-of': 30 });
+    expect(MIXES.B3).toEqual({ 'count-box': 50, 'finish-box': 50 });
+    expect(MIXES.B4).toEqual({ 'count-box': 30, 'finish-box': 40, 'hear-rhythm': 30 });
+    expect(MIXES.Q1).toEqual({ 'beats-of': 50, 'finish-box': 50 });
+    expect(MIXES.Q2).toEqual({ 'beats-of': 50, 'count-box': 50 });
+    expect(MIXES.Q3).toEqual({ 'hear-rhythm': 60, 'finish-box': 40 });
+    expect(MIXES.Q4).toEqual({
+      'beats-of': 25,
+      'count-box': 25,
+      'finish-box': 25,
+      'hear-rhythm': 25,
+    });
+    expect(MIXES.H1).toEqual({ 'beats-of': 50, 'which-longer': 50 });
+    expect(MIXES.H2).toEqual({ 'hear-rhythm': 70, 'beats-of': 30 });
   });
   it('units 12-25 have no levels 2-3', () => {
     for (let n = 12; n <= 25; n++) {
@@ -196,7 +260,7 @@ describe('curriculum self-check (SPEC 4.9)', () => {
     for (const id of used) expect(CONCEPT_CARD_IDS).toContain(id);
     for (const id of CONCEPT_CARD_IDS) expect(used, id).toContain(id);
     expect(Object.keys(CONCEPT_CARDS).sort()).toEqual([...CONCEPT_CARD_IDS].sort());
-    expect(CONCEPT_CARD_IDS).toHaveLength(24 + 7);
+    expect(CONCEPT_CARD_IDS).toHaveLength(24 + 7 + 10);
   });
   it('a checkpoint with a mix really carries it (cp-d is all name-accidental)', () => {
     expect(findCheckpoint('cp-d')?.mix).toEqual({ 'name-accidental': 100 });
@@ -271,8 +335,26 @@ describe('curriculum transcription (spot checks against CURRICULUM.md)', () => {
     ['u15-l2', 'Both clefs', [], 12],
     ['u15-l3', 'Plain or not?', [], 8],
     ['u15-l4', 'Signs review', [], 18],
+    ['u16-l1', 'The beat', [], 0],
+    ['u16-l2', '2-beat notes', [], 0],
+    ['u16-l3', 'Listen to the beat', [], 0],
+    ['u16-l4', 'Long and short', [], 0],
+    ['u16-l5', 'Beats review', [], 0],
+    ['u17-l1', 'Boxes of 4', [], 0],
+    ['u17-l2', 'Finish the box', [], 0],
+    ['u17-l3', '3-beat notes', [], 0],
+    ['u17-l4', 'Boxes of 3 and 2', [], 0],
+    ['u17-l5', 'Boxes review', [], 0],
+    ['u18-l1', '1-beat rests', [], 0],
+    ['u18-l2', 'Longer rests', [], 0],
+    ['u18-l3', 'Hear the quiet', [], 0],
+    ['u18-l4', 'Rests review', [], 0],
+    ['u19-l1', 'Half-beat pairs', [], 0],
+    ['u19-l2', 'Counting with pairs', [], 0],
+    ['u19-l3', 'Listen for pairs', [], 0],
+    ['u19-l4', 'Rhythm review', [], 0],
   ];
-  it('lists every level-1 lesson in order (the 4 + 39 + 18 rows)', () => {
+  it('lists every level-1 lesson in order (the 4 + 39 + 18 + 18 rows)', () => {
     expect(rows.map((r) => r[0])).toEqual(lv1.map((l) => l.id));
   });
   it.each(rows)('%s "%s"', (id, title, newCards, poolSize) => {
@@ -310,6 +392,14 @@ describe('curriculum transcription (spot checks against CURRICULUM.md)', () => {
       'u14-l1': ['c-bass-signs'],
       'u15-l1': ['c-natural'],
       'u15-l2': ['c-signs-grand'],
+      'u16-l1': ['c-beat', 'c-one-beat'],
+      'u16-l2': ['c-two-beat'],
+      'u16-l3': ['c-listen'],
+      'u17-l1': ['c-box', 'c-top-number'],
+      'u17-l3': ['c-three-beat'],
+      'u18-l1': ['c-rest'],
+      'u18-l2': ['c-long-rests'],
+      'u19-l1': ['c-half-beats'],
     });
   });
   it('unit titles and subtitles match', () => {
@@ -329,6 +419,10 @@ describe('curriculum transcription (spot checks against CURRICULUM.md)', () => {
       ['Flats', 'One key to the left'],
       ['Bass sharps and flats', 'The same signs, lower down'],
       ['The natural sign', 'Back to the plain key'],
+      ['How long is a note?', 'Counting beats'],
+      ['Beats in a box', 'Boxes of 4, 3 and 2'],
+      ['Rests', 'Quiet beats count too'],
+      ['Half beats', 'Two notes in one beat'],
     ]);
   });
   it('checkpoints match', () => {
@@ -339,6 +433,7 @@ describe('curriculum transcription (spot checks against CURRICULUM.md)', () => {
       ['cp-b', 'Bass checkpoint', 7, [5, 6, 7], 11],
       ['cp-c', 'Grand checkpoint', 10, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 34],
       ['cp-d', 'Sharps and flats checkpoint', 15, [12, 13, 14, 15], 12],
+      ['cp-e', 'Rhythm checkpoint', 19, [16, 17, 18, 19], 0],
     ]);
     expect(findCheckpoint('cp-a')?.pool[0]).toBe('treble-C4');
     expect(findCheckpoint('cp-b')?.pool[0]).toBe('bass-G2');
@@ -357,6 +452,7 @@ describe('lookups', () => {
     expect(findCheckpoint('cp-z')).toBeUndefined();
     expect(unitOf(3)?.title).toBe('Treble neighbours');
     expect(unitOf(12)?.title).toBe('Sharps');
-    expect(unitOf(16)).toBeUndefined();
+    expect(unitOf(16)?.title).toBe('How long is a note?');
+    expect(unitOf(20)).toBeUndefined();
   });
 });
