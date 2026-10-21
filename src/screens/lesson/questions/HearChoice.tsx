@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { BPM, boxesEvents } from '../../../audio/musicPlan';
-import { synth } from '../../../audio/synth';
+import { synth, useSound } from '../../../audio/synth';
 import { PLAY_AGAIN, RHYTHM_OPTION_NAMES, SOUND_OFF } from '../../../domain/content';
 import { planSettings } from '../../../domain/planners';
 import { correctAnswerOf } from '../../../domain/questions';
 import { Music } from '../../../notation/Music';
 import { rhythmScore } from '../../../notation/musicDraw';
-import { useCommit, useLoadedProgress } from '../../../data/ProgressContext';
+import { useCommit } from '../../../data/ProgressContext';
 import { Button } from '../../../ui/Button';
 import { Volume2 } from '../../../ui/icons';
 import { PictureChoices } from './PictureChoices';
@@ -19,7 +19,9 @@ import styles from './questions.module.css';
  * stays answerable and offers a "Turn on sound" button instead of playing (SPEC 8.6).
  */
 export function HearChoice({ q, answered, send }: KindProps<'hear-rhythm'>) {
-  const soundOn = useLoadedProgress().settings.soundOn;
+  // The synth's own mute state, not the setting: the provider unmutes the synth in an effect that
+  // runs after this view's effects, so keying on the setting would play while still muted.
+  const soundOn = !useSound().muted;
   const commit = useCommit();
   const played = useRef(false);
   const right = correctAnswerOf(q);

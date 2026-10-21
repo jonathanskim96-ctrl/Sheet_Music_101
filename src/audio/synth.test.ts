@@ -775,6 +775,24 @@ describe('playMusic (SPEC 8.7)', () => {
     expect(f.gains[1]?.calls).toHaveLength(2); // one fade, scheduled once
   });
 
+  it('a failure part-way through scheduling still lets the notes already scheduled be stopped', () => {
+    const f = fakeContext();
+    const create = f.ctx.createOscillator.bind(f.ctx);
+    let made = 0;
+    f.ctx.createOscillator = () => {
+      made++;
+      if (made === 3) throw new Error('engine gone');
+      return create();
+    };
+    const onError = vi.fn();
+    const s = createSynth(() => f.ctx, onError);
+    s.playMusic([{ at: 0, midi: [72], beats: 4 }], { bpm: 80, countIn: 4 });
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(f.oscillators).toHaveLength(2); // two clicks were scheduled before the failure
+    s.stopMusic();
+    for (const o of f.oscillators) expect(o.stop).toBeLessThanOrEqual(10 + 0.06);
+  });
+
   it('errors go to the one-time handler and never throw', () => {
     const onError = vi.fn();
     const s = createSynth(() => {

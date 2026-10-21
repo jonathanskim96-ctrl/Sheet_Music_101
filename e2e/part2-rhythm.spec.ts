@@ -17,22 +17,39 @@ const DAY = '2026-10-13';
 const ALL_DONE = pathLessons().length; // any lesson can be opened and replayed
 const RHYTHM = pathLessons().filter((l) => l.unit >= 16 && l.unit <= 19);
 
-/** Counts the oscillators the app creates, so a test can tell whether anything was played. */
+/**
+ * Counts the oscillators the app creates and the stop() calls made on them, so a test can tell
+ * whether anything was played or stopped. Every note gets one stop() when it is scheduled;
+ * stopping the music early calls stop() on each note once more.
+ */
 async function spyOnSound(page: Page): Promise<void> {
   await page.addInitScript(() => {
-    const w = window as unknown as { __osc: number; AudioContext: typeof AudioContext };
+    const w = window as unknown as {
+      __osc: number;
+      __stops: number;
+      AudioContext: typeof AudioContext;
+    };
     w.__osc = 0;
+    w.__stops = 0;
     const Real = w.AudioContext;
     w.AudioContext = class extends Real {
       override createOscillator(): OscillatorNode {
         w.__osc += 1;
-        return super.createOscillator();
+        const osc = super.createOscillator();
+        const stop = osc.stop.bind(osc);
+        osc.stop = (when?: number) => {
+          w.__stops += 1;
+          stop(when);
+        };
+        return osc;
       }
     };
   });
 }
 const oscillators = (page: Page): Promise<number> =>
   page.evaluate(() => (window as unknown as { __osc: number }).__osc);
+const stops = (page: Page): Promise<number> =>
+  page.evaluate(() => (window as unknown as { __stops: number }).__stops);
 
 test.describe('units 16-19 and checkpoint E (rhythm)', () => {
   test('every rhythm lesson and cp-e opens in order and plays to the end', async ({
@@ -93,6 +110,7 @@ test.describe('units 16-19 and checkpoint E (rhythm)', () => {
   test('muting during a listening question shows "Turn on sound", and the button turns sound on', async ({
     page,
   }) => {
+    await spyOnSound(page);
     await page.clock.setFixedTime(new Date(`${DAY}T10:00:00`));
     await seedProgress(page, progressAfter(ALL_DONE));
     await go(page, '#/lesson/u16-l3');
@@ -108,8 +126,11 @@ test.describe('units 16-19 and checkpoint E (rhythm)', () => {
     // the options stay answerable while muted
     await expect(q.getByRole('button', { name: 'Top rhythm' })).toBeEnabled();
 
+    const beforeOn = await oscillators(page);
     await off.getByRole('button', { name: 'Turn on sound' }).click();
     await expect(page.getByTestId('sound-off')).toHaveCount(0);
+    // turning sound on plays the rhythm again (count-in clicks and notes are scheduled)
+    await expect.poll(() => oscillators(page)).toBeGreaterThanOrEqual(beforeOn + 8);
     await expect(q.getByRole('button', { name: 'Play again' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Mute sound' })).toBeVisible();
 
@@ -153,7 +174,11 @@ test.describe('units 16-19 and checkpoint E (rhythm)', () => {
     await card.getByRole('button', { name: 'Play' }).click();
     // 4 clicks + 4 notes x 4 partials
     await expect.poll(() => oscillators(page)).toBeGreaterThanOrEqual(20);
+    // leaving the card stops its rhythm: every scheduled note is told to stop once more
+    const played = await oscillators(page);
+    expect(await stops(page)).toBe(played);
     await page.getByRole('button', { name: 'Got it' }).click();
+    await expect.poll(() => stops(page)).toBe(2 * played);
     // c-one-beat has no Play button
     await expect(page.getByTestId('concept-card')).toHaveAttribute('data-card', 'c-one-beat');
     await expect(

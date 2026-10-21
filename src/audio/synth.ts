@@ -272,6 +272,8 @@ export function createSynth(
         group.gain.value = 1;
         group.connect(out as never);
         const oscillators: OscillatorLike[] = [];
+        // Kept from the start, so notes scheduled before a failure part-way through can still be stopped.
+        playing = { ctx: c, group, oscillators };
         const beat = 60 / opts.bpm;
         const t0 = c.currentTime + LEAD;
         for (let i = 0; i < opts.countIn; i++) {
@@ -288,7 +290,6 @@ export function createSynth(
             for (const p of midiPlan(midi, start, dur))
               oscillators.push(voice(c, group, 'sine', p.frequency, p.peak, p.start, p.end));
         }
-        playing = { ctx: c, group, oscillators };
       });
     },
     stopMusic,

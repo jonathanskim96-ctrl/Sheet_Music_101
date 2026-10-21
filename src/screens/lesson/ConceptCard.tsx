@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { CONCEPT_CARDS, type ConceptCardId } from '../../domain/content';
 import { BPM, boxesEvents } from '../../audio/musicPlan';
 import { synth } from '../../audio/synth';
@@ -12,6 +13,13 @@ export function ConceptCard({ id, onGotIt }: { id: ConceptCardId; onGotIt: () =>
   const play = card.play;
   const ill = card.illustration;
   const rhythm = card.playRhythm === true && ill.kind === 'rhythm' ? ill.pictures : null;
+  // A rhythm still playing stops when the card goes away (or the next card takes its place).
+  useEffect(
+    () => () => {
+      synth.stopMusic();
+    },
+    [id],
+  );
   return (
     <>
       <div className={styles['content']} data-testid="concept-card" data-card={id}>
