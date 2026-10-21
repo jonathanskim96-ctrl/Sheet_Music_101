@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { frequency, type Note } from '../domain/notes';
+import type { PlayEvent } from './musicPlan';
 import {
   CORRECT_PLAN,
   FANFARE_PLAN,
@@ -49,10 +50,27 @@ export type AudioContextFactory = () => AudioContextLike;
 const ATTACK = 0.008;
 const SILENCE = 0.0001;
 
+/** The count-in click (SPEC 8.7): a short sine tick, louder on the first beat. */
+const CLICK = { freq: 1500, dur: 0.03, peak: 0.1, accentPeak: 0.15, attack: 0.002 } as const;
+/** A note lasts this much of its beats, so repeated notes are separate. */
+const NOTE_FRACTION = 0.9;
+/** A stopped replay fades out over this long, so it doesn't click. */
+const FADE_OUT = 0.03;
+
+export interface MusicOptions {
+  bpm: number;
+  /** Clicks before the first event, one per beat, the first accented. */
+  countIn: number;
+}
+
 export interface Synth {
   playNote: (note: Note, delay?: number, dur?: number) => void;
   /** Like playNote for any key by MIDI number (the black keys of the sharp/flat cards). */
   playMidi: (midi: number, delay?: number, dur?: number) => void;
+  /** Count-in clicks, then the events on the beat grid; a new call stops the previous one. */
+  playMusic: (events: readonly PlayEvent[], opts: MusicOptions) => void;
+  /** Fades out whatever playMusic is playing (a question view that goes away calls this). */
+  stopMusic: () => void;
   playCorrect: () => void;
   playWrong: () => void;
   playFanfare: () => void;
@@ -88,6 +106,9 @@ export function createSynth(
   // the stuck-engine rebuild happens once each time the page is shown.
   let rebuildUsed = false;
   const listeners = new Set<() => void>();
+  // The notes of the music that is playing now, so a new call (or a replay) can stop them.
+  let playing: { ctx: AudioContextLike; group: GainLike; oscillators: OscillatorLike[] } | null =
+    null;
 
   const report = (e: unknown) => {
     if (reported) return;
@@ -158,18 +179,42 @@ export function createSynth(
     peak: number,
     start: number,
     end: number,
-  ) => {
+    attack = ATTACK,
+  ): OscillatorLike => {
     const osc = c.createOscillator();
     const gain = c.createGain();
     osc.type = wave;
     osc.frequency.value = freq;
     gain.gain.setValueAtTime(0, start);
-    gain.gain.linearRampToValueAtTime(peak, start + ATTACK);
+    gain.gain.linearRampToValueAtTime(peak, start + attack);
     gain.gain.exponentialRampToValueAtTime(SILENCE, end);
     osc.connect(gain as never);
     gain.connect(out as never);
     osc.start(start);
     osc.stop(end + 0.05);
+    return osc;
+  };
+
+  // Fades the running music out and stops its notes. A note that has already ended may refuse
+  // another stop(); that is harmless and never a sound failure.
+  const stopMusic = () => {
+    const prev = playing;
+    playing = null;
+    if (!prev) return;
+    try {
+      const now = prev.ctx.currentTime;
+      prev.group.gain.setValueAtTime(1, now);
+      prev.group.gain.linearRampToValueAtTime(0, now + FADE_OUT);
+      for (const o of prev.oscillators) {
+        try {
+          o.stop(now + FADE_OUT + 0.02);
+        } catch {
+          /* already ended */
+        }
+      }
+    } catch {
+      /* the old engine was closed */
+    }
   };
 
   const unlock = () => {
@@ -219,6 +264,34 @@ export function createSynth(
           voice(c, out, 'sine', p.frequency, p.peak, p.start, p.end);
       });
     },
+    playMusic(events, opts) {
+      guarded(() => {
+        stopMusic();
+        const { ctx: c, out } = ready();
+        const group = c.createGain();
+        group.gain.value = 1;
+        group.connect(out as never);
+        const oscillators: OscillatorLike[] = [];
+        const beat = 60 / opts.bpm;
+        const t0 = c.currentTime + LEAD;
+        for (let i = 0; i < opts.countIn; i++) {
+          const start = t0 + i * beat;
+          const peak = i === 0 ? CLICK.accentPeak : CLICK.peak;
+          oscillators.push(
+            voice(c, group, 'sine', CLICK.freq, peak, start, start + CLICK.dur, CLICK.attack),
+          );
+        }
+        for (const e of events) {
+          const start = t0 + (opts.countIn + e.at) * beat;
+          const dur = e.beats * beat * NOTE_FRACTION;
+          for (const midi of e.midi)
+            for (const p of midiPlan(midi, start, dur))
+              oscillators.push(voice(c, group, 'sine', p.frequency, p.peak, p.start, p.end));
+        }
+        playing = { ctx: c, group, oscillators };
+      });
+    },
+    stopMusic,
     playCorrect: () => {
       playTones(CORRECT_PLAN);
     },
@@ -231,6 +304,7 @@ export function createSynth(
     setMuted(value) {
       if (muted === value) return;
       muted = value;
+      if (value) stopMusic(); // muting during a rhythm silences it too
       for (const l of listeners) l();
     },
     isMuted: () => muted,

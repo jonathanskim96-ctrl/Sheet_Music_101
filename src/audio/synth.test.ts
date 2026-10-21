@@ -644,3 +644,146 @@ describe('app-wide synth', () => {
     setAudioErrorHandler(undefined);
   });
 });
+
+describe('playMusic (SPEC 8.7)', () => {
+  const BEAT = 0.75; // 80 beats a minute
+  const T0 = 10.02; // the fake clock says 10; sounds start 20 ms ahead
+
+  /** Oscillators of the click (1 500 Hz) and of the notes (the first partial of C5 is 523 Hz). */
+  const clicks = (f: ReturnType<typeof fakeContext>) =>
+    f.oscillators.filter((o) => Math.abs(o.freq - 1500) < 0.01);
+  const firstPartials = (f: ReturnType<typeof fakeContext>) =>
+    f.oscillators.filter((o) => Math.abs(o.freq - frequency('C5')) < 0.01);
+
+  it('clicks once per count-in beat, 750 ms apart, then plays the events on the grid', () => {
+    const f = fakeContext();
+    const s = createSynth(() => f.ctx);
+    s.playMusic(
+      [
+        { at: 0, midi: [72], beats: 1 },
+        { at: 2, midi: [72], beats: 2 },
+      ],
+      { bpm: 80, countIn: 4 },
+    );
+    const clickStarts = clicks(f).map((o) => o.start);
+    expect(clickStarts).toHaveLength(4);
+    clickStarts.forEach((t, i) => {
+      expect(t).toBeCloseTo(T0 + i * BEAT);
+    });
+    const noteStarts = firstPartials(f).map((o) => o.start);
+    expect(noteStarts).toHaveLength(2);
+    expect(noteStarts[0]).toBeCloseTo(T0 + 4 * BEAT);
+    expect(noteStarts[1]).toBeCloseTo(T0 + 6 * BEAT);
+  });
+
+  it('a note lasts 90 % of its beats', () => {
+    const f = fakeContext();
+    createSynth(() => f.ctx).playMusic([{ at: 0, midi: [72], beats: 2 }], { bpm: 80, countIn: 0 });
+    const first = firstPartials(f)[0];
+    // the fundamental ends after dur seconds; stop() comes 50 ms later
+    expect((first?.stop ?? 0) - 0.05 - (first?.start ?? 0)).toBeCloseTo(2 * BEAT * 0.9);
+  });
+
+  it('the click is a 30 ms sine, accented (0.15) on the first beat and 0.10 after, with a 2 ms attack', () => {
+    const f = fakeContext();
+    createSynth(() => f.ctx).playMusic([], { bpm: 80, countIn: 2 });
+    expect(clicks(f).map((o) => o.type)).toEqual(['sine', 'sine']);
+    const first = clicks(f)[0];
+    expect((first?.stop ?? 0) - 0.05 - (first?.start ?? 0)).toBeCloseTo(0.03);
+    // gains: master, the group, then one per click
+    const [, , click1, click2] = f.gains;
+    expect(click1?.calls.map((c) => [c[0], c[1]])).toEqual([
+      ['set', 0],
+      ['lin', 0.15],
+      ['exp', 0.0001],
+    ]);
+    expect(click1?.calls[1]?.[2]).toBeCloseTo(T0 + 0.002);
+    expect(click2?.calls[1]?.[1]).toBe(0.1);
+  });
+
+  it('rests are silent: only the events given are sounded (no oscillator for a gap)', () => {
+    const f = fakeContext();
+    // a 1-beat note, a 2-beat rest (a gap) and a 1-beat note
+    createSynth(() => f.ctx).playMusic(
+      [
+        { at: 0, midi: [72], beats: 1 },
+        { at: 3, midi: [72], beats: 1 },
+      ],
+      { bpm: 80, countIn: 0 },
+    );
+    const starts = firstPartials(f).map((o) => o.start);
+    expect(starts).toHaveLength(2);
+    expect(starts[0]).toBeCloseTo(T0);
+    expect(starts[1]).toBeCloseTo(T0 + 3 * BEAT);
+    expect(f.oscillators).toHaveLength(8); // 2 notes x 4 partials
+  });
+
+  it('notes in one event sound together', () => {
+    const f = fakeContext();
+    createSynth(() => f.ctx).playMusic([{ at: 0, midi: [60, 64, 67], beats: 4 }], {
+      bpm: 80,
+      countIn: 0,
+    });
+    expect(f.oscillators).toHaveLength(12);
+    expect(new Set(f.oscillators.map((o) => o.start)).size).toBe(1);
+  });
+
+  it('a new call fades out and stops the notes of the previous one', () => {
+    const f = fakeContext();
+    const s = createSynth(() => f.ctx);
+    s.playMusic([{ at: 0, midi: [72], beats: 4 }], { bpm: 80, countIn: 4 });
+    const before = f.oscillators.length;
+    const firstGroup = f.gains[1];
+    s.playMusic([{ at: 0, midi: [72], beats: 1 }], { bpm: 80, countIn: 0 });
+    // the old group fades to 0 within 30 ms and every old oscillator is told to stop by then
+    expect(firstGroup?.calls.slice(-2).map((c) => [c[0], c[1]])).toEqual([
+      ['set', 1],
+      ['lin', 0],
+    ]);
+    for (const o of f.oscillators.slice(0, before)) expect(o.stop).toBeLessThanOrEqual(10 + 0.06);
+    // and the new one is not touched
+    for (const o of f.oscillators.slice(before)) expect(o.stop).toBeGreaterThan(10.06);
+  });
+
+  it('is a no-op while muted (no engine, no error), and muting silences the music that is playing', () => {
+    const factory = vi.fn(() => fakeContext().ctx);
+    const onError = vi.fn();
+    const s = createSynth(factory, onError);
+    s.setMuted(true);
+    s.playMusic([{ at: 0, midi: [72], beats: 1 }], { bpm: 80, countIn: 4 });
+    expect(factory).not.toHaveBeenCalled();
+    expect(onError).not.toHaveBeenCalled();
+
+    const f = fakeContext();
+    const s2 = createSynth(() => f.ctx);
+    s2.playMusic([{ at: 0, midi: [72], beats: 4 }], { bpm: 80, countIn: 0 });
+    s2.setMuted(true);
+    expect(f.gains[1]?.calls.slice(-1)[0]?.slice(0, 2)).toEqual(['lin', 0]);
+  });
+
+  it('stopMusic fades the music out, and is harmless when nothing plays', () => {
+    const f = fakeContext();
+    const s = createSynth(() => f.ctx);
+    expect(() => {
+      s.stopMusic();
+    }).not.toThrow();
+    s.playMusic([{ at: 0, midi: [72], beats: 4 }], { bpm: 80, countIn: 0 });
+    s.stopMusic();
+    expect(f.gains[1]?.calls.slice(-1)[0]?.slice(0, 2)).toEqual(['lin', 0]);
+    for (const o of f.oscillators) expect(o.stop).toBeLessThanOrEqual(10 + 0.06);
+    s.stopMusic(); // a second stop does nothing
+    expect(f.gains[1]?.calls).toHaveLength(2); // one fade, scheduled once
+  });
+
+  it('errors go to the one-time handler and never throw', () => {
+    const onError = vi.fn();
+    const s = createSynth(() => {
+      throw new Error('no audio');
+    }, onError);
+    expect(() => {
+      s.playMusic([{ at: 0, midi: [72], beats: 1 }], { bpm: 80, countIn: 4 });
+      s.playMusic([{ at: 0, midi: [72], beats: 1 }], { bpm: 80, countIn: 4 });
+    }).not.toThrow();
+    expect(onError).toHaveBeenCalledTimes(1);
+  });
+});
