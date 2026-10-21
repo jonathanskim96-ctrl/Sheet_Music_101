@@ -106,6 +106,7 @@ const anyQuestion: fc.Arbitrary<Question> = fc.oneof(
     kind: fc.constant('find-key-pitch' as const),
     card: fc.constantFrom(...ALL_CARDS),
     render,
+    showNatural: fc.boolean(),
   }),
 );
 
@@ -512,19 +513,31 @@ describe('name-accidental and find-key-pitch (SPEC 8.6)', () => {
     expect(checkAnswer(q, { kind: 'letter', letter: 'F' })).toBe(false);
   });
   it('find-key-pitch wants the exact key: another octave or the neighbouring key is wrong', () => {
-    const q: Question = { kind: 'find-key-pitch', card: 'treble-F#4', render: 'single' };
+    const q: Question = {
+      kind: 'find-key-pitch',
+      card: 'treble-F#4',
+      render: 'single',
+      showNatural: false,
+    };
     expect(correctAnswerOf(q)).toEqual({ kind: 'pitch-key', midi: 66 });
     expect(checkAnswer(q, { kind: 'pitch-key', midi: 66 })).toBe(true);
     expect(checkAnswer(q, { kind: 'pitch-key', midi: 54 })).toBe(false); // F♯ an octave lower
     expect(checkAnswer(q, { kind: 'pitch-key', midi: 65 })).toBe(false); // plain F
     expect(checkAnswer(q, { kind: 'key', note: 'F4' })).toBe(false);
-    const flat: Question = { kind: 'find-key-pitch', card: 'bass-Bb2', render: 'single' };
+    const flat: Question = {
+      kind: 'find-key-pitch',
+      card: 'bass-Bb2',
+      render: 'single',
+      showNatural: false,
+    };
     expect(correctAnswerOf(flat)).toEqual({ kind: 'pitch-key', midi: cardMidi('bass-Bb2') });
     expect(cardMidi('bass-Bb2')).toBe(46); // one below B2 (47)
   });
   it('cardOf names the card', () => {
     expect(cardOf(ask('bass-C#3'))).toBe('bass-C#3');
-    expect(cardOf({ kind: 'find-key-pitch', card: 'bass-C#3', render: 'single' })).toBe('bass-C#3');
+    expect(
+      cardOf({ kind: 'find-key-pitch', card: 'bass-C#3', render: 'single', showNatural: false }),
+    ).toBe('bass-C#3');
   });
 
   describe('pitchOptions: the options rule, including every candidate it drops', () => {
@@ -549,6 +562,18 @@ describe('name-accidental and find-key-pitch (SPEC 8.6)', () => {
     it('a natural card: its own sign candidate is dropped, ♯ kept, ♭ dropped, neighbours plain', () => {
       expect(names('treble-F4').sort()).toEqual(['E', 'F', 'F♯', 'G']);
       expect(names('treble-B4').sort()).toEqual(['A', 'B', 'C', 'B♭'].sort()); // B♯ dropped, B♭ kept
+    });
+    it('D is the one plain card with 3 buttons: D♯ and D♭ are not names the course uses', () => {
+      expect(names('treble-D5').sort()).toEqual(['C', 'D', 'E']);
+      for (const c of [
+        'treble-C5',
+        'treble-E5',
+        'treble-F4',
+        'treble-G4',
+        'treble-A4',
+        'treble-B4',
+      ] as const)
+        expect(names(c), c).toHaveLength(4);
     });
     it('the right answer is always present exactly once, options are distinct and valid', () => {
       fc.assert(

@@ -342,7 +342,7 @@ describe('promptFor', () => {
       'Which note is this?',
     ],
     [
-      { kind: 'find-key-pitch', card: 'treble-F#4', render: 'single' },
+      { kind: 'find-key-pitch', card: 'treble-F#4', render: 'single', showNatural: false },
       'Tap this exact key on the piano.',
     ],
   ];

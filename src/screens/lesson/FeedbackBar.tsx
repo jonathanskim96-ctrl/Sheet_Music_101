@@ -112,7 +112,7 @@ export function FeedbackBar({ question, result, progress, combo, onContinue }: F
             card !== null && (
               <SignLines
                 card={card}
-                showNatural={question.kind === 'name-accidental' && question.showNatural}
+                showNatural={question.showNatural}
                 alsoCalled={question.kind === 'find-key-pitch' && result.correct}
               />
             )}

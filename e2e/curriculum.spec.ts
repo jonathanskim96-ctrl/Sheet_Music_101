@@ -51,7 +51,7 @@ test.describe('whole curriculum', () => {
       );
       played += 1;
     }
-    expect(played).toBe(pathLessons().length);
+    expect(played).toBe(61); // a fixed number, so a lesson missing from the data fails here
 
     // levels 2 and 3, unit by unit (level 3 opens once both level-2 lessons are done)
     for (const unit of UNITS) {
@@ -64,7 +64,7 @@ test.describe('whole curriculum', () => {
         }
       }
     }
-    expect(played).toBe(pathLessons().length + 36);
+    expect(played).toBe(61 + 36);
 
     for (const id of ['cp-a', 'cp-b', 'cp-c', 'cp-d']) {
       await go(page, `#/checkpoint/${id}`);
@@ -73,7 +73,7 @@ test.describe('whole curriculum', () => {
       await finish(page);
       played += 1;
     }
-    expect(played).toBe(pathLessons().length + 36 + 4);
+    expect(played).toBe(61 + 36 + 4);
   });
 });
 

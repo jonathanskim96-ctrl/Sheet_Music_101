@@ -61,9 +61,9 @@ function noteQuestion(
 ): Question {
   switch (kind) {
     case 'find-key-pitch':
-      return { kind, card, render };
-    case 'name-accidental':
       // A plain card gets a printed natural sign only in the lessons that teach it (unit 15).
+      return { kind, card, render, showNatural: showNaturals && isNaturalCard(card) };
+    case 'name-accidental':
       return {
         kind,
         card,

@@ -620,22 +620,33 @@ describe('checkpoints use their mix (M10 step 9)', () => {
 });
 
 describe('units 12-15 lesson rules', () => {
-  it('u15-l1 and u15-l3 print natural signs on plain cards; others do not', () => {
+  it('u15-l1 and u15-l3 print natural signs on plain cards (naming and key questions); others do not', () => {
     const find = (id: string) => findLesson(id) as LessonDef;
     for (const id of ['u15-l1', 'u15-l3']) {
       const plain = SEEDS.slice(0, 30)
         .flatMap(
           (seed) => buildLesson(find(id), emptyProgress('2026-09-01'), TODAY, seed).questions,
         )
-        .filter((q) => q.kind === 'name-accidental' && isNaturalCard(q.card));
+        .filter(
+          (q) =>
+            (q.kind === 'name-accidental' || q.kind === 'find-key-pitch') && isNaturalCard(q.card),
+        );
       expect(plain.length, id).toBeGreaterThan(0);
-      for (const q of plain) expect(q.kind === 'name-accidental' && q.showNatural, id).toBe(true);
+      for (const q of plain)
+        expect('showNatural' in q && q.showNatural, `${id} ${q.kind}`).toBe(true);
     }
+    // u15-l3 ("Plain or not?") is half find-key-pitch: those plain notes carry the ♮ too
+    const keys = SEEDS.slice(0, 30)
+      .flatMap(
+        (seed) => buildLesson(find('u15-l3'), emptyProgress('2026-09-01'), TODAY, seed).questions,
+      )
+      .filter((q) => q.kind === 'find-key-pitch' && isNaturalCard(q.card));
+    expect(keys.length).toBeGreaterThan(0);
     const none = SEEDS.slice(0, 30)
       .flatMap(
         (seed) => buildLesson(find('u12-l1'), emptyProgress('2026-09-01'), TODAY, seed).questions,
       )
-      .filter((q) => q.kind === 'name-accidental');
+      .filter((q) => q.kind === 'name-accidental' || q.kind === 'find-key-pitch');
     expect(none.length).toBeGreaterThan(0);
     for (const q of none) expect(q.showNatural).toBe(false);
   });

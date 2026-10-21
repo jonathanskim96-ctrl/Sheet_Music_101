@@ -16,6 +16,7 @@ export function FindKeyPitch({ q, answered, send }: KindProps<'find-key-pitch'>)
   const parts = parseCardId(q.card);
   if (!parts) throw new Error(`Unknown card: ${q.card}`);
   const right = correctAnswerOf(q);
+  const printed = parts.sign !== 'natural' ? parts.sign : q.showNatural ? 'natural' : undefined;
   const window = keyboardWindow(parts.note);
   const keys = whiteKeys(window.from, window.to);
 
@@ -44,7 +45,7 @@ export function FindKeyPitch({ q, answered, send }: KindProps<'find-key-pitch'>)
           {
             clef: parts.clef,
             note: parts.note,
-            ...(parts.sign !== 'natural' ? { sign: parts.sign } : {}),
+            ...(printed !== undefined ? { sign: printed } : {}),
             state: answered ? (answered.correct ? 'correct' : 'wrong') : 'normal',
           },
         ]}
