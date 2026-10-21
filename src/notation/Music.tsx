@@ -38,6 +38,8 @@ export interface MusicProps {
   showTime?: boolean;
   /** Smallest staff space in CSS pixels before the boxes wrap onto a second row (default 9). */
   minSpace?: number;
+  /** Rings the top time number in the focus colour (the "top number" concept card). */
+  highlightTop?: boolean;
   ariaLabel?: string;
 }
 
@@ -217,9 +219,10 @@ interface RowProps {
   count: number;
   showTime: boolean;
   width: number;
+  highlightTop: boolean;
 }
 
-function Row({ mode, score, firstBox, count, showTime, width }: RowProps) {
+function Row({ mode, score, firstBox, count, showTime, width, highlightTop }: RowProps) {
   const layout = layoutMusic({
     mode,
     home: score.home,
@@ -279,11 +282,22 @@ function Row({ mode, score, firstBox, count, showTime, width }: RowProps) {
                 (layout.timeX ?? 0) - ((g(n).bounds[0] + g(n).bounds[2]) / 2) * K;
               return (
                 <>
+                  {highlightTop && (
+                    <rect
+                      className={styles['ring']}
+                      data-testid="music-top-number"
+                      x={layout.timeX - 1.4 * S}
+                      y={ys.top - 1.4 * S}
+                      width={2.8 * S}
+                      height={2.8 * S}
+                      rx={0.6 * S}
+                    />
+                  )}
                   <Glyph
                     name={digit(score.time)}
                     x={cx(score.time)}
                     y={ys.top}
-                    className={styles['ink'] ?? ''}
+                    className={highlightTop ? (styles['focus'] ?? '') : (styles['ink'] ?? '')}
                   />
                   <Glyph name="timeSig4" x={cx(4)} y={ys.bottom} className={styles['ink'] ?? ''} />
                 </>
@@ -356,7 +370,14 @@ function defaultLabel(score: MusicScore, mode: MusicMode): string {
 }
 
 /** Notes in boxes on a treble, bass or grand staff, or on the one-line rhythm staff (SPEC 8.4). */
-export function Music({ mode, score, showTime = true, minSpace = 9, ariaLabel }: MusicProps) {
+export function Music({
+  mode,
+  score,
+  showTime = true,
+  minSpace = 9,
+  highlightTop = false,
+  ariaLabel,
+}: MusicProps) {
   const boxCount = score.staffs[0]?.boxes.length ?? 0;
   const holder = useRef<HTMLDivElement>(null);
   const [px, setPx] = useState<number | null>(null);
@@ -414,7 +435,14 @@ export function Music({ mode, score, showTime = true, minSpace = 9, ariaLabel }:
           style={fraction < 1 ? { maxWidth: `${String(fraction * 100)}%` } : undefined}
         >
           {plan.map((r) => (
-            <Row key={r.firstBox} mode={mode} score={score} width={width} {...r} />
+            <Row
+              key={r.firstBox}
+              mode={mode}
+              score={score}
+              width={width}
+              highlightTop={highlightTop}
+              {...r}
+            />
           ))}
         </div>
       </div>

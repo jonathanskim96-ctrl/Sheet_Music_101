@@ -53,6 +53,24 @@ export function beatsOf(t: RhythmToken): number {
   return BEATS[t];
 }
 
+/**
+ * Where each sounding note of a rhythm starts and how long it lasts, in beats. Rests are gaps and
+ * a half-beat pair is two notes of half a beat (SPEC 8.7).
+ */
+export function rhythmTimeline(tokens: readonly RhythmToken[]): { at: number; beats: number }[] {
+  const out: { at: number; beats: number }[] = [];
+  let at = 0;
+  for (const t of tokens) {
+    if (t === 'ee') {
+      out.push({ at, beats: 0.5 }, { at: at + 0.5, beats: 0.5 });
+    } else if (t !== 'Q' && t !== 'H' && t !== 'W') {
+      out.push({ at, beats: BEATS[t] });
+    }
+    at += BEATS[t];
+  }
+  return out;
+}
+
 /** Beats of one music event (a rest or a note or stack). */
 export function eventBeats(e: MusicEvent): number {
   return BEATS[e.dur];

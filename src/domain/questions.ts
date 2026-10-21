@@ -10,6 +10,7 @@ import {
   type Note,
   type Sign,
 } from './notes';
+import { beatsOf, type Dur, type RhythmToken, type Time } from './music';
 import { shuffle } from './rng';
 
 /** One answer button of a name-accidental question: a letter and its sign ('natural' = plain). */
@@ -35,7 +36,13 @@ export type Question =
       options: PitchOption[];
     }
   // the exact key, black keys too; `showNatural` as above (unit 15 prints a natural sign on plain cards)
-  | { kind: 'find-key-pitch'; card: CardId; render: 'single' | 'grand'; showNatural: boolean };
+  | { kind: 'find-key-pitch'; card: CardId; render: 'single' | 'grand'; showNatural: boolean }
+  // Rhythm (SPEC 8.6, M11). Nothing here is about a card.
+  | { kind: 'beats-of'; token: RhythmToken }
+  | { kind: 'which-longer'; first: Dur; second: Dur } // the two last a different number of beats
+  | { kind: 'count-box'; box: RhythmToken[] } // drawn without time numbers
+  | { kind: 'finish-box'; time: Time; box: RhythmToken[]; options: RhythmToken[] } // box = the pattern minus its last token; 3 options
+  | { kind: 'hear-rhythm'; time: Time; options: RhythmToken[][]; answer: 0 | 1 | 2 }; // options[answer] is the one played
 
 export type ChoiceValue =
   | 'line'
@@ -47,7 +54,11 @@ export type ChoiceValue =
   | 'step-up'
   | 'step-down'
   | 'skip-up'
-  | 'skip-down';
+  | 'skip-down'
+  | 'beats-1'
+  | 'beats-2'
+  | 'beats-3'
+  | 'beats-4';
 
 export type Answer =
   | { kind: 'letter'; letter: Letter }
@@ -55,7 +66,9 @@ export type Answer =
   | { kind: 'position'; position: number }
   | { kind: 'choice'; value: ChoiceValue }
   | { kind: 'pitch-name'; letter: Letter; sign: Sign }
-  | { kind: 'pitch-key'; midi: number };
+  | { kind: 'pitch-key'; midi: number }
+  // the learner picked the 1st, 2nd or 3rd picture (finish-box, hear-rhythm)
+  | { kind: 'option'; index: 0 | 1 | 2 };
 
 function cardParts(card: CardId): { clef: Clef; note: Note } {
   const parts = parseCardId(card);
@@ -114,6 +127,38 @@ export function pitchOptions(card: CardId, rand: () => number): PitchOption[] {
   return shuffle([...kept.slice(0, 3), right], rand);
 }
 
+/** Total beats of a rhythm box (rests count). */
+export function boxBeats(box: readonly RhythmToken[]): number {
+  return box.reduce((sum, t) => sum + beatsOf(t), 0);
+}
+
+/** The "1 beat" … "4 beats" button value for a number of beats. */
+export function beatsValue(n: number): Extract<ChoiceValue, `beats-${string}`> {
+  switch (n) {
+    case 1:
+      return 'beats-1';
+    case 2:
+      return 'beats-2';
+    case 3:
+      return 'beats-3';
+    case 4:
+      return 'beats-4';
+    default:
+      throw new RangeError(`No button for ${String(n)} beats`);
+  }
+}
+
+/** Which finish-box option makes the box add up to its time; throws if none or several do (a data bug). */
+export function finishBoxAnswer(q: Extract<Question, { kind: 'finish-box' }>): 0 | 1 | 2 {
+  const need = q.time - boxBeats(q.box);
+  const hits = q.options.flatMap((t, i) => (beatsOf(t) === need ? [i] : []));
+  const [only] = hits;
+  if (hits.length !== 1 || (only !== 0 && only !== 1 && only !== 2)) {
+    throw new Error(`finish-box needs exactly one right option, found ${String(hits.length)}`);
+  }
+  return only;
+}
+
 function assertNever(x: never): never {
   throw new Error(`Unexpected value: ${JSON.stringify(x)}`);
 }
@@ -159,6 +204,16 @@ export function correctAnswerOf(q: Question): Answer {
       return { kind: 'pitch-name', ...pitchOfCard(q.card) };
     case 'find-key-pitch':
       return { kind: 'pitch-key', midi: cardMidi(q.card) };
+    case 'beats-of':
+      return { kind: 'choice', value: beatsValue(beatsOf(q.token)) };
+    case 'which-longer':
+      return { kind: 'choice', value: beatsOf(q.first) > beatsOf(q.second) ? 'first' : 'second' };
+    case 'count-box':
+      return { kind: 'choice', value: beatsValue(boxBeats(q.box)) };
+    case 'finish-box':
+      return { kind: 'option', index: finishBoxAnswer(q) };
+    case 'hear-rhythm':
+      return { kind: 'option', index: q.answer };
     default:
       return assertNever(q);
   }
@@ -193,9 +248,18 @@ export function checkAnswer(q: Question, a: Answer): boolean {
     case 'line-or-space':
     case 'higher-lower':
     case 'clef-identify':
+    case 'beats-of':
+    case 'which-longer':
+    case 'count-box':
       return (
         a.kind === 'choice' &&
         a.value === (correctAnswerOf(q) as Extract<Answer, { kind: 'choice' }>).value
+      );
+    case 'finish-box':
+    case 'hear-rhythm':
+      return (
+        a.kind === 'option' &&
+        a.index === (correctAnswerOf(q) as Extract<Answer, { kind: 'option' }>).index
       );
     case 'name-accidental': {
       const right = pitchOfCard(q.card);
@@ -244,6 +308,11 @@ export function cardOf(q: Question): CardId | null {
     case 'line-or-space':
     case 'higher-lower':
     case 'clef-identify':
+    case 'beats-of':
+    case 'which-longer':
+    case 'count-box':
+    case 'finish-box':
+    case 'hear-rhythm':
       return null;
     default:
       return assertNever(q);

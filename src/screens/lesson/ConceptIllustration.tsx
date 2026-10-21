@@ -1,6 +1,8 @@
 import { CONCEPT_CARDS, type ConceptCardId, type Illustration } from '../../domain/content';
 import { letterOf, noteAtPosition, type Note } from '../../domain/notes';
 import { Keyboard, whiteKeys, type KeyState } from '../../notation/Keyboard';
+import { Music } from '../../notation/Music';
+import { rhythmBoxesScore } from '../../notation/musicDraw';
 import { Staff, type StaffNote } from '../../notation/Staff';
 import styles from './lesson.module.css';
 
@@ -121,6 +123,20 @@ export function ConceptIllustration({ id }: { id: ConceptCardId }) {
         </div>
       );
     }
+    case 'rhythm':
+      return (
+        <div className={styles['stack']}>
+          {ill.pictures.map((pic, i) => (
+            <Music
+              key={`${String(i)}-${pic.boxes.map((b) => b.join(' ')).join('|')}`}
+              mode="rhythm"
+              score={rhythmBoxesScore(pic.boxes, pic.time)}
+              showTime={pic.showTime === true}
+              highlightTop={pic.highlightTop === true}
+            />
+          ))}
+        </div>
+      );
     default: {
       const never: never = ill;
       return never;

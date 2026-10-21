@@ -72,12 +72,32 @@ export function melodyScore(m: Melody, marked?: Marking, state?: DrawState): Mus
   };
 }
 
+function tokenEvent(t: RhythmToken): DrawEvent {
+  if (t === 'Q' || t === 'H' || t === 'W') return { kind: 'rest', dur: t };
+  return { kind: 'note', dur: t, notes: [{ note: null, printed: null }] };
+}
+
+/** Rhythm patterns, one box each, for the one-line rhythm staff. */
+export function rhythmBoxesScore(
+  boxes: readonly (readonly RhythmToken[])[],
+  time: Time,
+): MusicScore {
+  return {
+    time,
+    home: 'none',
+    staffs: [{ clef: 'treble', boxes: boxes.map((box) => box.map(tokenEvent)) }],
+  };
+}
+
 /** One rhythm pattern (one box) for the one-line rhythm staff. */
 export function rhythmScore(tokens: readonly RhythmToken[], time: Time): MusicScore {
-  const events = tokens.map((t): DrawEvent => {
-    if (t === 'Q' || t === 'H' || t === 'W') return { kind: 'rest', dur: t };
-    return { kind: 'note', dur: t, notes: [{ note: null, printed: null }] };
-  });
+  return rhythmBoxesScore([tokens], time);
+}
+
+/** A box with its last beats missing: a dashed empty slot stands where they go (finish-box). */
+export function unfinishedBoxScore(box: readonly RhythmToken[], time: Time): MusicScore {
+  const used = box.reduce((sum, t) => sum + beatsOf(t), 0);
+  const events: DrawEvent[] = [...box.map(tokenEvent), { kind: 'empty', beats: time - used }];
   return { time, home: 'none', staffs: [{ clef: 'treble', boxes: [events] }] };
 }
 

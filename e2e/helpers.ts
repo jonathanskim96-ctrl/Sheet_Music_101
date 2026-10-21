@@ -17,6 +17,10 @@ export const CHOICE_LABEL: Record<string, string> = {
   'step-down': 'Step down',
   'skip-up': 'Skip up',
   'skip-down': 'Skip down',
+  'beats-1': '1 beat',
+  'beats-2': '2 beats',
+  'beats-3': '3 beats',
+  'beats-4': '4 beats',
 };
 
 /** Opens the app on a fresh phone and taps "Let's start". */
@@ -165,6 +169,10 @@ export async function answerQuestion(page: Page, correct: boolean): Promise<Answ
       'step-down': 'step-up',
       'skip-up': 'skip-down',
       'skip-down': 'skip-up',
+      'beats-1': 'beats-2',
+      'beats-2': 'beats-3',
+      'beats-3': 'beats-4',
+      'beats-4': 'beats-1',
     };
     const value = correct ? right.value : (pairs[right.value] ?? right.value);
     await q.getByRole('button', { name: CHOICE_LABEL[value] ?? value, exact: true }).click();
@@ -209,6 +217,10 @@ export async function answerQuestion(page: Page, correct: boolean): Promise<Answ
       midi = WHITE[midi % 12] === undefined ? midi - 1 : midi + (WHITE[(midi + 1) % 12] ? 1 : 2);
     }
     await keyAt(midi).click();
+  } else if (right.kind === 'option') {
+    // finish-box / hear-rhythm: the pictures are buttons numbered from the top (or left)
+    const index = correct ? right.index : (right.index + 1) % 3;
+    await q.locator(`[data-option-index="${String(index)}"]`).click();
   } else {
     // find-on-staff: tap the band, then Check. A wrong answer is the position next to the right one.
     const position = correct ? right.position : right.position + (right.position < 12 ? 1 : -1);

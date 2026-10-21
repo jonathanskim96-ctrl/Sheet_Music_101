@@ -78,7 +78,7 @@ describe('part-2 concept cards match CURRICULUM.md section 11 exactly (the ones 
     .map((cells) => ({ id: cells[1] ?? '', title: cells[2] ?? '', body: cells[3] ?? '' }));
   const built = rows.filter((r) => (CONCEPT_CARD_IDS as readonly string[]).includes(r.id));
 
-  it('M10 built the seven sign cards, in the order of the table', () => {
+  it('M10 and M11 built the sign and rhythm cards, in the order of the table', () => {
     expect(built.map((r) => r.id)).toEqual([
       'c-sharp',
       'c-sharp-staff',
@@ -87,6 +87,16 @@ describe('part-2 concept cards match CURRICULUM.md section 11 exactly (the ones 
       'c-bass-signs',
       'c-natural',
       'c-signs-grand',
+      'c-beat',
+      'c-one-beat',
+      'c-two-beat',
+      'c-listen',
+      'c-box',
+      'c-top-number',
+      'c-three-beat',
+      'c-rest',
+      'c-long-rests',
+      'c-half-beats',
     ]);
     expect(CONCEPT_CARD_IDS.slice(24)).toEqual(built.map((r) => r.id));
   });
@@ -104,15 +114,6 @@ describe('every quoted text in CURRICULUM.md section 12 exists in content.ts (as
   // helper functions and checked by name below. Each time a milestone builds its texts, it moves
   // them out of this list so the check covers them (M10 STANDARDS note).
   const NOT_YET = new Set([
-    'How many beats does this note last?',
-    'How many beats does this rest last?',
-    'How many beats does this pair last?',
-    'Which lasts longer?',
-    'First note',
-    'Second note',
-    'How many beats are in this box?',
-    'Which one finishes the box?',
-    'Which rhythm did you hear?',
     'Which note is marked?',
     'How does the marked note move?',
     'Which tune did you hear?',
@@ -126,36 +127,16 @@ describe('every quoted text in CURRICULUM.md section 12 exists in content.ts (as
     'No',
     'Which stack is this?',
     'Name its bottom note.',
-    '1 beat',
-    '2 beats',
-    '3 beats',
-    '4 beats',
     '2 letters',
     '3 letters',
     '4 letters',
     '5 letters',
-    'Top rhythm',
-    'Middle rhythm',
-    'Bottom rhythm',
     'Top tune',
     'Middle tune',
     'Bottom tune',
-    '1-beat note',
-    '2-beat rest',
-    'Play again',
-    '2-beat note',
-    '3-beat note',
-    '4-beat note',
-    'half-beat pair',
-    '1-beat rest',
-    '4-beat rest',
-    'the first note',
-    'a 2-beat note',
+    'a 2-beat note', // produced by withArticle (tested below)
     'a 1-beat rest',
     'a',
-    'the top one',
-    'the middle one',
-    'the bottom one',
     'step up',
     '3 letters apart',
     'together',
@@ -168,12 +149,9 @@ describe('every quoted text in CURRICULUM.md section 12 exists in content.ts (as
     'The ♮ earlier in this box still counts.',
     'The home sign makes every {Letter} a {Letter}♯.',
     'New box: the sign from the last box is gone.',
-    '1 + 1 + 2 = 4 beats.',
+    '1 + 1 + 2 = 4 beats.', // an example, produced by beatSumLine (tested below)
     'C-D-E: 3 letters apart.',
     'C-E-G: the C stack.',
-    'Tap Play again to hear it once more.',
-    'Turn on sound to hear this.',
-    'Turn on sound',
     "You've finished the whole course! Keep your reading sharp with Practise.",
     // examples and templates of M10, covered by the named tests below
     'F♯',
@@ -215,6 +193,73 @@ describe('every quoted text in CURRICULUM.md section 12 exists in content.ts (as
     expect(content.alsoCalled('treble-Bb4')).toBe('That key is also called A♯.');
     expect(content.alsoCalled('treble-Eb5')).toBe('That key is also called D♯.');
     expect(content.alsoCalled('treble-C4')).toBeNull();
+  });
+  it('rhythm prompts, button labels and event names are exactly as written in section 12', () => {
+    const md = section(12);
+    const q = (kind: string, rest: object): Question => ({ kind, ...rest }) as Question;
+    expect(promptFor(q('beats-of', { token: 'q' }))).toBe('How many beats does this note last?');
+    expect(promptFor(q('beats-of', { token: 'h.' }))).toBe('How many beats does this note last?');
+    expect(promptFor(q('beats-of', { token: 'Q' }))).toBe('How many beats does this rest last?');
+    expect(promptFor(q('beats-of', { token: 'W' }))).toBe('How many beats does this rest last?');
+    expect(promptFor(q('beats-of', { token: 'ee' }))).toBe('How many beats does this pair last?');
+    expect(promptFor(q('which-longer', { first: 'q', second: 'h' }))).toBe('Which lasts longer?');
+    expect(promptFor(q('count-box', { box: ['w'] }))).toBe('How many beats are in this box?');
+    expect(promptFor(q('finish-box', { time: 4, box: ['q'], options: [] }))).toBe(
+      'Which one finishes the box?',
+    );
+    expect(promptFor(q('hear-rhythm', { time: 4, options: [], answer: 0 }))).toBe(
+      'Which rhythm did you hear?',
+    );
+    expect(content.BEATS_LABELS).toEqual(['1 beat', '2 beats', '3 beats', '4 beats']);
+    expect(content.RHYTHM_OPTION_NAMES).toEqual(['Top rhythm', 'Middle rhythm', 'Bottom rhythm']);
+    expect(content.OPTION_TEXT).toEqual(['the top one', 'the middle one', 'the bottom one']);
+    expect(content.EVENT_NAMES).toEqual({
+      q: '1-beat note',
+      h: '2-beat note',
+      'h.': '3-beat note',
+      w: '4-beat note',
+      ee: 'half-beat pair',
+      Q: '1-beat rest',
+      H: '2-beat rest',
+      W: '4-beat rest',
+    });
+    for (const text of Object.values(content.EVENT_NAMES)) expect(md, text).toContain(text);
+    expect(md).toContain(content.PLAY_AGAIN);
+    expect(md).toContain(content.HEAR_AGAIN_LINE);
+    expect(md).toContain(content.SOUND_OFF.line);
+    expect(md).toContain(content.SOUND_OFF.button);
+  });
+  it('finish-box answers read "a 2-beat note" / "a 1-beat rest"; box sums read "1 + 1 + 2 = 4 beats."', () => {
+    expect(content.withArticle('h')).toBe('a 2-beat note');
+    expect(content.withArticle('Q')).toBe('a 1-beat rest');
+    expect(content.withArticle('ee')).toBe('a half-beat pair');
+    expect(content.beatSumLine(['q', 'q', 'h'])).toBe('1 + 1 + 2 = 4 beats.');
+    expect(content.beatSumLine(['h.', 'q'])).toBe('3 + 1 = 4 beats.');
+    expect(content.beatSumLine(['ee', 'q', 'Q', 'H'])).toBe('1 + 1 + 1 + 2 = 5 beats.');
+    expect(
+      content.finishedBox({
+        kind: 'finish-box',
+        time: 4,
+        box: ['q', 'q'],
+        options: ['q', 'h', 'w'],
+      }),
+    ).toEqual(['q', 'q', 'h']);
+  });
+  it('the rhythm concept cards play only where CURRICULUM section 11 says "Play"', () => {
+    const md = section(11);
+    const withPlay = CONCEPT_CARD_IDS.filter((id) => CONCEPT_CARDS[id].playRhythm === true);
+    expect(withPlay).toEqual([
+      'c-beat',
+      'c-two-beat',
+      'c-listen',
+      'c-three-beat',
+      'c-rest',
+      'c-half-beats',
+    ]);
+    for (const id of withPlay) {
+      const row = md.split('\n').find((l) => l.startsWith(`| ${id} |`)) ?? '';
+      expect(row, id).toContain('Play');
+    }
   });
   it('the Meet-card tips for sharps and flats match CURRICULUM section 7', () => {
     const md = section(7);
@@ -262,7 +307,9 @@ describe('every quoted text in CURRICULUM.md section 5 exists in content.ts', ()
     expect(CHOICE_TEXT.line).toBe('a line');
     expect(CHOICE_TEXT.second).toBe('the second note');
     expect(CHOICE_TEXT['step-up']).toBe('step up');
-    expect(Object.keys(CHOICE_TEXT)).toHaveLength(10);
+    expect(Object.keys(CHOICE_TEXT)).toHaveLength(14);
+    expect(CHOICE_TEXT['beats-1']).toBe('1 beat');
+    expect(CHOICE_TEXT['beats-3']).toBe('3 beats');
   });
   it('combo milestones are 3, 5, 10', () => {
     expect(content.COMBO_MILESTONES).toEqual([

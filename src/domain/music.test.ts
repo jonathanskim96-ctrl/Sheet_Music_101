@@ -7,6 +7,7 @@ import {
   eventBeats,
   parseMusic,
   parseRhythm,
+  rhythmTimeline,
   soundingCard,
   soundingPitch,
   type Melody,
@@ -292,5 +293,38 @@ describe('soundingCard', () => {
   });
   it('uses the same names the learner sees', () => {
     expect(pitchName(soundingPitch(byId(MS, 's2'), 0, 0, 1))).toBe('B♭');
+  });
+});
+
+describe('rhythmTimeline (what a rhythm sounds like)', () => {
+  const tokens = (s: string) => parseRhythm(s) as RhythmToken[];
+  it('notes start where the beats before them end, with their own length', () => {
+    expect(rhythmTimeline(tokens('q q h'))).toEqual([
+      { at: 0, beats: 1 },
+      { at: 1, beats: 1 },
+      { at: 2, beats: 2 },
+    ]);
+    expect(rhythmTimeline(tokens('h.'))).toEqual([{ at: 0, beats: 3 }]);
+    expect(rhythmTimeline(tokens('w'))).toEqual([{ at: 0, beats: 4 }]);
+  });
+  it('rests are gaps: they sound nothing but take their beats', () => {
+    expect(rhythmTimeline(tokens('q Q q Q'))).toEqual([
+      { at: 0, beats: 1 },
+      { at: 2, beats: 1 },
+    ]);
+    expect(rhythmTimeline(tokens('W'))).toEqual([]);
+    expect(rhythmTimeline(tokens('H h'))).toEqual([{ at: 2, beats: 2 }]);
+  });
+  it('a half-beat pair is two notes of half a beat', () => {
+    expect(rhythmTimeline(tokens('ee q q q'))).toEqual([
+      { at: 0, beats: 0.5 },
+      { at: 0.5, beats: 0.5 },
+      { at: 1, beats: 1 },
+      { at: 2, beats: 1 },
+      { at: 3, beats: 1 },
+    ]);
+  });
+  it('an empty rhythm has no notes', () => {
+    expect(rhythmTimeline([])).toEqual([]);
   });
 });

@@ -9,7 +9,8 @@ import {
   type Note,
   type Sign,
 } from './notes';
-import { stepSkipValue, type Answer, type Question } from './questions';
+import { beatsOf, type RhythmToken, type Time } from './music';
+import { boxBeats, finishBoxAnswer, stepSkipValue, type Answer, type Question } from './questions';
 
 // ---------------------------------------------------------------- concept cards
 
@@ -38,7 +39,7 @@ export const CONCEPT_CARD_IDS = [
   'c-going-lower',
   'c-read-steps',
   'c-skips',
-  // Course part 2 (CURRICULUM §11); the rhythm, melody and stack cards arrive with M11–M13.
+  // Course part 2 (CURRICULUM §11); the melody and stack cards arrive with M12–M13.
   'c-sharp',
   'c-sharp-staff',
   'c-flat',
@@ -46,6 +47,17 @@ export const CONCEPT_CARD_IDS = [
   'c-bass-signs',
   'c-natural',
   'c-signs-grand',
+  // Rhythm (M11), in the order of the CURRICULUM §11 table
+  'c-beat',
+  'c-one-beat',
+  'c-two-beat',
+  'c-listen',
+  'c-box',
+  'c-top-number',
+  'c-three-beat',
+  'c-rest',
+  'c-long-rests',
+  'c-half-beats',
 ] as const;
 export type ConceptCardId = (typeof CONCEPT_CARD_IDS)[number];
 
@@ -99,13 +111,26 @@ export type Illustration =
         /** Both names written on every black key. */
         blackLabels?: boolean;
       };
-    };
+    }
+  | { kind: 'rhythm'; pictures: readonly RhythmPicture[] };
+
+/** One rhythm picture on a concept card: boxes of tokens on the one-line rhythm staff. */
+export interface RhythmPicture {
+  time: Time;
+  boxes: readonly (readonly RhythmToken[])[];
+  /** Draw the time numbers at the start (default: no). */
+  showTime?: boolean;
+  /** Highlight the top number (c-top-number). */
+  highlightTop?: boolean;
+}
 
 export interface ConceptCardContent {
   title: string;
   body: string;
   illustration: Illustration;
   play?: readonly Note[];
+  /** "Play" sounds the card's rhythm pictures one after the other (count-in = the first picture's time). */
+  playRhythm?: true;
 }
 
 const t = (...notes: Note[]): IllustrationNote[] => notes.map((note) => ({ clef: 'treble', note }));
@@ -329,6 +354,88 @@ export const CONCEPT_CARDS: Record<ConceptCardId, ConceptCardContent> = {
       staff: { mode: 'grand', notes: [ts('F4', 'sharp'), bs('B2', 'flat')] },
     },
   },
+  'c-beat': {
+    title: 'The beat',
+    body: 'Music has a steady beat, like a ticking clock. We count it: 1, 2, 3, 4.',
+    illustration: { kind: 'rhythm', pictures: [{ time: 4, boxes: [['q', 'q', 'q', 'q']] }] },
+    playRhythm: true,
+  },
+  'c-one-beat': {
+    title: '1-beat notes',
+    body: 'A filled note with a stick lasts 1 beat.',
+    illustration: { kind: 'rhythm', pictures: [{ time: 4, boxes: [['q']] }] },
+  },
+  'c-two-beat': {
+    title: '2-beat notes',
+    body: 'An open note with a stick lasts 2 beats. The open note with no stick, the one you know, lasts 4 beats.',
+    illustration: {
+      kind: 'rhythm',
+      pictures: [
+        { time: 4, boxes: [['h', 'h']] },
+        { time: 4, boxes: [['w']] },
+      ],
+    },
+    playRhythm: true,
+  },
+  'c-listen': {
+    title: 'Listen first',
+    body: 'Tap Play to hear a rhythm. Soft clicks count the beat first, then the notes play.',
+    illustration: { kind: 'rhythm', pictures: [{ time: 4, boxes: [['q', 'q', 'h']] }] },
+    playRhythm: true,
+  },
+  'c-box': {
+    title: 'Boxes',
+    body: 'Upright lines cut music into boxes. Every box holds the same number of beats.',
+    illustration: {
+      kind: 'rhythm',
+      pictures: [
+        {
+          time: 4,
+          boxes: [['q', 'q', 'h'], ['w']],
+        },
+      ],
+    },
+  },
+  'c-top-number': {
+    title: 'The top number',
+    body: 'The two numbers at the start: the top one tells you how many beats fit in each box.',
+    illustration: {
+      kind: 'rhythm',
+      pictures: [{ time: 4, boxes: [['h', 'h']], showTime: true, highlightTop: true }],
+    },
+  },
+  'c-three-beat': {
+    title: '3-beat notes',
+    body: 'A dot after a 2-beat note adds 1 more beat: it lasts 3 beats.',
+    illustration: {
+      kind: 'rhythm',
+      pictures: [{ time: 3, boxes: [['h.']], showTime: true }],
+    },
+    playRhythm: true,
+  },
+  'c-rest': {
+    title: 'Rests',
+    body: 'A rest means: stay quiet. It still counts beats. This one is a 1-beat rest.',
+    illustration: { kind: 'rhythm', pictures: [{ time: 4, boxes: [['q', 'Q', 'q', 'Q']] }] },
+    playRhythm: true,
+  },
+  'c-long-rests': {
+    title: 'Longer rests',
+    body: 'A 2-beat rest sits on the line like a hat. A 4-beat rest hangs under it like a hole: a whole box of quiet.',
+    illustration: {
+      kind: 'rhythm',
+      pictures: [
+        { time: 4, boxes: [['H', 'h']] },
+        { time: 4, boxes: [['W']] },
+      ],
+    },
+  },
+  'c-half-beats': {
+    title: 'Half-beat pairs',
+    body: 'Two notes joined at the top share one beat. Count them "1 and".',
+    illustration: { kind: 'rhythm', pictures: [{ time: 4, boxes: [['ee', 'q', 'q', 'q']] }] },
+    playRhythm: true,
+  },
 };
 
 // ---------------------------------------------------------------- nicknames and tips
@@ -378,6 +485,13 @@ export const PROMPTS = {
   // Course part 2 (CURRICULUM §12)
   nameAccidental: 'Which note is this?',
   findKeyPitch: 'Tap this exact key on the piano.',
+  beatsOfNote: 'How many beats does this note last?',
+  beatsOfRest: 'How many beats does this rest last?',
+  beatsOfPair: 'How many beats does this pair last?',
+  whichLonger: 'Which lasts longer?',
+  countBox: 'How many beats are in this box?',
+  finishBox: 'Which one finishes the box?',
+  hearRhythm: 'Which rhythm did you hear?',
 } as const;
 
 export const BUTTON_LABELS = {
@@ -390,6 +504,9 @@ export const BUTTON_LABELS = {
   skipUp: 'Skip up',
   skipDown: 'Skip down',
 } as const;
+
+/** The "1 beat" … "4 beats" answer buttons (CURRICULUM §12). */
+export const BEATS_LABELS = ['1 beat', '2 beats', '3 beats', '4 beats'] as const;
 
 /** "Put a {Letter} on the staff." */
 export function findOnStaffPrompt(letter: Letter): string {
@@ -431,6 +548,20 @@ export function promptFor(q: Question): string {
       return PROMPTS.nameAccidental;
     case 'find-key-pitch':
       return PROMPTS.findKeyPitch;
+    case 'beats-of':
+      return q.token === 'ee'
+        ? PROMPTS.beatsOfPair
+        : q.token === 'Q' || q.token === 'H' || q.token === 'W'
+          ? PROMPTS.beatsOfRest
+          : PROMPTS.beatsOfNote;
+    case 'which-longer':
+      return PROMPTS.whichLonger;
+    case 'count-box':
+      return PROMPTS.countBox;
+    case 'finish-box':
+      return PROMPTS.finishBox;
+    case 'hear-rhythm':
+      return PROMPTS.hearRhythm;
     default:
       return assertNever(q);
   }
@@ -502,6 +633,47 @@ export function alsoCalled(card: CardId): string | null {
   return other === null ? null : `That key is also called ${other}.`;
 }
 
+// ---------------------------------------------------------------- rhythm texts (CURRICULUM §12)
+
+/** What a note or rest is called, for feedback and accessible names. */
+export const EVENT_NAMES: Record<RhythmToken, string> = {
+  q: '1-beat note',
+  h: '2-beat note',
+  'h.': '3-beat note',
+  w: '4-beat note',
+  ee: 'half-beat pair',
+  Q: '1-beat rest',
+  H: '2-beat rest',
+  W: '4-beat rest',
+};
+
+/** The pictures of a listening question, by position (accessible names, and "the top one" in feedback). */
+export const RHYTHM_OPTION_NAMES = ['Top rhythm', 'Middle rhythm', 'Bottom rhythm'] as const;
+export const OPTION_TEXT = ['the top one', 'the middle one', 'the bottom one'] as const;
+
+/** The replay button under a listening question. */
+export const PLAY_AGAIN = 'Play again';
+/** Extra feedback line under a listening question, right or wrong. */
+export const HEAR_AGAIN_LINE = 'Tap Play again to hear it once more.';
+/** A listening question while sound is muted. */
+export const SOUND_OFF = { line: 'Turn on sound to hear this.', button: 'Turn on sound' } as const;
+
+/** "a 2-beat note" / "a 1-beat rest": a finish-box answer inside "It's {X}." */
+export function withArticle(t: RhythmToken): string {
+  return `a ${EVENT_NAMES[t]}`;
+}
+
+/** "1 + 1 + 2 = 4 beats." for a finished box (rests count). */
+export function beatSumLine(box: readonly RhythmToken[]): string {
+  return `${box.map((t) => String(beatsOf(t))).join(' + ')} = ${String(boxBeats(box))} beats.`;
+}
+
+/** The box a finish-box question ends up with when answered correctly. */
+export function finishedBox(q: Extract<Question, { kind: 'finish-box' }>): RhythmToken[] {
+  const right = q.options[finishBoxAnswer(q)];
+  return right === undefined ? [...q.box] : [...q.box, right];
+}
+
 /** Heading of the second Progress chart (CURRICULUM §12). */
 export const SIGN_CHART_TITLE = 'Sharps and flats';
 
@@ -543,6 +715,10 @@ export const CHOICE_TEXT = {
   'step-down': 'step down',
   'skip-up': 'skip up',
   'skip-down': 'skip down',
+  'beats-1': '1 beat',
+  'beats-2': '2 beats',
+  'beats-3': '3 beats',
+  'beats-4': '4 beats',
 } as const satisfies Record<Extract<Answer, { kind: 'choice' }>['value'], string>;
 
 /** A card's display name: its nickname if it has one, else its letter with any sign ('F', 'F♯'). */

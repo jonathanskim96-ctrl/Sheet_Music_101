@@ -216,7 +216,7 @@ test('Progress shows the totals, the mastery chart and level stars', async ({ pa
   await signs.first().click();
   await expect(page.getByTestId('mastery-tooltip-signs')).toHaveText('Treble F♯ · New');
   await expect(page.locator('[data-card="treble-G#4"]')).toHaveCount(1);
-  await expect(page.getByTestId('level-stars')).toHaveCount(15);
+  await expect(page.getByTestId('level-stars')).toHaveCount(19); // one per unit built so far
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - window.innerWidth,
   );
