@@ -16,7 +16,7 @@ import {
 } from './helpers';
 
 const DAY = '2026-10-13';
-const PART2 = pathLessons().filter((l) => l.unit >= 12);
+const PART2 = pathLessons().filter((l) => l.unit >= 12 && l.unit <= 15);
 const card = (): CardState => ({
   box: 2,
   lastSeenDay: '2026-10-10',

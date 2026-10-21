@@ -492,3 +492,82 @@ for (const scheme of ['light', 'dark'] as const) {
     });
   }
 }
+
+// M11 (rhythm): every rhythm concept card, each new question view (unanswered, wrong, and the
+// listening question with sound off), the Path around checkpoint E, at two phone widths in both
+// colour schemes.
+for (const scheme of ['light', 'dark'] as const) {
+  for (const width of [390, 320]) {
+    test(`M11 screens at ${String(width)}px, ${scheme} mode`, async ({ page }) => {
+      test.setTimeout(240_000);
+      test.slow();
+      const tag = `${String(width)}-${scheme}`;
+      const shot = (name: string) =>
+        page.screenshot({ path: `test-results/screens/m11-${name}-${tag}.png` });
+      await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
+      await page.setViewportSize({ width, height: 844 });
+      await page.clock.setFixedTime(new Date('2026-10-13T10:00:00'));
+      await seedProgress(page, everythingDone());
+
+      // every concept card of the rhythm units, in lesson order
+      for (const id of [
+        'u16-l1',
+        'u16-l2',
+        'u16-l3',
+        'u17-l1',
+        'u17-l3',
+        'u18-l1',
+        'u18-l2',
+        'u19-l1',
+      ]) {
+        await go(page, `#/lesson/${id}`);
+        for (let guard = 0; guard < 4; guard++) {
+          const card = page.getByTestId('concept-card');
+          if (!(await card.isVisible({ timeout: 1000 }).catch(() => false))) break;
+          await shot(`card-${id}-${(await card.getAttribute('data-card')) ?? 'x'}`);
+          await page.getByRole('button', { name: 'Got it' }).click();
+        }
+      }
+
+      // each question view, unanswered and then wrong
+      const views: [lesson: string, kind: string][] = [
+        ['u16-l2', 'beats-of'],
+        ['u16-l4', 'which-longer'],
+        ['u17-l4', 'count-box'],
+        ['u17-l2', 'finish-box'],
+        ['u16-l3', 'hear-rhythm'],
+        ['u18-l1', 'beats-of'], // a rest
+        ['u19-l1', 'beats-of'], // a half-beat pair
+      ];
+      for (const [lesson, kind] of views) {
+        await go(page, `#/lesson/${lesson}`);
+        await reachQuestion(page, kind);
+        await shot(`${kind}-${lesson}`);
+        await answerQuestion(page, false);
+        await expect(page.getByTestId('feedback')).toBeVisible();
+        await shot(`${kind}-${lesson}-wrong`);
+        const sideways = await page.evaluate(
+          () => document.documentElement.scrollWidth - window.innerWidth,
+        );
+        expect(sideways, `${kind} in ${lesson} scrolls sideways`).toBeLessThanOrEqual(0);
+      }
+
+      // the listening question with sound muted
+      await go(page, '#/lesson/u18-l3');
+      await reachQuestion(page, 'hear-rhythm');
+      await page.getByRole('button', { name: 'Mute sound' }).click();
+      await expect(page.getByTestId('sound-off')).toBeVisible();
+      await shot('hear-rhythm-sound-off');
+      await page.getByRole('button', { name: 'Turn on sound' }).click();
+
+      // the Path around checkpoint E
+      await go(page, '#/');
+      await page.getByTestId('checkpoint-cp-e').scrollIntoViewIfNeeded();
+      await shot('path-cp-e');
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - window.innerWidth,
+      );
+      expect(overflow).toBeLessThanOrEqual(0);
+    });
+  }
+}
